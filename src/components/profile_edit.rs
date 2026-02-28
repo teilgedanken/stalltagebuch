@@ -6,6 +6,7 @@ use crate::{
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
 use dioxus_i18n::t;
+use photo_gallery::Photo;
 
 #[component]
 pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
@@ -13,7 +14,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
     let mut ring_color = use_signal(|| String::new());
-    let mut photos = use_signal(|| Vec::<crate::models::Photo>::new());
+    let mut photos = use_signal(|| Vec::<Photo>::new());
     let mut selected_profile_photo_id = use_signal(|| None::<String>);
     let mut show_delete_confirm = use_signal(|| false);
     let mut error = use_signal(|| String::new());
@@ -51,10 +52,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                 .ok()
                             }
                             _ => None,
-                        }
-                        .or_else(|| {
-                            crate::services::photo_service::list_quail_photos(&conn, &uuid).ok()
-                        });
+                        };
 
                     if let Some(list) = photo_list {
                         // Finde aktuelles Profilbild
@@ -319,14 +317,19 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                                 {
                                                     Ok(_) => {
                                                         if let Ok(q_uuid) = uuid::Uuid::parse_str(&qid) {
-                                                            // Reload photos using collection-based API
-                                                            let photo_list = match crate::services::photo_service::get_quail_collection(&conn, &q_uuid) {
+                                                            let photo_list = match crate::services::photo_service::get_quail_collection(
+                                                                &conn,
+                                                                &q_uuid,
+                                                            ) {
                                                                 Ok(Some(collection_id)) => {
-                                                                    crate::services::photo_service::list_collection_photos(&conn, &collection_id).ok()
+                                                                    crate::services::photo_service::list_collection_photos(
+                                                                            &conn,
+                                                                            &collection_id,
+                                                                        )
+                                                                        .ok()
                                                                 }
                                                                 _ => None,
-                                                            }.or_else(|| crate::services::photo_service::list_quail_photos(&conn, &q_uuid).ok());
-
+                                                            };
                                                             if let Some(list) = photo_list {
                                                                 photos.set(list);
                                                                 if selected_profile_photo_id().as_ref().map(|s| s.as_str())

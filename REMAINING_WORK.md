@@ -1,186 +1,60 @@
 # Remaining Work for Photo Gallery Refactoring
 
-This document outlines the remaining tasks to complete the full refactoring of photo management into the photo-gallery crate.
+Updated: 2026-02-28
 
-## Completed ✅
+This document tracks what is still open after the latest photo-gallery and database integration work.
 
-1. **Photo collections schema** - Created `photo_collections` table
-2. **Migration logic** - Automatically migrates old photos to collections on startup
-3. **Basic Dioxus components** - Created ThumbnailImage, PreviewImage, FullscreenImage, etc. (but they accept data URLs)
-4. **Schema v6 migration** - Added to main crate, runs automatically
-5. **Collection FK setup** - Added collection_id to quails and events tables
+## Recently Completed ✅
+
+1. Photo-gallery picker migration finished (`photo-gallery/src/picker.rs`, `src/camera.rs` wrapper).
+2. UI components now load by `photo_uuid`/collection context (no more manual data URL loading in callers).
+3. Main app now provides `PhotoGalleryContext` centrally in `src/main.rs`.
+4. `stalltagebuch-database` crate introduced and wired into workspace.
+5. `src/database/mod.rs` now runs app-specific schema extension (`src/database/schema.rs`) after core DB init.
+6. Collection access simplified: quail/event UUID is used as collection UUID in `src/services/photo_service.rs`.
+7. Android OpenSSL crash fixed by switching `nextcloud-auth` reqwest to `rustls-tls`.
+8. Temporary OpenSSL copy logic removed from `build_android.sh`; Android build succeeds again.
 
 ## Remaining Tasks
 
-### 1. Move Photo Service Logic to photo-gallery ❌
+### 1. Verify/repair legacy DBs that still miss `photos.collection_id` ❌
 
-**Current state:**
-- `src/services/photo_service.rs` is a thin wrapper over PhotoGalleryService
-- It handles app-specific concerns (CRDT operation capture, error conversion)
+Recent runtime errors showed that some installed databases can still be on an older shape.
 
-**What needs to be done:**
-- Move all CRUD operations fully to photo-gallery crate
-- Remove dependency on main crate's AppError
-- Make photo-gallery crate handle database operations directly
-- Keep only CRDT operation capture in main crate
+What is still needed:
+1. Add a startup schema check specifically for `photos.collection_id`.
+2. If missing, run a safe repair migration and log a clear message.
+3. Add a regression test path for upgrading an old DB snapshot.
 
-**Files to modify:**
-- `photo-gallery/src/service.rs` - Expand with full CRUD operations
-- `src/services/photo_service.rs` - Reduce to minimal CRDT wrapper
+### 2. Finish upload/download refactor boundary ❌
 
-### 2. Move Upload/Download Logic to photo-gallery ❌
+Current state:
+1. Core photo loading moved toward `photo-gallery`.
+2. Upload/download orchestration still spans app services and gallery services.
 
-**Current state:**
-- `src/services/upload_service.rs` contains photo upload logic with WebDAV
-- Uses app-specific error handling and sync settings
-- Parallel upload with JoinSet for 3 concurrent uploads
+What is still needed:
+1. Define one stable API boundary between `src/services/upload_service.rs` and `photo-gallery/src/{upload,download}.rs`.
+2. Ensure retry/error metadata is not duplicated between crates.
+3. Keep CRDT capture app-side only.
 
-**What needs to be done:**
-- Move `upload_photos_batch()` to photo-gallery crate
-- Move `count_pending_photos()` to photo-gallery
-- Move `list_remote_photos_simple()` and related WebDAV helpers
-- Create sync settings struct in photo-gallery (or accept as parameter)
-- Return results that main crate can log/track
+### 3. Remove stale assumptions about `collection_id` on quails/events ❌
 
-**Files to move/modify:**
-- Create `photo-gallery/src/upload.rs` with upload logic
-- Create `photo-gallery/src/download.rs` with download logic  
-- Update `src/services/upload_service.rs` to call photo-gallery
-- Update `src/services/download_service.rs` (if exists) similarly
+Current state:
+1. Runtime logic now uses quail/event UUIDs as collection IDs.
+2. Some docs/comments still describe FK-based `collection_id` linkage on `quails`/`quail_events`.
 
-### 3. Move Camera/Gallery Picking to photo-gallery ✅
+What is still needed:
+1. Clean up outdated docs/comments to reflect UUID-as-collection model.
+2. Confirm no code path still queries `quails.collection_id` or `quail_events.collection_id`.
 
-**Completed:**
-- Created `photo-gallery/src/picker.rs` with full Android JNI implementation
-- Moved all camera/gallery picking logic to photo-gallery crate
-- Main crate's `src/camera.rs` is now a thin wrapper for backward compatibility
-- Made MainActivity class name configurable via `AndroidPickerConfig`
-- All platform-specific code now in photo-gallery
-- Comprehensive `PICKER_API.md` documentation
+### 4. Add focused migration and Android smoke tests ❌
 
-**Implementation:**
-- `photo-gallery/src/picker.rs` - Full Android JNI picker implementation
-- `src/camera.rs` - Thin compatibility wrapper
-- Configurable via `AndroidPickerConfig { main_activity_class }` 
-- Functions: `pick_image()`, `pick_images()`, `capture_photo()`, `has_camera_permission()`
-- Platform-agnostic error handling with `PickerError` enum
-- Stub implementations for non-Android platforms
-
-### 4. Components That Load Their Own Data ❌
-
-**Current state:**
-- Components accept data URLs (base64-encoded images)
-- Caller must load photo from database and convert to data URL
-- This was a design decision to avoid Rust ownership issues
-
-**What was originally requested:**
-- Components should accept `database_connection: &Connection` and `photo_uuid: Uuid`
-- Components load their own data from database
-- Data retrieved once from remote, then loaded from disk
-
-**Challenge:**
-- Dioxus components can't easily hold `&Connection` (not Clone, not Send)
-- Need alternative approach: global service, Arc<Mutex<Connection>>, or channels
-
-**Possible solutions:**
-
-**Solution A: Global connection pool**
-```rust
-// In photo-gallery
-pub fn init_photo_connection(conn: Connection);
-
-// Component uses global connection
-ThumbnailImage {
-    photo_uuid: uuid,
-    storage_path: path,
-}
-```
-
-**Solution B: Pass connection via context**
-```rust
-// Set up context in app
-use_context_provider(|| PhotoGalleryContext::new(conn));
-
-// Component gets from context
-ThumbnailImage {
-    photo_uuid: uuid,
-}
-```
-
-**Solution C: Async data loading with signals**
-```rust
-ThumbnailImage {
-    photo_uuid: uuid,
-    storage_path: path,
-    // Component spawns async task to load data
-}
-```
-
-**Files to modify:**
-- `photo-gallery/src/components.rs` - Refactor all components
-- May need new `photo-gallery/src/context.rs` for shared state
-
-### 5. Collection-Based API in Main Crate ❌
-
-**Current state:**
-- Main crate still uses quail_id/event_id in photo operations
-- `add_quail_photo()`, `add_event_photo()` functions exist
-
-**What should change:**
-- Main crate creates collections for quails/events
-- Photos added to collections, not directly to quails/events
-- Functions like `add_photo_to_collection(collection_id, path)`
-
-**Example new API:**
-```rust
-// Instead of:
-photo_service::add_quail_photo(conn, quail_id, path).await?;
-
-// Use:
-let collection_id = get_or_create_quail_collection(conn, quail_id)?;
-photo_service::add_photo_to_collection(conn, collection_id, path).await?;
-```
-
-**Files to modify:**
-- `src/services/photo_service.rs` - Update API
-- `src/components/*.rs` - Update photo adding code
-- Any component that adds photos to quails/events
-
-## Testing Plan
-
-Once the above is complete:
-
-1. **Unit tests** - Test photo-gallery crate in isolation
-2. **Integration tests** - Test main crate with photo-gallery
-3. **Migration testing** - Test schema v6 migration with real data
-4. **Android testing** - Test on physical Android device
-5. **Sync testing** - Test upload/download with Nextcloud
-
-## Estimated Scope
-
-This is a **significant refactoring** that touches many parts of the codebase:
-
-- **High complexity items**: Component data loading, camera/gallery picking
-- **Medium complexity items**: Upload/download service migration
-- **Lower complexity items**: API updates to use collections
-
-**Recommendation**: Consider a **phased approach**:
-
-Phase 1: Complete upload/download migration ✨ (most valuable)
-Phase 2: Refactor components to load their own data
-Phase 3: Handle camera/gallery picking (callback vs. full move)
-Phase 4: Update all usage to collection-based API
-
-## Questions for Discussion
-
-1. **Camera picking**: Full move or callback API?
-2. **Component data loading**: Which solution (global pool, context, or signals)?
-3. **API breaking changes**: Ok to require collection_id instead of quail_id/event_id?
-4. **Priority**: Which phase should be tackled first?
+What is still needed:
+1. Migration test: old DB -> current schema -> add photo to collection.
+2. Android smoke flow: install APK, create profile/event, add image, reopen app, verify image persists.
+3. Optional sync smoke: verify one upload and one download still work after refactor.
 
 ## Notes
 
-- The schema migration (v6) is already complete and working
-- Collections are created automatically from existing photos
-- Backward compatibility is maintained (old columns still exist)
-- New code should use collections; old code still works
+1. The previous broad refactor checklist has been trimmed; completed phases were removed.
+2. Priority should be database upgrade safety first, then upload/download boundary cleanup.

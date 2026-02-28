@@ -51,6 +51,7 @@ EOF
     fi
 }
 
+# Copy native OpenSSL libraries to jniLibs so they are bundled in the APK
 # Find Android SDK build-tools (zipalign and apksigner)
 find_build_tools() {
     local sdk_path="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"

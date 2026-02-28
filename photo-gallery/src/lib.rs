@@ -63,9 +63,9 @@ pub use download::{DownloadError, DownloadResult, PhotoDownloadConfig, PhotoDown
 
 #[cfg(feature = "components")]
 pub use components::{
-    get_collection_photos, get_collection_preview_path, get_photo_path, CollectionFullscreen,
-    FullscreenImage, PhotoGalleryContext, PreviewCollection, PreviewImage, ThumbnailCollection,
-    ThumbnailImage,
+    get_collection_photos, get_collection_preview_path, get_collection_preview_uuid,
+    get_photo_path, CollectionFullscreen, FullscreenImage, PhotoGalleryContext, PreviewCollection,
+    PreviewImage, ThumbnailCollection, ThumbnailImage,
 };
 
 pub use picker::{

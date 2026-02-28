@@ -31,27 +31,24 @@ fn App() -> Element {
 
 ## Components
 
+
 ### ThumbnailImage
 
-Displays a small thumbnail (128px × 128px).
+Displays a small thumbnail (128px × 128px). If a thumbnail isn't available locally the component will attempt to download the original photo via the configured sync settings and retry loading the thumbnail.
 
 **Props:**
-- `data_url: Option<String>` - Pre-loaded data URL (backward compatible)
-- `relative_path: Option<String>` - Photo path relative to storage (loads automatically)
+- `photo_uuid: Option<String>` - Photo UUID (component resolves path and loads thumbnail)
 - `alt: String` - Alt text (default: "Photo")
 
 **Example:**
 ```rust
-use photo_gallery::{ThumbnailImage, get_photo_path};
+use photo_gallery::{ThumbnailImage};
 
 #[component]
 fn PhotoThumbnail(photo_uuid: String) -> Element {
-    let conn = /* database connection */;
-    let relative_path = get_photo_path(&conn, &photo_uuid).ok();
-    
     rsx! {
         ThumbnailImage {
-            relative_path: relative_path,
+            photo_uuid: Some(photo_uuid.clone()),
             alt: "Profile photo".to_string(),
         }
     }
@@ -60,28 +57,26 @@ fn PhotoThumbnail(photo_uuid: String) -> Element {
 
 ### PreviewImage
 
-Displays a medium-sized preview (max 512px).
+Displays a medium-sized preview (max 512px). If the medium thumbnail isn't present locally the component will try a per-photo download (when sync is enabled) and retry loading the medium thumbnail.
 
 **Props:**
-- `data_url: Option<String>` - Pre-loaded data URL
-- `relative_path: Option<String>` - Photo path (loads automatically)
+- `photo_uuid: Option<String>` - Photo UUID (component resolves path and loads medium thumbnail)
 - `alt: String` - Alt text (default: "Photo")
 
 **Example:**
 ```rust
 PreviewImage {
-    relative_path: Some("photos/abc123.jpg".to_string()),
+    photo_uuid: Some("abc123-uuid".to_string()),
     alt: "Event photo".to_string(),
 }
 ```
 
 ### FullscreenImage
 
-Displays a photo in fullscreen with a close button.
+Displays a photo in fullscreen with a close button. If the requested image isn't present locally the component will try a per-photo download (when sync is enabled) and retry loading the original image.
 
 **Props:**
-- `data_url: Option<String>` - Pre-loaded data URL
-- `relative_path: Option<String>` - Photo path (loads automatically)
+- `photo_uuid: Option<String>` - Photo UUID (component resolves path and loads original image)
 - `on_close: EventHandler<()>` - Close button callback
 
 **Example:**
@@ -96,31 +91,31 @@ rsx! {
     
     if show_fullscreen() {
         FullscreenImage {
-            relative_path: Some("photos/abc123.jpg".to_string()),
+            photo_uuid: Some("abc123-uuid".to_string()),
             on_close: move |_| show_fullscreen.set(false),
         }
     }
 }
 ```
 
+
 ### ThumbnailCollection
 
 Displays a collection preview thumbnail that opens fullscreen viewer on click.
 
 **Props:**
-- `preview_data_url: Option<String>` - Pre-loaded preview data URL
-- `preview_relative_path: Option<String>` - Preview photo path (loads automatically)
+- `preview_photo_uuid: Option<String>` - Photo UUID to use for preview (preferable)
 - `on_click: Option<EventHandler<()>>` - Click handler
 
 **Example:**
 ```rust
 use photo_gallery::{ThumbnailCollection, get_collection_preview_path};
 
-let preview_path = get_collection_preview_path(&conn, &collection_id).ok().flatten();
+let preview_uuid = /* query or service to obtain preview_photo_uuid for the collection */;
 
 rsx! {
     ThumbnailCollection {
-        preview_relative_path: preview_path,
+        preview_photo_uuid: preview_uuid,
         on_click: move |_| open_collection(),
     }
 }
@@ -131,17 +126,16 @@ rsx! {
 Medium-sized collection preview.
 
 **Props:**
-- `preview_data_url: Option<String>` - Pre-loaded preview data URL
-- `preview_relative_path: Option<String>` - Preview photo path
+- `preview_photo_uuid: Option<String>` - Photo UUID to use for preview (preferable)
 - `on_click: Option<EventHandler<()>>` - Click handler
 
 ### CollectionFullscreen
 
 Fullscreen collection viewer with navigation (prev/next).
 
-**Props:**
-- `photo_data_urls: Vec<String>` - Pre-loaded data URLs (default: empty)
-- `photo_relative_paths: Vec<String>` - Photo paths (loads automatically, default: empty)
+- `photo_uuids: Vec<String>` - Photo UUIDs (component resolves each to a path and loads originals)
+- `initial_index: usize` - Starting photo index (default: 0)
+- `on_close: EventHandler<()>` - Close button callback
 - `initial_index: usize` - Starting photo index (default: 0)
 - `on_close: EventHandler<()>` - Close button callback
 
@@ -149,11 +143,11 @@ Fullscreen collection viewer with navigation (prev/next).
 ```rust
 use photo_gallery::{CollectionFullscreen, get_collection_photos};
 
-let photo_paths = get_collection_photos(&conn, &collection_id).ok().unwrap_or_default();
+let photo_uuids = /* query service to return photo UUIDs for the collection, ordered by created_at */;
 
 rsx! {
     CollectionFullscreen {
-        photo_relative_paths: photo_paths,
+        photo_uuids: photo_uuids,
         initial_index: 0,
         on_close: move |_| close_viewer(),
     }
@@ -186,6 +180,20 @@ pub fn get_collection_preview_path(conn: &Connection, collection_id: &str) -> Re
 **Example:**
 ```rust
 let preview = photo_gallery::get_collection_preview_path(&conn, "collection-uuid")?;
+
+### get_collection_preview_uuid
+
+Get preview photo UUID for a collection. Returns the collection's preview_photo_uuid if set, otherwise the first photo UUID in the collection.
+
+```rust
+pub fn get_collection_preview_uuid(conn: &Connection, collection_id: &str) -> Result<Option<String>, String>
+```
+
+Example:
+
+```rust
+let preview_uuid = photo_gallery::get_collection_preview_uuid(&conn, "collection-uuid")?;
+```
 ```
 
 ### get_collection_photos

@@ -5,7 +5,7 @@ use crate::error::AppError;
 use std::path::PathBuf;
 
 // Re-export photo-gallery picker functionality
-pub use photo_gallery::picker::AndroidPickerConfig;
+pub use photo_gallery::picker::{AndroidPickerConfig, PickerError};
 
 // Helper function to convert PickerError to AppError
 fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {

@@ -176,6 +176,7 @@ pub async fn update_event_full(
         event_type: event_type.clone(),
         event_date,
         notes: notes.clone(),
+        photos: existing.photos,
     };
     candidate.validate()?;
     conn.execute(

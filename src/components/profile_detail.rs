@@ -1,30 +1,27 @@
 use crate::database;
-use crate::image_processing;
+// image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
 use crate::models::{Quail, QuailEvent};
-use crate::services::{event_service, photo_service, profile_service};
+use crate::services::{event_service, profile_service};
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
+// Photo type is not needed in this file - preview/fullscreen components handle loading
+use photo_gallery::{CollectionFullscreen, PreviewCollection};
 
 /// Helper function to resolve photo path to absolute path
 /// Handles both full paths (starting with /) and relative filenames
-fn resolve_photo_path(path: &str) -> String {
-    if path.starts_with('/') {
-        // Already an absolute path
-        path.to_string()
-    } else {
-        // Relative path or just filename - use photo service to get absolute path
-        photo_service::get_absolute_photo_path(path)
-    }
-}
+// resolve_photo_path and image_to_data_url logic is no longer needed here
 
 #[component]
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
     let mut profile = use_signal(|| None::<Quail>);
     let mut events = use_signal(|| Vec::<QuailEvent>::new());
     let mut error = use_signal(|| String::new());
-    let mut photos = use_signal(|| Vec::<crate::models::Photo>::new());
-    let mut current_photo_index = use_signal(|| 0usize);
+    // preview UUID shown in the main profile area (PreviewCollection)
+    let mut quail_photo_collection_uuid = use_signal(|| None::<uuid::Uuid>);
+    // uuids for fullscreen viewer (filled when opening fullscreen)
+    let fullscreen_uuids = use_signal(|| Vec::<uuid::Uuid>::new());
+    let current_photo_index = use_signal(|| 0usize);
     let mut show_fullscreen = use_signal(|| false);
     let mut uploading = use_signal(|| false);
     let mut upload_error = use_signal(|| String::new());
@@ -33,6 +30,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
     let quail_id_for_gallery = quail_id.clone();
     #[cfg(target_os = "android")]
     let quail_id_for_camera = quail_id.clone();
+    // clone used for opening fullscreen without moving the original id
+    let quail_id_for_fullscreen = quail_id.clone();
 
     // Retry failed downloads beim Mount
     use_effect(move || {
@@ -46,41 +45,6 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         });
     });
 
-    // Alle Bilder der Wachtel laden (using collection-based API)
-    let quail_id_for_photos = quail_id.clone();
-    use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_photos) {
-                // Try collection-based API first, fall back to old API
-                let photo_list =
-                    match crate::services::photo_service::get_quail_collection(&conn, &uuid) {
-                        Ok(Some(collection_id)) => {
-                            crate::services::photo_service::list_collection_photos(
-                                &conn,
-                                &collection_id,
-                            )
-                            .ok()
-                        }
-                        _ => None,
-                    }
-                    .or_else(|| {
-                        crate::services::photo_service::list_quail_photos(&conn, &uuid).ok()
-                    });
-
-                if let Some(list) = photo_list {
-                    let len = list.len();
-                    photos.set(list);
-                    // Reset photo index if it's out of bounds
-                    if current_photo_index() >= len && len > 0 {
-                        current_photo_index.set(len - 1);
-                    } else if len == 0 {
-                        current_photo_index.set(0);
-                    }
-                }
-            }
-        }
-    });
-
     // Profil und Events laden
     let quail_id_for_profile = quail_id.clone();
     use_effect(move || {
@@ -88,6 +52,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_profile) {
                 match profile_service::get_profile(&conn, &uuid) {
                     Ok(p) => {
+                        quail_photo_collection_uuid.set(Some(uuid));
                         profile.set(Some(p));
                         error.set(String::new());
                     }
@@ -113,7 +78,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                     "← "
                     {t!("action-back")}
                 }
-                h1 { style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
+                h1 {
+                    style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
                     {t!("profile-detail-title")} // Profile
                 }
             }
@@ -133,84 +99,43 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         div {
                             style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer;",
                             onclick: move |_| {
-                                if !photos().is_empty() {
-                                    current_photo_index.set(0);
-                                    show_fullscreen.set(true);
-                                }
+                                let quail_id_open = quail_id_for_fullscreen.clone();
+                                let mut fullscreen_uuids_sig = fullscreen_uuids.clone();
+                                let mut current_idx_sig = current_photo_index.clone();
+                                let mut show_fullscreen_sig = show_fullscreen.clone();
+                                spawn(async move {
+                                    if let Ok(conn) = database::init_database() {
+                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_open) {
+                                            if let Ok(Some(collection_id)) = crate::services::photo_service::get_quail_collection(
+                                                &conn,
+                                                &uuid,
+                                            ) {
+                                                if let Ok(list) = crate::services::photo_service::list_collection_photos(
+                                                    &conn,
+                                                    &collection_id,
+                                                ) {
+                                                    let uuids = list
+                                                        .into_iter()
+                                                        .map(|p| p.uuid)
+                                                        .collect::<Vec<uuid::Uuid>>();
+                                                    if !uuids.is_empty() {
+                                                        log::debug!(
+                                                            "ProfileDetail: opening fullscreen with {} photos", uuids
+                                                            .len()
+                                                        );
+                                                        fullscreen_uuids_sig.set(uuids);
+                                                        current_idx_sig.set(0);
+                                                        show_fullscreen_sig.set(true);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                             },
                             {
-                                let profile_photo_opt = if let Some(ref profile_photo_uuid) = p.profile_photo {
-                                    photos().iter().find(|ph| &ph.uuid == profile_photo_uuid).cloned()
-                                } else {
-                                    None
-                                };
-                                if let Some(profile_photo) = profile_photo_opt {
-                                    // Prefer medium thumbnail, then small, then original
-                                    let path_to_use = profile_photo
-                                        .thumbnail_medium_path
-                                        .clone()
-                                        .or(profile_photo.thumbnail_small_path.clone())
-                                        .or(profile_photo.thumbnail_path.clone())
-                                        .unwrap_or(profile_photo.path.clone());
-                                    let absolute_path = resolve_photo_path(&path_to_use);
-                                    match image_processing::image_path_to_data_url(&absolute_path) {
-                                        Ok(data_url) => rsx! {
-                                            img {
-                                                src: data_url,
-                                                alt: p.name.clone(),
-                                                style: "width:100%; height:100%; object-fit: cover;",
-                                            }
-                                            if photos().len() > 1 {
-                                                div { style: "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:6px 12px; border-radius:16px; font-size:12px;",
-                                                    "📷 {photos().len()}"
-                                                }
-                                            }
-                                        },
-                                        Err(e) => rsx! {
-                                            div { style: "font-size: 48px; color:#999; display:flex; flex-direction:column; align-items:center;",
-                                                "🐦"
-                                                div { style: "font-size: 10px; color:#c66; margin-top: 4px; word-break: break-all; padding: 0 8px;",
-                                                    "{e}"
-                                                }
-                                            }
-                                        },
-                                    }
-                                } else if !photos().is_empty() {
-                                    let first_photo = &photos()[0];
-                                    // Prefer medium thumbnail, then small, then original
-                                    let path_to_use = first_photo
-                                        .thumbnail_medium_path
-                                        .clone()
-                                        .or(first_photo.thumbnail_small_path.clone())
-                                        .or(first_photo.thumbnail_path.clone())
-                                        .unwrap_or(first_photo.path.clone());
-                                    let absolute_path = resolve_photo_path(&path_to_use);
-                                    match image_processing::image_path_to_data_url(&absolute_path) {
-                                        Ok(data_url) => rsx! {
-                                            img {
-                                                src: data_url,
-                                                alt: p.name.clone(),
-                                                style: "width:100%; height:100%; object-fit: cover;",
-                                            }
-                                            if photos().len() > 1 {
-                                                div { style: "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:6px 12px; border-radius:16px; font-size:12px;",
-                                                    "📷 {photos().len()}"
-                                                }
-                                            }
-                                        },
-                                        Err(e) => rsx! {
-                                            div { style: "font-size: 48px; color:#999; display:flex; flex-direction:column; align-items:center;",
-                                                "🐦"
-                                                div { style: "font-size: 10px; color:#c66; margin-top: 4px; word-break: break-all; padding: 0 8px;",
-                                                    "{e}"
-                                                }
-                                            }
-                                        },
-                                    }
-                                } else {
-                                    rsx! {
-                                        div { style: "font-size: 48px; color:#999;", "🐦" }
-                                    }
+                                rsx! {
+                                    PreviewCollection { preview_collection_uuid: quail_photo_collection_uuid(), on_click: None }
                                 }
                             }
                         }
@@ -254,11 +179,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                                                             }
                                                                         }
                                                                     }
-                                                                    if let Ok(photo_list) = crate::services::photo_service::list_collection_photos(
+                                                                    if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
                                                                         &conn,
                                                                         &collection_id,
                                                                     ) {
-                                                                        photos.set(photo_list);
+                                                                        quail_photo_collection_uuid.set(Some(preview_opt));
                                                                     }
                                                                 }
                                                                 Err(e) => {
@@ -322,11 +247,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                                                         .await
                                                                     {
                                                                         Ok(_) => {
-                                                                            if let Ok(photo_list) = crate::services::photo_service::list_collection_photos(
+                                                                            if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
                                                                                 &conn,
                                                                                 &collection_id,
                                                                             ) {
-                                                                                photos.set(photo_list);
+                                                                                quail_photo_collection_uuid.set(Some(preview_opt));
                                                                             }
                                                                         }
                                                                         Err(e) => {
@@ -473,7 +398,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         }
 
                         if events().is_empty() {
-                            div { style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
+                            div {
+                                style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
                                 {t!("events-empty")} // No events available
                             }
                         } else {
@@ -544,94 +470,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             }
 
             // Vollbild-Galerie Overlay
-            if show_fullscreen() && !photos().is_empty() {
-                div {
-                    style: "position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:9999; display:flex; flex-direction:column;",
-                    onclick: move |_| show_fullscreen.set(false),
-                    // Header
-                    div {
-                        style: "padding:16px; display:flex; justify-content:space-between; align-items:center;",
-                        onclick: move |e| e.stop_propagation(),
-                        div { style: "color:white; font-size:18px; font-weight:600;",
-                            "{current_photo_index() + 1} / {photos().len()}"
-                        }
-                        button {
-                            style: "background:rgba(255,255,255,0.2); color:white; padding:8px 16px; border-radius:8px; font-size:16px;",
-                            onclick: move |_| show_fullscreen.set(false),
-                            "✕ "
-                            {t!("action-close")}
-                        }
-                    }
-                    // Hauptbild
-                    div {
-                        style: "flex:1; display:flex; align-items:center; justify-content:center; padding:16px;",
-                        onclick: move |e| e.stop_propagation(),
-                        {
-                            let idx = current_photo_index();
-                            let photo_vec = photos();
-                            if idx < photo_vec.len() {
-                                let current_photo = &photo_vec[idx];
-                                // For fullscreen, use original or medium thumbnail
-                                let path_to_use = if current_photo.path.starts_with('/') {
-                                    current_photo.path.clone()
-                                } else {
-                                    current_photo.thumbnail_medium_path.clone()
-                                        .unwrap_or(current_photo.path.clone())
-                                };
-                                let full_path = resolve_photo_path(&path_to_use);
-                                match image_processing::image_path_to_data_url(&full_path) {
-                                    Ok(data_url) => rsx! {
-                                        img {
-                                            src: data_url,
-                                            style: "max-width:100%; max-height:100%; object-fit:contain;",
-                                        }
-                                    },
-                                    Err(e) => rsx! {
-                                        div { style: "color:white; display:flex; flex-direction:column; align-items:center;",
-                                            div { style: "font-size:48px;", "⚠️" }
-                                            div { style: "font-size: 12px; color:#faa; margin-top: 8px; text-align:center; padding: 0 16px; word-break: break-all;",
-                                                "Fehler: {e}"
-                                            }
-                                            div { style: "font-size: 10px; color:#888; margin-top: 4px;",
-                                                "Pfad: {full_path}"
-                                            }
-                                        }
-                                    },
-                                }
-                            } else {
-                                rsx! {
-                                    div { style: "color:white; font-size:24px;", "No photo available" }
-                                }
-                            }
-                        }
-                    }
-                    // Navigation
-                    if photos().len() > 1 {
-                        div {
-                            style: "padding:16px; display:flex; gap:12px; justify-content:center;",
-                            onclick: move |e| e.stop_propagation(),
-                            button {
-                                style: "background:rgba(255,255,255,0.3); color:white; padding:12px 24px; border-radius:8px; font-size:18px; font-weight:600;",
-                                disabled: current_photo_index() == 0,
-                                onclick: move |_| {
-                                    if current_photo_index() > 0 {
-                                        current_photo_index.set(current_photo_index() - 1);
-                                    }
-                                },
-                                "◀"
-                            }
-                            button {
-                                style: "background:rgba(255,255,255,0.3); color:white; padding:12px 24px; border-radius:8px; font-size:18px; font-weight:600;",
-                                disabled: current_photo_index() >= photos().len() - 1,
-                                onclick: move |_| {
-                                    if current_photo_index() < photos().len() - 1 {
-                                        current_photo_index.set(current_photo_index() + 1);
-                                    }
-                                },
-                                "▶"
-                            }
-                        }
-                    }
+            if show_fullscreen() && !fullscreen_uuids().is_empty() {
+                CollectionFullscreen {
+                    photo_uuids: fullscreen_uuids(),
+                    initial_index: current_photo_index(),
+                    on_close: move |_| show_fullscreen.set(false),
                 }
             }
         }

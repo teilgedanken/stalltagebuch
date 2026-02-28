@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 description = "A reusable photo gallery management library with thumbnail generation and storage"
 
 [dependencies]
+stalltagebuch-database = { path = "../stalltagebuch-database" }
 rusqlite = { version = "0.37", features = ["bundled", "chrono"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }

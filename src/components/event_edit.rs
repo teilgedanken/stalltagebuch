@@ -9,10 +9,11 @@ use chrono::NaiveDate;
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
 use dioxus_i18n::t;
+use photo_gallery::{Photo, PhotoResult, PhotoSize};
 
 /// Helper component to load and display event photos using Gallery
 #[component]
-fn EventPhotoGallery(event_id: String, photos: Signal<Vec<crate::models::Photo>>) -> Element {
+fn EventPhotoGallery(event_id: String, photos: Signal<Vec<Photo>>) -> Element {
     // Load all photo data asynchronously
     let photo_list = photos();
     let mut loaded_photos = use_signal(|| Vec::<(String, String)>::new());
@@ -26,24 +27,20 @@ fn EventPhotoGallery(event_id: String, photos: Signal<Vec<crate::models::Photo>>
                 let photo_uuid = photo.uuid.to_string();
                 if let Ok(conn) = database::init_database() {
                     if let Ok(uuid) = uuid::Uuid::parse_str(&photo_uuid) {
-                        match photo_service::get_photo_with_download(
-                            &conn,
-                            &uuid,
-                            crate::models::photo::PhotoSize::Small,
-                        )
-                        .await
+                        match photo_service::get_photo_with_download(&conn, &uuid, PhotoSize::Small)
+                            .await
                         {
-                            Ok(crate::models::photo::PhotoResult::Available(bytes)) => {
+                            Ok(PhotoResult::Available(bytes)) => {
                                 let data_url = format!(
                                     "data:image/webp;base64,{}",
                                     base64::engine::general_purpose::STANDARD.encode(&bytes)
                                 );
                                 loaded.push((photo_uuid, data_url));
                             }
-                            Ok(crate::models::photo::PhotoResult::Downloading) => {
+                            Ok(PhotoResult::Downloading) => {
                                 log::debug!("Photo {} still downloading", photo_uuid);
                             }
-                            Ok(crate::models::photo::PhotoResult::Failed(err, retry_count)) => {
+                            Ok(PhotoResult::Failed(err, retry_count)) => {
                                 log::warn!(
                                     "Photo {} download failed: {} (retry count: {})",
                                     photo_uuid,
@@ -104,14 +101,19 @@ fn EventPhotoGallery(event_id: String, photos: Signal<Vec<crate::models::Photo>>
                                 }
                             }
                             if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                // Reload photos using collection-based API
-                                let photo_list = match crate::services::photo_service::get_event_collection(&conn, &e_uuid) {
+                                let photo_list = match crate::services::photo_service::get_event_collection(
+                                    &conn,
+                                    &e_uuid,
+                                ) {
                                     Ok(Some(collection_id)) => {
-                                        crate::services::photo_service::list_collection_photos(&conn, &collection_id).ok()
+                                        crate::services::photo_service::list_collection_photos(
+                                                &conn,
+                                                &collection_id,
+                                            )
+                                            .ok()
                                     }
                                     _ => None,
-                                }.or_else(|| photo_service::list_event_photos(&conn, &e_uuid).ok());
-
+                                };
                                 if let Some(list) = photo_list {
                                     photos.set(list);
                                 }
@@ -139,7 +141,7 @@ pub fn EventEditScreen(
             .to_string()
     });
     let mut notes = use_signal(|| String::new());
-    let mut photos = use_signal(|| Vec::<crate::models::Photo>::new());
+    let mut photos = use_signal(|| Vec::<Photo>::new());
     let mut error = use_signal(|| String::new());
     let mut success = use_signal(|| false);
     let mut uploading = use_signal(|| false);
@@ -188,8 +190,7 @@ pub fn EventEditScreen(
                             .ok()
                         }
                         _ => None,
-                    }
-                    .or_else(|| photo_service::list_event_photos(&conn, &e_uuid).ok());
+                    };
 
                 if let Some(list) = photo_list {
                     photos.set(list);
@@ -368,8 +369,10 @@ pub fn EventEditScreen(
                                                 Ok(paths) => {
                                                     if let Ok(conn) = database::init_database() {
                                                         if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                                            // Get or create collection for this event
-                                                            match crate::services::photo_service::get_or_create_event_collection(&conn, &e_uuid) {
+                                                            match crate::services::photo_service::get_or_create_event_collection(
+                                                                &conn,
+                                                                &e_uuid,
+                                                            ) {
                                                                 Ok(collection_id) => {
                                                                     for p in paths {
                                                                         let ps = p.to_string_lossy().to_string();
@@ -431,8 +434,10 @@ pub fn EventEditScreen(
                                                     if let Ok(conn) = database::init_database() {
                                                         if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
                                                             let ps = p.to_string_lossy().to_string();
-                                                            // Get or create collection for this event
-                                                            match crate::services::photo_service::get_or_create_event_collection(&conn, &e_uuid) {
+                                                            match crate::services::photo_service::get_or_create_event_collection(
+                                                                &conn,
+                                                                &e_uuid,
+                                                            ) {
                                                                 Ok(collection_id) => {
                                                                     let _ = crate::services::photo_service::add_photo_to_collection(
                                                                             &conn,

@@ -70,7 +70,7 @@ impl Default for PhotoGalleryConfig {
         Self {
             storage_path: String::new(),
             enable_thumbnails: true,
-            thumbnail_small_size: 128,
+            thumbnail_small_size: 256,
             thumbnail_medium_size: 512,
         }
     }

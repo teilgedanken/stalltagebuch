@@ -1,8 +1,7 @@
 use crate::error::AppError;
-use crate::models::photo::{PhotoResult, PhotoSize};
-use crate::models::Photo;
 use photo_gallery::{
-    create_thumbnails, PhotoGalleryConfig, PhotoGalleryService, PhotoSyncConfig, PhotoSyncService,
+    create_thumbnails, Photo, PhotoGalleryConfig, PhotoGalleryService, PhotoResult, PhotoSize,
+    PhotoSyncConfig, PhotoSyncService,
 };
 use rusqlite::{Connection, OptionalExtension};
 use std::sync::OnceLock;
@@ -25,7 +24,7 @@ pub fn init_photo_service() -> &'static PhotoGalleryService {
 }
 
 /// Get the storage path based on platform
-fn get_storage_path() -> String {
+pub fn get_storage_path() -> String {
     #[cfg(target_os = "android")]
     {
         "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos".to_string()
@@ -66,10 +65,11 @@ pub async fn add_quail_photo(
     log::debug!("Quail ID: {}, Path: {}", quail_id, path);
 
     let service = init_photo_service();
+    let quail = crate::services::get_profile(conn, &quail_id)?;
 
     // Add photo using photo-gallery service
     let photo_uuid = service
-        .add_quail_photo(conn, quail_id, path)
+        .add_photo_to_collection(conn, &quail_id, path)
         .await
         .map_err(convert_error)?;
 
@@ -107,10 +107,19 @@ pub async fn add_event_photo(
     _thumbnail_path: Option<String>,
 ) -> Result<Uuid, AppError> {
     let service = init_photo_service();
+    let event = crate::services::event_service::get_event_by_id(conn, &event_id)?
+        .ok_or(AppError::NotFound("Event nicht gefunden".into()))?;
 
     // Add photo using photo-gallery service
     let photo_uuid = service
-        .add_event_photo(conn, event_id, path)
+        .add_photo_to_collection(
+            conn,
+            event
+                .photos
+                .as_ref()
+                .ok_or(AppError::NotFound("No Event found".into()))?,
+            path,
+        )
         .await
         .map_err(convert_error)?;
 
@@ -139,20 +148,6 @@ pub async fn add_event_photo(
     .await?;
 
     Ok(photo_uuid)
-}
-
-pub fn list_quail_photos(conn: &Connection, quail_uuid: &Uuid) -> Result<Vec<Photo>, AppError> {
-    let service = init_photo_service();
-    service
-        .list_quail_photos(conn, quail_uuid)
-        .map_err(convert_error)
-}
-
-pub fn list_event_photos(conn: &Connection, event_uuid: &Uuid) -> Result<Vec<Photo>, AppError> {
-    let service = init_photo_service();
-    service
-        .list_event_photos(conn, event_uuid)
-        .map_err(convert_error)
 }
 
 pub fn get_profile_photo(conn: &Connection, quail_uuid: &Uuid) -> Result<Option<Photo>, AppError> {
@@ -475,53 +470,8 @@ pub fn get_or_create_quail_collection(
     conn: &Connection,
     quail_id: &Uuid,
 ) -> Result<Uuid, AppError> {
-    use rusqlite::params;
-
-    // Check if quail already has a collection
-    // Use Option<String> in the closure to handle NULL values properly
-    let existing: Option<Option<String>> = conn
-        .query_row(
-            "SELECT collection_id FROM quails WHERE uuid = ?1",
-            params![quail_id.to_string()],
-            |row| row.get::<_, Option<String>>(0),
-        )
-        .optional()?;
-
-    // Flatten: None = quail not found, Some(None) = quail found but no collection
-    if let Some(Some(collection_id_str)) = existing {
-        // Collection already exists
-        return Uuid::parse_str(&collection_id_str)
-            .map_err(|e| AppError::Other(format!("Invalid collection UUID: {}", e)));
-    }
-
-    // Create new collection for this quail
-    let collection_id = Uuid::new_v4();
-    let quail_name: String = conn.query_row(
-        "SELECT name FROM quails WHERE uuid = ?1",
-        params![quail_id.to_string()],
-        |row| row.get(0),
-    )?;
-
-    conn.execute(
-        "INSERT INTO photo_collections (uuid, name) VALUES (?1, ?2)",
-        params![
-            collection_id.to_string(),
-            format!("Quail {} ({})", quail_name, quail_id)
-        ],
-    )?;
-
-    // Link collection to quail
-    conn.execute(
-        "UPDATE quails SET collection_id = ?1 WHERE uuid = ?2",
-        params![collection_id.to_string(), quail_id.to_string()],
-    )?;
-
-    log::debug!(
-        "Created collection {} for quail {}",
-        collection_id,
-        quail_id
-    );
-    Ok(collection_id)
+    // The quail UUID itself IS the collection ID in the photo-gallery system
+    Ok(*quail_id)
 }
 
 /// Get or create a photo collection for an event
@@ -529,53 +479,8 @@ pub fn get_or_create_event_collection(
     conn: &Connection,
     event_id: &Uuid,
 ) -> Result<Uuid, AppError> {
-    use rusqlite::params;
-
-    // Check if event already has a collection
-    // Use Option<String> in the closure to handle NULL values properly
-    let existing: Option<Option<String>> = conn
-        .query_row(
-            "SELECT collection_id FROM quail_events WHERE uuid = ?1",
-            params![event_id.to_string()],
-            |row| row.get::<_, Option<String>>(0),
-        )
-        .optional()?;
-
-    // Flatten: None = event not found, Some(None) = event found but no collection
-    if let Some(Some(collection_id_str)) = existing {
-        // Collection already exists
-        return Uuid::parse_str(&collection_id_str)
-            .map_err(|e| AppError::Other(format!("Invalid collection UUID: {}", e)));
-    }
-
-    // Create new collection for this event
-    let collection_id = Uuid::new_v4();
-    let event_type: String = conn.query_row(
-        "SELECT event_type FROM quail_events WHERE uuid = ?1",
-        params![event_id.to_string()],
-        |row| row.get(0),
-    )?;
-
-    conn.execute(
-        "INSERT INTO photo_collections (uuid, name) VALUES (?1, ?2)",
-        params![
-            collection_id.to_string(),
-            format!("Event {} ({})", event_type, event_id)
-        ],
-    )?;
-
-    // Link collection to event
-    conn.execute(
-        "UPDATE quail_events SET collection_id = ?1 WHERE uuid = ?2",
-        params![collection_id.to_string(), event_id.to_string()],
-    )?;
-
-    log::debug!(
-        "Created collection {} for event {}",
-        collection_id,
-        event_id
-    );
-    Ok(collection_id)
+    // The event UUID itself IS the collection ID in the photo-gallery system
+    Ok(*event_id)
 }
 
 /// Add photo to a collection (new collection-based API)

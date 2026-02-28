@@ -13,6 +13,7 @@ pub struct QuailEvent {
     pub event_type: EventType,
     pub event_date: NaiveDate,
     pub notes: Option<String>,
+    pub photos: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -87,6 +88,7 @@ impl QuailEvent {
             event_type,
             event_date,
             notes: None,
+            photos: None,
         }
     }
 
@@ -124,16 +126,18 @@ impl<'r> TryFrom<&Row<'r>> for QuailEvent {
         let event_type_str: String = row.get(2)?;
         let event_date_str: String = row.get(3)?;
         let notes: Option<String> = row.get(4)?;
+        let photos_string: Option<String> = row.get(5)?;
 
         let event_date = NaiveDate::parse_from_str(&event_date_str, "%Y-%m-%d")
             .map_err(|e| rusqlite::Error::FromSqlConversionFailure(3, Type::Text, Box::new(e)))?;
-
+        let photos: Option<Uuid> = photos_string.map(|s| Uuid::parse_str(&s).ok()).flatten();
         Ok(QuailEvent {
             uuid,
             quail_id,
             event_type: EventType::from_str(&event_type_str),
             event_date,
             notes,
+            photos,
         })
     }
 }

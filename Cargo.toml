@@ -1,5 +1,11 @@
 [workspace]
-members = [".", "dioxus-gallery-components", "nextcloud-auth", "photo-gallery"]
+members = [
+    ".",
+    "dioxus-gallery-components",
+    "nextcloud-auth",
+    "photo-gallery",
+    "stalltagebuch-database",
+]
 resolver = "2"
 
 [package]
@@ -12,6 +18,7 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+stalltagebuch-database = { path = "stalltagebuch-database" }
 dioxus-gallery-components = { path = "dioxus-gallery-components" }
 photo-gallery = { path = "photo-gallery", features = ["sync", "components"] }
 nextcloud-auth = { path = "nextcloud-auth" }
