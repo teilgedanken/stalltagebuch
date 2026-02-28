@@ -1,0 +1,13 @@
+[package]
+name = "stalltagebuch-server"
+version = "0.1.0"
+edition = "2021"
+description = "SpacetimeDB server module for Stalltagebuch"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spacetimedb = "2.0.2"
+log = "0.4"

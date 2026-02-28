@@ -1,7 +1,10 @@
 use crate::database;
+use crate::models::SpacetimeSettings;
 use crate::models::SyncSettings;
 use crate::services::export_import_service::ImportMode;
+use crate::services::spacetime_settings_service;
 use crate::services::sync_service;
+use crate::spacetime::context::{ConnectionState, SpacetimeContext};
 use crate::Screen;
 use chrono::{Local, TimeZone};
 use dioxus::prelude::*;
@@ -12,6 +15,153 @@ fn format_hms(ts_ms: i64) -> String {
     match Local.timestamp_millis_opt(ts_ms).single() {
         Some(dt) => dt.format(&t!("log-time-format")).to_string(), // the format string for the chrono format time.
         None => String::from("--:--:--"),
+    }
+}
+
+// ─── SpacetimeDB settings card ────────────────────────────────────────────────
+
+/// Card component that lets the user configure (and test) the SpacetimeDB
+/// connection.  It reads/writes settings via
+/// [`spacetime_settings_service`] and connects/disconnects the shared
+/// [`SpacetimeContext`].
+#[component]
+fn SpacetimeDbCard() -> Element {
+    let mut stdb = use_context::<SpacetimeContext>();
+    let mut stdb2 = stdb.clone();
+
+    // Load persisted settings on mount.
+    let saved = spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
+    let mut server_url = use_signal(|| saved.server_url.clone());
+    let mut database_name = use_signal(|| saved.database_name.clone());
+    let mut token = use_signal(|| saved.token.clone());
+    let mut status_msg = use_signal(|| String::new());
+
+    let conn_state = stdb.connection_state;
+
+    let save_and_connect = move |_| {
+        let url = server_url();
+        let db = database_name();
+        let tok = token();
+
+        if url.is_empty() || db.is_empty() || tok.is_empty() {
+            status_msg.set("⚠️ Please fill in server URL, database name, and token.".to_string());
+            return;
+        }
+
+        let settings = SpacetimeSettings {
+            server_url: url.clone(),
+            database_name: db.clone(),
+            token: tok.clone(),
+            ..spacetime_settings_service::load_spacetime_settings().unwrap_or_default()
+        };
+        match spacetime_settings_service::save_spacetime_settings(&settings) {
+            Ok(()) => {
+                status_msg.set("✅ Settings saved.".to_string());
+            }
+            Err(e) => {
+                status_msg.set(format!("❌ Save failed: {e}"));
+                return;
+            }
+        }
+
+        stdb.connect(url, db, tok);
+    };
+
+    let disconnect = move |_| {
+        stdb2.disconnect();
+        status_msg.set("Disconnected.".to_string());
+    };
+
+    rsx! {
+        div { class: "card", style: "margin-bottom: 16px;",
+            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;",
+                "🗄️ SpacetimeDB"
+            }
+
+            // Connection state indicator
+            {match conn_state() {
+                ConnectionState::Disconnected => rsx! {
+                    p { style: "margin: 0 0 10px 0; color: #888;", "Not connected" }
+                },
+                ConnectionState::Connecting => rsx! {
+                    p { style: "margin: 0 0 10px 0; color: #f57c00;", "⏳ Connecting…" }
+                },
+                ConnectionState::Connected => rsx! {
+                    p { style: "margin: 0 0 10px 0; color: #2e7d32;", "✅ Connected" }
+                },
+                ConnectionState::Error(ref e) => rsx! {
+                    p { style: "margin: 0 0 10px 0; color: #c62828;", "❌ Error: {e}" }
+                },
+            }}
+
+            // Server URL
+            label { style: "display: block; font-size: 13px; color: #555; margin-bottom: 4px;",
+                "Server URL (e.g. https://testnet.spacetimedb.com)"
+            }
+            input {
+                r#type: "text",
+                value: "{server_url}",
+                style: "width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px;",
+                oninput: move |e| server_url.set(e.value()),
+            }
+
+            // Database name
+            label { style: "display: block; font-size: 13px; color: #555; margin-bottom: 4px;",
+                "Database name (e.g. stalltagebuch)"
+            }
+            input {
+                r#type: "text",
+                value: "{database_name}",
+                style: "width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px;",
+                oninput: move |e| database_name.set(e.value()),
+            }
+
+            // Auth token
+            label { style: "display: block; font-size: 13px; color: #555; margin-bottom: 4px;",
+                "Auth token (from spacetime login)"
+            }
+            input {
+                r#type: "password",
+                value: "{token}",
+                style: "width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 12px;",
+                oninput: move |e| token.set(e.value()),
+            }
+
+            div { style: "display: flex; gap: 8px;",
+                button {
+                    class: "btn-primary",
+                    style: "flex: 1;",
+                    onclick: save_and_connect,
+                    "💾 Save & Connect"
+                }
+                if conn_state() == ConnectionState::Connected {
+                    button {
+                        class: "btn-secondary",
+                        onclick: disconnect,
+                        "Disconnect"
+                    }
+                }
+            }
+
+            if !status_msg().is_empty() {
+                p { style: "margin: 8px 0 0 0; font-size: 13px; color: #555;", "{status_msg}" }
+            }
+
+            details { style: "margin-top: 12px;",
+                summary { style: "cursor: pointer; font-size: 13px; color: #0066cc;",
+                    "ℹ️ How to deploy the server module"
+                }
+                div { style: "margin-top: 8px; font-size: 13px; color: #555; line-height: 1.6;",
+                    p { "1. Install the SpacetimeDB CLI from " a { href: "https://spacetimedb.com/install", target: "_blank", "spacetimedb.com/install" } " (verify the script before running)." }
+                    p { "2. From the project root: " code { "spacetime publish stalltagebuch-server --project-path stalltagebuch-server" } }
+                    p { "3. Get your token: " code { "spacetime login" } " (or use an identity token from the web console)." }
+                    p { "Dioxus bindings can be regenerated with: "
+                        code { "spacetime generate --lang dioxus --out-dir src/spacetime/module_bindings --project-path stalltagebuch-server" }
+                        " (requires the Dioxus binding generator PR to be merged)."
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -646,7 +796,10 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
             // Network connectivity check
             NetworkCheckCard {}
 
-            // Current settings display
+            // ── SpacetimeDB connection ─────────────────────────────────────
+            SpacetimeDbCard {}
+
+            // Current settings display (Nextcloud photo storage)
             if let Some(settings) = current_settings() {
                 div {
                     class: "card",

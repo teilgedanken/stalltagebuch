@@ -21,8 +21,7 @@ pub fn init_database() -> Result<Connection, DatabaseError> {
     let conn = stalltagebuch_database::init_database()?;
 
     // Then apply app-specific schema migrations
-    crate::database::schema::init_schema(&conn)
-        .map_err(|e| DatabaseError::Sqlite(e))?;
+    crate::database::schema::init_schema(&conn).map_err(|e| DatabaseError::Sqlite(e))?;
 
     Ok(conn)
 }

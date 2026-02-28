@@ -15,6 +15,8 @@ pub enum AppError {
     PermissionDenied(String),
     /// Image processing error
     ImageProcessing(String),
+    /// Network/HTTP error (e.g. SpacetimeDB HTTP API)
+    Network(String),
     /// General error
     #[allow(dead_code)]
     Other(String),
@@ -29,6 +31,7 @@ impl fmt::Display for AppError {
             AppError::NotFound(msg) => write!(f, "Not found: {}", msg),
             AppError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
             AppError::ImageProcessing(msg) => write!(f, "Image processing error: {}", msg),
+            AppError::Network(msg) => write!(f, "Network error: {}", msg),
             AppError::Other(msg) => write!(f, "{}", msg),
         }
     }
@@ -62,6 +65,7 @@ impl AppError {
             AppError::NotFound(msg) => format!("{} was not found.", msg),
             AppError::PermissionDenied(msg) => format!("Permission required: {}", msg),
             AppError::ImageProcessing(_) => "Error processing image.".to_string(),
+            AppError::Network(msg) => format!("Network error: {}", msg),
             AppError::Other(msg) => msg.clone(),
         }
     }

@@ -5,6 +5,9 @@ members = [
     "nextcloud-auth",
     "photo-gallery",
     "stalltagebuch-database",
+    # stalltagebuch-server is intentionally excluded: it compiles to
+    # wasm32-unknown-unknown for SpacetimeDB and is built separately via
+    # `spacetime publish stalltagebuch-server --project-path stalltagebuch-server`.
 ]
 resolver = "2"
 

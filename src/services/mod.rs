@@ -8,6 +8,7 @@ pub mod export_import_service;
 pub mod operation_capture;
 pub mod photo_service;
 pub mod profile_service;
+pub mod spacetime_settings_service;
 pub mod sync_paths;
 pub mod sync_service;
 pub mod upload_service;

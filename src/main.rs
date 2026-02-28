@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
 use photo_gallery::PhotoGalleryContext;
+use spacetime::context::SpacetimeContext;
 
 mod camera;
 mod components;
@@ -10,6 +11,7 @@ mod i18n;
 mod image_processing;
 mod models;
 mod services;
+mod spacetime;
 
 use components::{
     AddProfileScreen, EggHistoryScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
@@ -84,17 +86,32 @@ fn App() -> Element {
     // Provide PhotoGalleryContext to photo-gallery components (storage path from service)
     use_context_provider(|| PhotoGalleryContext::new(services::photo_service::get_storage_path()));
 
-    // Auto-start background sync if configured
-    use_effect(move || match database::init_database() {
-        Ok(conn) => match services::sync_service::load_sync_settings(&conn) {
-            Ok(Some(settings)) if settings.enabled => {
-                log::info!("Auto-starting background sync");
-                services::background_sync::start_background_sync();
+    // Provide the SpacetimeDB context tree-wide.
+    // Components access it via `use_context::<SpacetimeContext>()` or the
+    // `use_spacetime()` convenience hook.
+    use_context_provider(SpacetimeContext::disconnected);
+
+    // Auto-connect to SpacetimeDB if settings are already persisted.
+    use_effect(move || {
+        let mut stdb = use_context::<SpacetimeContext>();
+        match services::spacetime_settings_service::load_spacetime_settings() {
+            Ok(settings) if settings.is_spacetime_configured() => {
+                log::info!("Auto-connecting to SpacetimeDB at {}", settings.server_url);
+                stdb.connect(settings.server_url, settings.database_name, settings.token);
             }
-            _ => {}
-        },
-        Err(e) => {
-            log::error!("Failed to check sync settings: {}", e);
+            Ok(_) => {
+                log::info!("SpacetimeDB not yet configured – open Settings to connect");
+            }
+            Err(e) => {
+                log::error!("Failed to load SpacetimeDB settings: {e}");
+            }
+        }
+
+        // Legacy: also initialise the local SQLite DB so that the photo
+        // gallery and other local services that still depend on it work
+        // correctly during the transition period.
+        if let Err(e) = database::init_database() {
+            log::error!("Local database init failed: {e}");
         }
     });
 
