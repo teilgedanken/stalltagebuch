@@ -17,7 +17,7 @@ pub async fn capture_quail_create(
     // Create clock and tick for each operation to ensure different logical_clock values
     let mut clock = crdt_service::HybridLogicalClock::new(device_id.clone());
     let mut operations = Vec::new();
-    
+
     // Operation 1: name
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -30,7 +30,7 @@ pub async fn capture_quail_create(
             value: serde_json::Value::String(name.to_string()),
         },
     });
-    
+
     // Operation 2: gender
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -131,7 +131,7 @@ pub async fn capture_event_create(
     // Create clock and tick for each operation to ensure different logical_clock values
     let mut clock = crdt_service::HybridLogicalClock::new(device_id.clone());
     let mut operations = Vec::new();
-    
+
     // Operation 1: quail_id
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -144,7 +144,7 @@ pub async fn capture_event_create(
             value: serde_json::Value::String(quail_id.to_string()),
         },
     });
-    
+
     // Operation 2: event_type
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -157,7 +157,7 @@ pub async fn capture_event_create(
             value: serde_json::Value::String(event_type.to_string()),
         },
     });
-    
+
     // Operation 3: event_date
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -244,7 +244,7 @@ pub async fn capture_photo_create(
     // Create clock and tick for each operation to ensure different logical_clock values
     let mut clock = crdt_service::HybridLogicalClock::new(device_id.clone());
     let mut operations = Vec::new();
-    
+
     // Operation 1: relative_path
     clock.tick();
     operations.push(crdt_service::Operation {
@@ -329,7 +329,7 @@ pub async fn capture_egg_create(
     count: i32,
 ) -> Result<(), AppError> {
     let device_id = upload_service::get_device_id(conn)?;
-    
+
     // Shared HLC für beide Operationen, damit sie unterschiedliche logical_counter haben
     let mut clock = crate::services::crdt_service::HybridLogicalClock::new(device_id.clone());
     clock.tick();

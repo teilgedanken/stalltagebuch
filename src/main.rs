@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
+use photo_gallery::PhotoGalleryContext;
 
 mod camera;
 mod components;
@@ -21,6 +22,11 @@ const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 fn main() {
     init_logger();
+    // Panic hook: capture backtraces and log them so Android logcat contains useful info
+    std::panic::set_hook(Box::new(|info| {
+        log::error!("Encountered panic: {:?}", info);
+        log::error!("Backtrace:\n{:?}", std::backtrace::Backtrace::capture());
+    }));
     log::info!("App start: Stalltagebuch wird gestartet");
     dioxus::launch(App);
 }
@@ -74,6 +80,9 @@ pub enum Screen {
 fn App() -> Element {
     let mut current_screen = use_signal(|| Screen::Home);
     use_init_i18n(i18n::init_i18n);
+
+    // Provide PhotoGalleryContext to photo-gallery components (storage path from service)
+    use_context_provider(|| PhotoGalleryContext::new(services::photo_service::get_storage_path()));
 
     // Auto-start background sync if configured
     use_effect(move || match database::init_database() {

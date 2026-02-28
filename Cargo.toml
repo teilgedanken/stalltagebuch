@@ -1,5 +1,11 @@
 [workspace]
-members = [".", "dioxus-gallery-components"]
+members = [
+    ".",
+    "dioxus-gallery-components",
+    "nextcloud-auth",
+    "photo-gallery",
+    "stalltagebuch-database",
+]
 resolver = "2"
 
 [package]
@@ -12,7 +18,10 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+stalltagebuch-database = { path = "stalltagebuch-database" }
 dioxus-gallery-components = { path = "dioxus-gallery-components" }
+photo-gallery = { path = "photo-gallery", features = ["sync", "components"] }
+nextcloud-auth = { path = "nextcloud-auth" }
 dioxus = { version = "0.7.1", features = [] }
 dioxus-i18n = { git = "https://github.com/Kannen/dioxus-i18n.git", branch = "main" }
 unic-langid = { version = "0.9", features = ["macros"] }
@@ -21,8 +30,13 @@ chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
-reqwest = { version = "0.12", features = ["json"] }
-reqwest_dav = "0.2"
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+reqwest_dav = { version = "0.2", default-features = false, features = [
+    "rustls-tls",
+] }
 base64 = "0.22"
 toml = "0.9"
 sha2 = "0.10"

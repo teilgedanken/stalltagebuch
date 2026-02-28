@@ -1,5 +1,5 @@
 /// Sync path constants for new multi-master sync layout
-/// 
+///
 /// Directory structure:
 /// ```
 /// Stalltagebuch/

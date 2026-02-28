@@ -47,8 +47,13 @@ class MainActivity : WryActivity() {
         private const val STORAGE_PERMISSION_CODE = 1002
         
         // Singleton-Referenz auf die Activity
+        // Exposed as a JVM static field to make reflective/JNI access robust against
+        // method removal/obfuscation by R8. Using @JvmField ensures a direct static
+        // field `instance` exists on the outer class `MainActivity` which native code
+        // can fetch using `getStaticField` reliably.
+        @JvmField
         @Volatile
-        private var instance: MainActivity? = null
+        var instance: MainActivity? = null
         
         @JvmStatic
         fun getInstance(): MainActivity? = instance

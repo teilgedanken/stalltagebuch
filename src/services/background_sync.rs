@@ -234,12 +234,12 @@ async fn upload_pending_local_data(conn: &Connection) -> Result<(), AppError> {
     use crate::services::{crdt_service, upload_service};
 
     let device_id = upload_service::get_device_id(conn)?;
-    
+
     // Phase 1: Upload all photos first (with progress tracking)
     log::info!("Phase 1: Uploading photos...");
     let total_photos = upload_service::count_pending_photos(conn)?;
     set_upload_progress(0, total_photos);
-    
+
     let mut uploaded_photos = 0;
     loop {
         let uploaded = upload_service::upload_photos_batch(conn).await?;
@@ -249,11 +249,11 @@ async fn upload_pending_local_data(conn: &Connection) -> Result<(), AppError> {
         uploaded_photos += uploaded;
         set_upload_progress(uploaded_photos, total_photos);
     }
-    
+
     // Reset progress after completion
     set_upload_progress(0, 0);
     log::info!("Phase 1 complete: {} photos uploaded", uploaded_photos);
-    
+
     // Phase 2: Upload metadata operations (atomically after all photos done)
     let mut all_ops = Vec::new();
 

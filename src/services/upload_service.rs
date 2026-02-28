@@ -118,23 +118,36 @@ pub async fn upload_ops_batch(
 
 /// Counts how many photos are pending upload (sync_status='local_only')
 pub fn count_pending_photos(conn: &Connection) -> Result<usize, AppError> {
-    let count: usize = conn.query_row(
-        "SELECT COUNT(*) FROM photos 
-         WHERE deleted = 0 AND (sync_status = 'local_only' OR sync_status IS NULL)",
-        [],
-        |row| row.get(0),
-    )?;
-    Ok(count)
+    use crate::services::sync_service;
+
+    // Get sync settings to create upload service
+    let settings = match sync_service::load_sync_settings(conn)? {
+        Some(s) if s.enabled => s,
+        _ => return Ok(0),
+    };
+
+    let upload_config = photo_gallery::PhotoUploadConfig {
+        server_url: settings.server_url,
+        username: settings.username,
+        password: settings.app_password,
+        remote_path: settings.remote_path,
+        storage_path: get_storage_path(),
+    };
+
+    let upload_service = photo_gallery::PhotoUploadService::new(upload_config);
+    upload_service
+        .count_pending_photos(conn)
+        .map_err(|e| AppError::Other(format!("Photo upload error: {}", e)))
 }
 
-/// Uploads binary photo files to sync/photos/ with all three versions (original + 2 thumbnails)
+/// Uploads binary photo files to sync/photos/ with the original image only
 ///
-/// Only uploads photos with sync_status='local_only'.
+/// Only uploads photos with sync_status='local_only'. Thumbnails are no
+/// longer uploaded — they are generated locally on the receiving side.
 /// Uses JoinSet for parallel uploads (max 3 concurrent photos).
 /// If sync is not configured or disabled, this function returns Ok(0) without error.
 pub async fn upload_photos_batch(conn: &Connection) -> Result<usize, AppError> {
     use crate::services::sync_service;
-    use tokio::task::JoinSet;
 
     // If sync is not configured, just skip upload (app works locally)
     let settings = match sync_service::load_sync_settings(conn)? {
@@ -151,247 +164,31 @@ pub async fn upload_photos_batch(conn: &Connection) -> Result<usize, AppError> {
         return Ok(0);
     }
 
-    // Create WebDAV client
-    let webdav_url = format!(
-        "{}/remote.php/dav/files/{}",
-        settings.server_url.trim_end_matches('/'),
-        settings.username
-    );
-
-    let client = std::sync::Arc::new(
-        reqwest_dav::ClientBuilder::new()
-            .set_host(webdav_url)
-            .set_auth(reqwest_dav::Auth::Basic(
-                settings.username.clone(),
-                settings.app_password.clone(),
-            ))
-            .build()
-            .map_err(|e| AppError::Other(format!("WebDAV client error: {:?}", e)))?,
-    );
-
-    let base = settings.remote_path.trim_end_matches('/');
-    let sync_base = format!("{}/sync", base);
-    let photos_dir = format!("{}/photos", sync_base);
-
-    // Create photos directory if needed
-    if let Err(e) = client.mkcol(&sync_base).await {
-        log::debug!("MKCOL sync note: {:?}", e);
-    }
-    if let Err(e) = client.mkcol(&photos_dir).await {
-        log::debug!("MKCOL photos note: {:?}", e);
-    }
-
-    // List existing remote photos
-    let remote_photos = list_remote_photos_simple(&client, &photos_dir).await?;
-
-    // Get local photos that need upload (sync_status='local_only' or NULL)
-    let mut stmt = conn.prepare(
-        "SELECT uuid, COALESCE(relative_path, path) as rel_path, thumbnail_small_path, thumbnail_medium_path
-         FROM photos 
-         WHERE deleted = 0 AND (sync_status = 'local_only' OR sync_status IS NULL)",
-    )?;
-
-    let rows: Vec<(String, String, Option<String>, Option<String>)> = stmt
-        .query_map([], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let total_photos = rows.len();
-    log::info!("Found {} photos to upload", total_photos);
-
-    if total_photos == 0 {
-        return Ok(0);
-    }
-
-    let mut join_set = JoinSet::new();
-    let mut uploaded_count = 0;
-
-    for (uuid, rel_path, small_thumb, medium_thumb) in rows {
-        let client_clone = client.clone();
-        let photos_dir_clone = photos_dir.clone();
-        let remote_photos_clone = remote_photos.clone();
-
-        // Limit concurrent uploads to 3
-        while join_set.len() >= 3 {
-            if let Some(result) = join_set.join_next().await {
-                match result {
-                    Ok(Ok((uuid_done, success))) => {
-                        if success {
-                            uploaded_count += 1;
-                            // Update sync_status to 'synced'
-                            let conn_update = crate::database::init_database()?;
-                            let _ = conn_update.execute(
-                                "UPDATE photos SET sync_status = 'synced', retry_count = 0, sync_error = NULL WHERE uuid = ?1",
-                                rusqlite::params![uuid_done],
-                            );
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        join_set.spawn(async move {
-            upload_single_photo(
-                uuid,
-                rel_path,
-                small_thumb,
-                medium_thumb,
-                client_clone,
-                photos_dir_clone,
-                remote_photos_clone,
-            )
-            .await
-        });
-    }
-
-    // Wait for remaining uploads
-    while let Some(result) = join_set.join_next().await {
-        match result {
-            Ok(Ok((uuid_done, success))) => {
-                if success {
-                    uploaded_count += 1;
-                    // Update sync_status to 'synced'
-                    let conn_update = crate::database::init_database()?;
-                    let _ = conn_update.execute(
-                        "UPDATE photos SET sync_status = 'synced', retry_count = 0, sync_error = NULL WHERE uuid = ?1",
-                        rusqlite::params![uuid_done],
-                    );
-                }
-            }
-            _ => {}
-        }
-    }
-
-    log::info!("Uploaded {} of {} photos", uploaded_count, total_photos);
-    Ok(uploaded_count)
-}
-
-/// Uploads a single photo with all three versions (original + 2 thumbnails)
-async fn upload_single_photo(
-    uuid: String,
-    rel_path: String,
-    small_thumb: Option<String>,
-    medium_thumb: Option<String>,
-    client: std::sync::Arc<reqwest_dav::Client>,
-    photos_dir: String,
-    remote_photos: Vec<String>,
-) -> Result<(String, bool), AppError> {
-    // Update status to 'uploading'
-    let conn = crate::database::init_database()?;
-    conn.execute(
-        "UPDATE photos SET sync_status = 'uploading', last_sync_attempt = ?1 WHERE uuid = ?2",
-        rusqlite::params![
-            chrono::Utc::now().timestamp_millis(),
-            &uuid
-        ],
-    )?;
-
-    let photo_name = format!("{}.jpg", uuid);
-    
-    // Skip if already uploaded
-    if remote_photos.contains(&photo_name) {
-        log::debug!("Photo {} already exists remotely", uuid);
-        return Ok((uuid, true));
-    }
-
-    // Upload original
-    let abs_path = crate::services::photo_service::get_absolute_photo_path(&rel_path);
-    let file_path = std::path::Path::new(&abs_path);
-
-    if !file_path.exists() {
-        let error_msg = format!("Photo file not found locally: {}", abs_path);
-        log::warn!("{}", error_msg);
-        
-        // Mark as failed
-        conn.execute(
-            "UPDATE photos SET sync_status = 'local_only', sync_error = ?1 WHERE uuid = ?2",
-            rusqlite::params![error_msg, &uuid],
-        )?;
-        
-        return Ok((uuid, false));
-    }
-
-    // Read and upload original
-    match std::fs::read(file_path) {
-        Ok(data) => {
-            let remote_path = format!("{}/{}", photos_dir, photo_name);
-            if let Err(e) = client.put(&remote_path, data).await {
-                let error_msg = format!("Failed to upload original: {:?}", e);
-                log::error!("Photo {}: {}", uuid, error_msg);
-                
-                conn.execute(
-                    "UPDATE photos SET sync_status = 'local_only', sync_error = ?1 WHERE uuid = ?2",
-                    rusqlite::params![error_msg, &uuid],
-                )?;
-                
-                return Ok((uuid, false));
-            }
-            log::info!("Uploaded original photo: {}", photo_name);
-        }
-        Err(e) => {
-            let error_msg = format!("Failed to read photo: {:?}", e);
-            log::error!("{}: {}", abs_path, error_msg);
-            
-            conn.execute(
-                "UPDATE photos SET sync_status = 'local_only', sync_error = ?1 WHERE uuid = ?2",
-                rusqlite::params![error_msg, &uuid],
-            )?;
-            
-            return Ok((uuid, false));
-        }
-    }
-
-    // Upload small thumbnail if exists
-    if let Some(small_rel) = small_thumb {
-        let small_abs = crate::services::photo_service::get_absolute_photo_path(&small_rel);
-        if let Ok(small_data) = std::fs::read(&small_abs) {
-            let small_remote = format!("{}/{}", photos_dir, small_rel);
-            if let Err(e) = client.put(&small_remote, small_data).await {
-                log::warn!("Failed to upload small thumbnail {}: {:?}", small_rel, e);
-            } else {
-                log::info!("Uploaded small thumbnail: {}", small_rel);
-            }
-        }
-    }
-
-    // Upload medium thumbnail if exists
-    if let Some(medium_rel) = medium_thumb {
-        let medium_abs = crate::services::photo_service::get_absolute_photo_path(&medium_rel);
-        if let Ok(medium_data) = std::fs::read(&medium_abs) {
-            let medium_remote = format!("{}/{}", photos_dir, medium_rel);
-            if let Err(e) = client.put(&medium_remote, medium_data).await {
-                log::warn!("Failed to upload medium thumbnail {}: {:?}", medium_rel, e);
-            } else {
-                log::info!("Uploaded medium thumbnail: {}", medium_rel);
-            }
-        }
-    }
-
-    Ok((uuid, true))
-}
-
-/// Lists existing photo files in sync/photos/ directory
-async fn list_remote_photos_simple(
-    client: &reqwest_dav::Client,
-    photos_dir: &str,
-) -> Result<Vec<String>, AppError> {
-    let list = match client.list(photos_dir, reqwest_dav::Depth::Number(1)).await {
-        Ok(l) => l,
-        Err(_) => return Ok(Vec::new()), // Directory doesn't exist yet
+    // Use photo-gallery upload service
+    let upload_config = photo_gallery::PhotoUploadConfig {
+        server_url: settings.server_url,
+        username: settings.username,
+        password: settings.app_password,
+        remote_path: settings.remote_path,
+        storage_path: get_storage_path(),
     };
 
-    let mut names = Vec::new();
-    for item in list {
-        if let reqwest_dav::list_cmd::ListEntity::File(file) = item {
-            if let Some(name) = file.href.split('/').last() {
-                if name.ends_with(".jpg") || name.ends_with(".webp") {
-                    names.push(name.to_string());
-                }
-            }
-        }
+    let upload_service = photo_gallery::PhotoUploadService::new(upload_config);
+    upload_service
+        .upload_photos_batch(conn)
+        .await
+        .map_err(|e| AppError::Other(format!("Photo upload error: {}", e)))
+}
+
+/// Get the storage path based on platform
+fn get_storage_path() -> String {
+    #[cfg(target_os = "android")]
+    {
+        "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos".to_string()
     }
 
-    Ok(names)
+    #[cfg(not(target_os = "android"))]
+    {
+        "./photos".to_string()
+    }
 }

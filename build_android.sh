@@ -36,6 +36,11 @@ prepare_android_overrides() {
     mkdir -p "$RES_XML_DIR"
     cp "$ROOT_DIR/android/res/xml/file_paths.xml" "$RES_XML_DIR/file_paths.xml"
 
+    # Copy project-level proguard rules into the generated app module so R8 keeps JNI-used members
+    if [[ -f "$ROOT_DIR/android/proguard-rules.pro" ]]; then
+        cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
+    fi
+
     if [[ "$BUNDLE_IDENTIFIER" != "dev.dioxus.main" ]]; then
         mkdir -p "$(dirname "$BUILD_CONFIG_FILE")"
         cat > "$BUILD_CONFIG_FILE" <<EOF
@@ -46,6 +51,7 @@ EOF
     fi
 }
 
+# Copy native OpenSSL libraries to jniLibs so they are bundled in the APK
 # Find Android SDK build-tools (zipalign and apksigner)
 find_build_tools() {
     local sdk_path="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -90,6 +96,12 @@ if [[ $DX_EXIT -ne 0 ]]; then
         echo "dx build failed (see $DX_LOG)"
         exit $DX_EXIT
     fi
+fi
+
+# Ensure project-level ProGuard rules are present in the generated Gradle module
+# (dx may have regenerated app/proguard-rules.pro) — copy again right before Gradle packaging.
+if [[ -f "$ROOT_DIR/android/proguard-rules.pro" && -d "$DX_APP_DIR/app" ]]; then
+    cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
 fi
 
 rm -f "$DX_LOG"

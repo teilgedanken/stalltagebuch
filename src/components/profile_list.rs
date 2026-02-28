@@ -2,9 +2,9 @@ use crate::database;
 use crate::models::{Quail, RingColor};
 use crate::services;
 use crate::Screen;
-use base64::Engine;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
+use photo_gallery::ThumbnailImage;
 
 #[component]
 pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
@@ -113,52 +113,25 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
     let profile_uuid = profile.uuid;
 
-#[derive(Clone)]
-enum ImageState {
-    Loading,
-    Available(String),
-    Failed,
-}
+    // image state / loading handled by ThumbnailImage component and resource
 
-    // Lade Profilfoto über photo_service
-    let image_data = use_resource(move || async move {
-        log::debug!("##### Lade Profilbild für UUID: {:?}", profile_uuid);
+    // Load profile photo UUID and trigger background download; UI uses `ThumbnailImage`
+    let profile_photo_uuid = use_resource(move || async move {
+        log::debug!("##### Lade Profilbild UUID für {:?}", profile_uuid);
         if let Ok(conn) = database::init_database() {
             match services::photo_service::get_profile_photo(&conn, &profile_uuid) {
-                Ok(Some(photo)) => {
-                    // Use get_photo_with_download to handle downloading
-                    match services::photo_service::get_photo_with_download(&conn, &photo.uuid, crate::models::photo::PhotoSize::Small).await {
-                        Ok(crate::models::photo::PhotoResult::Available(bytes)) => {
-                            // Convert bytes to data URL
-                            let data_url = format!("data:image/webp;base64,{}", base64::engine::general_purpose::STANDARD.encode(&bytes));
-                            log::debug!("Profilbild geladen für UUID: {}", profile_uuid);
-                            ImageState::Available(data_url)
-                        }
-                        Ok(crate::models::photo::PhotoResult::Downloading) => {
-                            log::debug!("Profilbild wird heruntergeladen für UUID: {}", profile_uuid);
-                            ImageState::Loading
-                        }
-                        Ok(crate::models::photo::PhotoResult::Failed(error, retry_count)) => {
-                            log::warn!("Profilbild Download fehlgeschlagen für UUID: {}: {} (Versuch {}/{})", profile_uuid, error, retry_count, 5);
-                            ImageState::Failed
-                        }
-                        Err(e) => {
-                            log::error!("Fehler beim Laden des Profilbilds: {}", e);
-                            ImageState::Failed
-                        }
-                    }
-                }
+                Ok(Some(photo)) => Some(photo.uuid),
                 Ok(None) => {
                     log::debug!("Kein Profilbild in DB gefunden für UUID: {}", profile_uuid);
-                    ImageState::Failed
+                    None
                 }
                 Err(e) => {
                     log::error!("Fehler beim Laden des Profilbilds: {}", e);
-                    ImageState::Failed
+                    None
                 }
             }
         } else {
-            ImageState::Failed
+            None
         }
     });
 
@@ -190,21 +163,18 @@ enum ImageState {
         div { class: "profile-card", onclick: move |_| on_click.call(()),
             // Square Image Container
             div { class: "profile-image",
-                match image_data() {
-                    Some(ImageState::Loading) => rsx! {
-                        div { class: "profile-image-placeholder", style: "display: flex; align-items: center; justify-content: center; font-size: 24px;", "⏳" }
-                    },
-                    Some(ImageState::Available(data_url)) => rsx! {
-                        img {
-                            src: data_url,
-                            alt: profile.name.clone(),
-                            style: "width: 100%; height: 100%; object-fit: cover;",
+                match profile_photo_uuid() {
+                    None => rsx! {
+                        div {
+                            class: "profile-image-placeholder",
+                            style: "display: flex; align-items: center; justify-content: center; font-size: 24px;",
+                            "⏳"
                         }
                     },
-                    Some(ImageState::Failed) => rsx! {
-                        div { class: "profile-image-placeholder", "🐦" }
+                    Some(Some(uuid)) => rsx! {
+                        ThumbnailImage { photo_uuid: Some(uuid.clone()), alt: profile.name.clone() }
                     },
-                    None => rsx! {
+                    Some(None) => rsx! {
                         div { class: "profile-image-placeholder", "🐦" }
                     },
                 }

@@ -55,24 +55,38 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                             // Speichere Profilfoto falls vorhanden
                             if let Some(path) = photo_path() {
                                 let path_str = path.to_string_lossy().to_string();
-                                match crate::services::photo_service::add_quail_photo(
-                                    &conn, quail_id, path_str,
-                                    None, // Thumbnails werden im Service erstellt
-                                )
-                                .await
-                                {
-                                    Ok(photo_uuid) => {
-                                        // Setze dieses Foto als Profilbild
-                                        let _ = crate::services::photo_service::set_profile_photo(
+                                // Use collection-based API
+                                match crate::services::photo_service::get_or_create_quail_collection(
+                                    &conn, &quail_id,
+                                ) {
+                                    Ok(collection_id) => {
+                                        match crate::services::photo_service::add_photo_to_collection(
                                             &conn,
-                                            &quail_id,
-                                            &photo_uuid,
+                                            &collection_id,
+                                            path_str,
                                         )
-                                        .await;
+                                        .await
+                                        {
+                                            Ok(photo_uuid) => {
+                                                // Setze dieses Foto als Profilbild
+                                                let _ = crate::services::photo_service::set_profile_photo(
+                                                    &conn,
+                                                    &quail_id,
+                                                    &photo_uuid,
+                                                )
+                                                .await;
+                                            }
+                                            Err(e) => {
+                                                log::error!(
+                                                    "Fehler beim Hinzufügen des Profilfotos: {}",
+                                                    e
+                                                );
+                                            }
+                                        }
                                     }
                                     Err(e) => {
                                         log::error!(
-                                            "Fehler beim Hinzufügen des Profilfotos: {}",
+                                            "Fehler beim Erstellen der Foto-Sammlung: {}",
                                             e
                                         );
                                     }

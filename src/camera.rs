@@ -1,340 +1,40 @@
+// This module is now a thin wrapper around photo-gallery's picker functionality
+// to maintain backward compatibility with existing code.
+
 use crate::error::AppError;
 use std::path::PathBuf;
 
-#[cfg(target_os = "android")]
-use jni::objects::{JClass, JObject, JString, JValue};
-#[cfg(target_os = "android")]
-use ndk_context::android_context;
-#[allow(dead_code)]
-const MAIN_ACTIVITY_CLASS: &str = "dev/dioxus/main/MainActivity";
+// Re-export photo-gallery picker functionality
+pub use photo_gallery::picker::{AndroidPickerConfig, PickerError};
 
-#[cfg(target_os = "android")]
-fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, AppError> {
-    // ActivityThread.currentActivityThread()
-    let at_cls = env
-        .find_class("android/app/ActivityThread")
-        .map_err(|e| AppError::PermissionDenied(format!("ActivityThread not found: {}", e)))?;
-    let at = env
-        .call_static_method(
-            &at_cls,
-            "currentActivityThread",
-            "()Landroid/app/ActivityThread;",
-            &[],
-        )
-        .map_err(|e| AppError::PermissionDenied(format!("currentActivityThread failed: {}", e)))?
-        .l()
-        .map_err(|e| AppError::PermissionDenied(format!("currentActivityThread invalid: {}", e)))?;
-
-    // Prefer application class loader
-    let app = env
-        .call_method(&at, "getApplication", "()Landroid/app/Application;", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("getApplication failed: {}", e)))?
-        .l()
-        .map_err(|e| AppError::PermissionDenied(format!("getApplication invalid: {}", e)))?;
-
-    if app.is_null() {
-        // Fallback: system context
-        let sys_ctx = env
-            .call_method(&at, "getSystemContext", "()Landroid/app/ContextImpl;", &[])
-            .map_err(|e| AppError::PermissionDenied(format!("getSystemContext failed: {}", e)))?
-            .l()
-            .map_err(|e| AppError::PermissionDenied(format!("getSystemContext invalid: {}", e)))?;
-        let loader = env
-            .call_method(&sys_ctx, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
-            .map_err(|e| AppError::PermissionDenied(format!("getClassLoader (sys) failed: {}", e)))?
-            .l()
-            .map_err(|e| {
-                AppError::PermissionDenied(format!("getClassLoader (sys) invalid: {}", e))
-            })?;
-        return Ok(loader);
+// Helper function to convert PickerError to AppError
+fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {
+    match e {
+        photo_gallery::picker::PickerError::PermissionDenied(msg) => {
+            AppError::PermissionDenied(msg)
+        }
+        photo_gallery::picker::PickerError::Timeout(msg) => AppError::PermissionDenied(msg),
+        photo_gallery::picker::PickerError::Cancelled(msg) => AppError::PermissionDenied(msg),
+        photo_gallery::picker::PickerError::PlatformNotSupported(msg) => {
+            AppError::PermissionDenied(msg)
+        }
+        photo_gallery::picker::PickerError::Other(msg) => AppError::PermissionDenied(msg),
     }
-
-    let loader = env
-        .call_method(&app, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("getClassLoader failed: {}", e)))?
-        .l()
-        .map_err(|e| AppError::PermissionDenied(format!("getClassLoader invalid: {}", e)))?;
-    Ok(loader)
 }
 
-#[cfg(target_os = "android")]
-fn load_class<'a>(
-    env: &mut jni::JNIEnv<'a>,
-    loader: &JObject<'a>,
-    fq_slash: &str,
-) -> Result<JClass<'a>, AppError> {
-    // Convert dev/dioxus/main/MainActivity -> dev.dioxus.main.MainActivity for ClassLoader.loadClass
-    let fq_dot = fq_slash.replace('/', ".");
-    let name: JString = env
-        .new_string(fq_dot)
-        .map_err(|e| AppError::PermissionDenied(format!("new_string failed: {}", e)))?;
-    let cls_obj = env
-        .call_method(
-            loader,
-            "loadClass",
-            "(Ljava/lang/String;)Ljava/lang/Class;",
-            &[JValue::Object(&JObject::from(name))],
-        )
-        .map_err(|e| AppError::PermissionDenied(format!("ClassLoader.loadClass failed: {}", e)))?
-        .l()
-        .map_err(|e| AppError::PermissionDenied(format!("loadClass invalid: {}", e)))?;
-    Ok(JClass::from(cls_obj))
-}
-
-#[cfg(target_os = "android")]
-fn get_activity_instance<'a>(
-    env: &mut jni::JNIEnv<'a>,
-) -> Result<(JObject<'a>, JClass<'a>), AppError> {
-    let loader = get_app_class_loader(env)?;
-    let cls = load_class(env, &loader, MAIN_ACTIVITY_CLASS)?;
-    let instance = env
-        .call_static_method(&cls, "getInstance", "()Ldev/dioxus/main/MainActivity;", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("getInstance() failed: {}", e)))?
-        .l()
-        .map_err(|e| {
-            AppError::PermissionDenied(format!("getInstance() returned invalid object: {}", e))
-        })?;
-
-    if instance.is_null() {
-        return Err(AppError::PermissionDenied(
-            "MainActivity instance is null - Activity not initialized?".to_string(),
-        ));
-    }
-
-    Ok((instance, cls))
-}
-
-#[cfg(target_os = "android")]
 pub fn pick_image() -> Result<PathBuf, AppError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| AppError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
-
-    // Get MainActivity instance and class
-    let (activity, main_cls) = get_activity_instance(&mut env)?;
-
-    // Clear previous error
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
-
-    // Call launchImagePicker on the activity instance
-    env.call_method(&activity, "launchImagePicker", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("launchImagePicker failed: {}", e)))?;
-
-    // Poll for result (60 seconds timeout)
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        // Check for photo path
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPath", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let path: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    return Ok(PathBuf::from(path));
-                }
-            }
-        }
-
-        // Check for error
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    return Err(AppError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-
-    Err(AppError::PermissionDenied(
-        "Image picker timeout - no selection made".to_string(),
-    ))
+    photo_gallery::picker::pick_image().map_err(picker_error_to_app_error)
 }
 
-#[cfg(target_os = "android")]
 pub fn pick_images() -> Result<Vec<PathBuf>, AppError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| AppError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
-    let (activity, main_cls) = get_activity_instance(&mut env)?;
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
-    env.call_method(&activity, "launchImagePickerMulti", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("launchImagePickerMulti failed: {}", e)))?;
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPaths", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let combined: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    let paths = combined
-                        .lines()
-                        .filter(|l| !l.trim().is_empty())
-                        .map(PathBuf::from)
-                        .collect::<Vec<_>>();
-                    if !paths.is_empty() {
-                        return Ok(paths);
-                    }
-                }
-            }
-        }
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    return Err(AppError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-    Err(AppError::PermissionDenied(
-        "Image picker timeout (multi) - no selection made".to_string(),
-    ))
+    photo_gallery::picker::pick_images().map_err(picker_error_to_app_error)
 }
 
-#[cfg(target_os = "android")]
 pub fn capture_photo() -> Result<PathBuf, AppError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| AppError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
-
-    // Get MainActivity instance and class
-    let (activity, main_cls) = get_activity_instance(&mut env)?;
-
-    // Clear previous error
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
-
-    // Call launchCamera on the activity instance
-    env.call_method(&activity, "launchCamera", "()V", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("launchCamera failed: {}", e)))?;
-
-    // Poll for result (60 seconds timeout)
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        // Check for photo path
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPath", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let path: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    return Ok(PathBuf::from(path));
-                }
-            }
-        }
-
-        // Check for error
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            AppError::PermissionDenied(format!("String conversion failed: {}", e))
-                        })?
-                        .into();
-                    return Err(AppError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-
-    Err(AppError::PermissionDenied(
-        "Camera timeout - no photo taken".to_string(),
-    ))
+    photo_gallery::picker::capture_photo().map_err(picker_error_to_app_error)
 }
 
-#[cfg(target_os = "android")]
 #[allow(dead_code)]
 pub fn has_camera_permission() -> Result<bool, AppError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| AppError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
-
-    // Get MainActivity instance (ignore class here)
-    let (activity, _cls) = get_activity_instance(&mut env)?;
-
-    // Call hasCameraPermission
-    let result = env
-        .call_method(&activity, "hasCameraPermission", "()Z", &[])
-        .map_err(|e| AppError::PermissionDenied(format!("hasCameraPermission failed: {}", e)))?;
-
-    result
-        .z()
-        .map_err(|e| AppError::PermissionDenied(format!("Boolean conversion failed: {}", e)))
-}
-#[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
-pub fn pick_image() -> Result<PathBuf, AppError> {
-    Err(AppError::PermissionDenied(
-        "Image picker not available on this platform".to_string(),
-    ))
-}
-#[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
-pub fn pick_images() -> Result<Vec<PathBuf>, AppError> {
-    Err(AppError::PermissionDenied(
-        "Multi image picker not available on this platform".to_string(),
-    ))
-}
-#[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
-pub fn capture_photo() -> Result<PathBuf, AppError> {
-    Err(AppError::PermissionDenied(
-        "Camera not available on this platform".to_string(),
-    ))
-}
-#[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
-pub fn has_camera_permission() -> Result<bool, AppError> {
-    Ok(false)
+    photo_gallery::picker::has_camera_permission().map_err(picker_error_to_app_error)
 }

@@ -1,18 +1,27 @@
 use crate::database;
-use crate::image_processing;
+// image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
 use crate::models::{Quail, QuailEvent};
 use crate::services::{event_service, profile_service};
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
+// Photo type is not needed in this file - preview/fullscreen components handle loading
+use photo_gallery::{CollectionFullscreen, PreviewCollection};
+
+/// Helper function to resolve photo path to absolute path
+/// Handles both full paths (starting with /) and relative filenames
+// resolve_photo_path and image_to_data_url logic is no longer needed here
 
 #[component]
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
     let mut profile = use_signal(|| None::<Quail>);
     let mut events = use_signal(|| Vec::<QuailEvent>::new());
     let mut error = use_signal(|| String::new());
-    let mut photos = use_signal(|| Vec::<crate::models::Photo>::new());
-    let mut current_photo_index = use_signal(|| 0usize);
+    // preview UUID shown in the main profile area (PreviewCollection)
+    let mut quail_photo_collection_uuid = use_signal(|| None::<uuid::Uuid>);
+    // uuids for fullscreen viewer (filled when opening fullscreen)
+    let fullscreen_uuids = use_signal(|| Vec::<uuid::Uuid>::new());
+    let current_photo_index = use_signal(|| 0usize);
     let mut show_fullscreen = use_signal(|| false);
     let mut uploading = use_signal(|| false);
     let mut upload_error = use_signal(|| String::new());
@@ -21,6 +30,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
     let quail_id_for_gallery = quail_id.clone();
     #[cfg(target_os = "android")]
     let quail_id_for_camera = quail_id.clone();
+    // clone used for opening fullscreen without moving the original id
+    let quail_id_for_fullscreen = quail_id.clone();
 
     // Retry failed downloads beim Mount
     use_effect(move || {
@@ -34,20 +45,6 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         });
     });
 
-    // Alle Bilder der Wachtel laden
-    let quail_id_for_photos = quail_id.clone();
-    use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_photos) {
-                if let Ok(photo_list) =
-                    crate::services::photo_service::list_quail_photos(&conn, &uuid)
-                {
-                    photos.set(photo_list);
-                }
-            }
-        }
-    });
-
     // Profil und Events laden
     let quail_id_for_profile = quail_id.clone();
     use_effect(move || {
@@ -55,6 +52,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_profile) {
                 match profile_service::get_profile(&conn, &uuid) {
                     Ok(p) => {
+                        quail_photo_collection_uuid.set(Some(uuid));
                         profile.set(Some(p));
                         error.set(String::new());
                     }
@@ -80,7 +78,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                     "← "
                     {t!("action-back")}
                 }
-                h1 { style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
+                h1 {
+                    style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
                     {t!("profile-detail-title")} // Profile
                 }
             }
@@ -100,66 +99,43 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         div {
                             style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer;",
                             onclick: move |_| {
-                                if !photos().is_empty() {
-                                    current_photo_index.set(0);
-                                    show_fullscreen.set(true);
-                                }
+                                let quail_id_open = quail_id_for_fullscreen.clone();
+                                let mut fullscreen_uuids_sig = fullscreen_uuids.clone();
+                                let mut current_idx_sig = current_photo_index.clone();
+                                let mut show_fullscreen_sig = show_fullscreen.clone();
+                                spawn(async move {
+                                    if let Ok(conn) = database::init_database() {
+                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_open) {
+                                            if let Ok(Some(collection_id)) = crate::services::photo_service::get_quail_collection(
+                                                &conn,
+                                                &uuid,
+                                            ) {
+                                                if let Ok(list) = crate::services::photo_service::list_collection_photos(
+                                                    &conn,
+                                                    &collection_id,
+                                                ) {
+                                                    let uuids = list
+                                                        .into_iter()
+                                                        .map(|p| p.uuid)
+                                                        .collect::<Vec<uuid::Uuid>>();
+                                                    if !uuids.is_empty() {
+                                                        log::debug!(
+                                                            "ProfileDetail: opening fullscreen with {} photos", uuids
+                                                            .len()
+                                                        );
+                                                        fullscreen_uuids_sig.set(uuids);
+                                                        current_idx_sig.set(0);
+                                                        show_fullscreen_sig.set(true);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                             },
                             {
-                                let profile_photo_opt = if let Some(ref profile_photo_uuid) = p.profile_photo {
-                                    photos().iter().find(|ph| &ph.uuid == profile_photo_uuid).cloned()
-                                } else {
-                                    None
-                                };
-                                if let Some(profile_photo) = profile_photo_opt {
-                                    let path_to_use = profile_photo
-                                        .thumbnail_path
-                                        .clone()
-                                        .unwrap_or(profile_photo.path.clone());
-                                    match image_processing::image_path_to_data_url(&path_to_use) {
-                                        Ok(data_url) => rsx! {
-                                            img {
-                                                src: data_url,
-                                                alt: p.name.clone(),
-                                                style: "width:100%; height:100%; object-fit: cover;",
-                                            }
-                                            if photos().len() > 1 {
-                                                div { style: "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:6px 12px; border-radius:16px; font-size:12px;",
-                                                    "📷 {photos().len()}"
-                                                }
-                                            }
-                                        },
-                                        Err(_) => rsx! {
-                                            div { style: "font-size: 48px; color:#999;", "🐦" }
-                                        },
-                                    }
-                                } else if !photos().is_empty() {
-                                    let first_photo = &photos()[0];
-                                    let path_to_use = first_photo
-                                        .thumbnail_path
-                                        .clone()
-                                        .unwrap_or(first_photo.path.clone());
-                                    match image_processing::image_path_to_data_url(&path_to_use) {
-                                        Ok(data_url) => rsx! {
-                                            img {
-                                                src: data_url,
-                                                alt: p.name.clone(),
-                                                style: "width:100%; height:100%; object-fit: cover;",
-                                            }
-                                            if photos().len() > 1 {
-                                                div { style: "position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:6px 12px; border-radius:16px; font-size:12px;",
-                                                    "📷 {photos().len()}"
-                                                }
-                                            }
-                                        },
-                                        Err(_) => rsx! {
-                                            div { style: "font-size: 48px; color:#999;", "🐦" }
-                                        },
-                                    }
-                                } else {
-                                    rsx! {
-                                        div { style: "font-size: 48px; color:#999;", "🐦" }
-                                    }
+                                rsx! {
+                                    PreviewCollection { preview_collection_uuid: quail_photo_collection_uuid(), on_click: None }
                                 }
                             }
                         }
@@ -175,54 +151,61 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     upload_error.set(String::new());
                                     #[cfg(target_os = "android")]
                                     let quail_id_clone = quail_id_for_gallery.clone();
-                                spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::pick_images() {
-                                            Ok(paths) => {
-                                                if let Ok(conn) = database::init_database() {
-                                                    let mut first = true;
-                                                    for pth in paths {
-                                                        let path_str = pth.to_string_lossy().to_string();
-                                                        let _is_profile = first && photos().is_empty();
+                                    spawn(async move {
+                                        #[cfg(target_os = "android")]
+                                        {
+                                            match crate::camera::pick_images() {
+                                                Ok(paths) => {
+                                                    if let Ok(conn) = database::init_database() {
                                                         if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                                                            match crate::services::photo_service::add_quail_photo(
+                                                            match crate::services::photo_service::get_or_create_quail_collection(
                                                                 &conn,
-                                                                uuid,
-                                                                path_str,
-                                                                None, // Thumbnails werden im Service erstellt
-                                                            ).await {
-                                                                Ok(_) => {}
+                                                                &uuid,
+                                                            ) {
+                                                                Ok(collection_id) => {
+                                                                    for pth in paths {
+                                                                        let path_str = pth.to_string_lossy().to_string();
+                                                                        match crate::services::photo_service::add_photo_to_collection(
+                                                                                &conn,
+                                                                                &collection_id,
+                                                                                path_str,
+                                                                            )
+                                                                            .await
+                                                                        {
+                                                                            Ok(_) => {}
+                                                                            Err(e) => {
+                                                                                upload_error.set(format!("Fehler beim Speichern: {}", e));
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
+                                                                        &conn,
+                                                                        &collection_id,
+                                                                    ) {
+                                                                        quail_photo_collection_uuid.set(Some(preview_opt));
+                                                                    }
+                                                                }
                                                                 Err(e) => {
-                                                                    upload_error.set(format!("Fehler beim Speichern: {}", e));
-                                                                    break;
+                                                                    upload_error
+                                                                        .set(format!("Fehler beim Erstellen der Sammlung: {}", e));
                                                                 }
                                                             }
                                                         }
-                                                        first = false;
-                                                    }
-                                                    if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                                                        if let Ok(photo_list) = crate::services::photo_service::list_quail_photos(
-                                                            &conn,
-                                                            &uuid,
-                                                        ) {
-                                                            photos.set(photo_list);
-                                                        }
                                                     }
                                                 }
-                                            }
-                                            Err(e) => {
-                                                upload_error
-                                                    .set(format!("{}: {}", t!("error-selection-failed"), e))
+                                                Err(e) => {
+                                                    upload_error
+                                                        .set(format!("{}: {}", t!("error-selection-failed"), e))
+                                                }
                                             }
                                         }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        upload_error.set(t!("error-multiselect-android-only"));
-                                    }
-                                    uploading.set(false);
-                                });
+                                        #[cfg(not(target_os = "android"))]
+                                        {
+                                            upload_error.set(t!("error-multiselect-android-only"));
+                                        }
+                                        uploading.set(false);
+                                    });
                                 }
                             },
                             if uploading() {
@@ -244,47 +227,59 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     #[cfg(target_os = "android")]
                                     let quail_id_clone = quail_id_for_camera.clone();
                                     spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::capture_photo() {
-                                            Ok(path) => {
-                                                if let Ok(conn) = database::init_database() {
-                                                    let path_str = path.to_string_lossy().to_string();
-                                                    if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                                                        match crate::services::photo_service::add_quail_photo(
-                                                            &conn,
-                                                            uuid,
-                                                            path_str,
-                                                            None, // Thumbnails werden im Service erstellt
-                                                        ).await {
-                                                            Ok(_) => {
-                                                                if let Ok(photo_list) = crate::services::photo_service::list_quail_photos(
-                                                                    &conn,
-                                                                    &uuid,
-                                                                ) {
-                                                                    photos.set(photo_list);
+                                        #[cfg(target_os = "android")]
+                                        {
+                                            match crate::camera::capture_photo() {
+                                                Ok(path) => {
+                                                    if let Ok(conn) = database::init_database() {
+                                                        let path_str = path.to_string_lossy().to_string();
+                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                                                            match crate::services::photo_service::get_or_create_quail_collection(
+                                                                &conn,
+                                                                &uuid,
+                                                            ) {
+                                                                Ok(collection_id) => {
+                                                                    match crate::services::photo_service::add_photo_to_collection(
+                                                                            &conn,
+                                                                            &collection_id,
+                                                                            path_str,
+                                                                        )
+                                                                        .await
+                                                                    {
+                                                                        Ok(_) => {
+                                                                            if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
+                                                                                &conn,
+                                                                                &collection_id,
+                                                                            ) {
+                                                                                quail_photo_collection_uuid.set(Some(preview_opt));
+                                                                            }
+                                                                        }
+                                                                        Err(e) => {
+                                                                            upload_error
+                                                                                .set(format!("{}: {}", t!("error-save-failed"), e))
+                                                                        }
+                                                                    }
                                                                 }
-                                                            }
-                                                            Err(e) => {
-                                                                upload_error
-                                                                    .set(format!("{}: {}", t!("error-save-failed"), e))
+                                                                Err(e) => {
+                                                                    upload_error
+                                                                        .set(format!("{}: {}", t!("error-collection-failed"), e))
+                                                                }
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
-                                            Err(e) => {
-                                                upload_error
-                                                    .set(format!("{}: {}", t!("error-capture-failed"), e))
+                                                Err(e) => {
+                                                    upload_error
+                                                        .set(format!("{}: {}", t!("error-capture-failed"), e))
+                                                }
                                             }
                                         }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        upload_error.set(t!("error-camera-android-only"));
-                                    }
-                                    uploading.set(false);
-                                });
+                                        #[cfg(not(target_os = "android"))]
+                                        {
+                                            upload_error.set(t!("error-camera-android-only"));
+                                        }
+                                        uploading.set(false);
+                                    });
                                 }
                             },
                             if uploading() {
@@ -403,7 +398,8 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         }
 
                         if events().is_empty() {
-                            div { style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
+                            div {
+                                style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
                                 {t!("events-empty")} // No events available
                             }
                         } else {
@@ -474,71 +470,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             }
 
             // Vollbild-Galerie Overlay
-            if show_fullscreen() && !photos().is_empty() {
-                div {
-                    style: "position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:9999; display:flex; flex-direction:column;",
-                    onclick: move |_| show_fullscreen.set(false),
-                    // Header
-                    div {
-                        style: "padding:16px; display:flex; justify-content:space-between; align-items:center;",
-                        onclick: move |e| e.stop_propagation(),
-                        div { style: "color:white; font-size:18px; font-weight:600;",
-                            "{current_photo_index() + 1} / {photos().len()}"
-                        }
-                        button {
-                            style: "background:rgba(255,255,255,0.2); color:white; padding:8px 16px; border-radius:8px; font-size:16px;",
-                            onclick: move |_| show_fullscreen.set(false),
-                            "✕ "
-                            {t!("action-close")}
-                        }
-                    }
-                    // Hauptbild
-                    div {
-                        style: "flex:1; display:flex; align-items:center; justify-content:center; padding:16px;",
-                        onclick: move |e| e.stop_propagation(),
-                        {
-                            let current_photo = &photos()[current_photo_index()];
-                            let full_path = current_photo.path.clone();
-                            match image_processing::image_path_to_data_url(&full_path) {
-                                Ok(data_url) => rsx! {
-                                    img {
-                                        src: data_url,
-                                        style: "max-width:100%; max-height:100%; object-fit:contain;",
-                                    }
-                                },
-                                Err(_) => rsx! {
-                                    div { style: "color:white; font-size:48px;", "⚠️" }
-                                },
-                            }
-                        }
-                    }
-                    // Navigation
-                    if photos().len() > 1 {
-                        div {
-                            style: "padding:16px; display:flex; gap:12px; justify-content:center;",
-                            onclick: move |e| e.stop_propagation(),
-                            button {
-                                style: "background:rgba(255,255,255,0.3); color:white; padding:12px 24px; border-radius:8px; font-size:18px; font-weight:600;",
-                                disabled: current_photo_index() == 0,
-                                onclick: move |_| {
-                                    if current_photo_index() > 0 {
-                                        current_photo_index.set(current_photo_index() - 1);
-                                    }
-                                },
-                                "◀"
-                            }
-                            button {
-                                style: "background:rgba(255,255,255,0.3); color:white; padding:12px 24px; border-radius:8px; font-size:18px; font-weight:600;",
-                                disabled: current_photo_index() >= photos().len() - 1,
-                                onclick: move |_| {
-                                    if current_photo_index() < photos().len() - 1 {
-                                        current_photo_index.set(current_photo_index() + 1);
-                                    }
-                                },
-                                "▶"
-                            }
-                        }
-                    }
+            if show_fullscreen() && !fullscreen_uuids().is_empty() {
+                CollectionFullscreen {
+                    photo_uuids: fullscreen_uuids(),
+                    initial_index: current_photo_index(),
+                    on_close: move |_| show_fullscreen.set(false),
                 }
             }
         }

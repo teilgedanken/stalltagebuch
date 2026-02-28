@@ -70,15 +70,21 @@ pub fn EventAdd(
                         .await
                         {
                             Ok(event_id) => {
-                                // Save photos for this event
-                                for photo_path in photos() {
-                                    let _ = crate::services::photo_service::add_event_photo(
-                                        &conn,
-                                        event_id,
-                                        photo_path,
-                                        None, // Thumbnails werden im Service erstellt
-                                    )
-                                    .await;
+                                // Save photos for this event using collection-based API
+                                match crate::services::photo_service::get_or_create_event_collection(
+                                    &conn, &event_id,
+                                ) {
+                                    Ok(collection_id) => {
+                                        for photo_path in photos() {
+                                            let _ = crate::services::photo_service::add_photo_to_collection(
+                                                &conn, &collection_id, photo_path,
+                                            )
+                                            .await;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        log::error!("Failed to create event collection: {}", e);
+                                    }
                                 }
                                 saving_signal.set(false);
                                 on_navigate.call(Screen::ProfileDetail(quail_id.clone()));

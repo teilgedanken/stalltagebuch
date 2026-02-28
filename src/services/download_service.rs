@@ -103,8 +103,19 @@ pub async fn download_and_merge_ops(conn: &Connection) -> Result<usize, AppError
     let ops_applied = apply_operations(conn, &all_ops)?;
 
     // Best-effort: Lade alle fehlenden Fotodateien (aus relative_path) herunter
-    let downloaded_files =
-        download_missing_photos(conn, &client, settings.remote_path.trim_end_matches('/')).await?;
+    // Use photo-gallery download service
+    let download_config = photo_gallery::PhotoDownloadConfig {
+        server_url: settings.server_url.clone(),
+        username: settings.username.clone(),
+        password: settings.app_password.clone(),
+        remote_path: settings.remote_path.clone(),
+        storage_path: get_storage_path(),
+    };
+    let download_service = photo_gallery::PhotoDownloadService::new(download_config);
+    let downloaded_files = download_service
+        .download_missing_photos(conn)
+        .await
+        .map_err(|e| AppError::Other(format!("Photo download error: {}", e)))?;
 
     // Debug: Anzahl Events nach Merge
     if let Ok(count_events) = conn.query_row::<i64, _, _>(
@@ -128,87 +139,17 @@ pub async fn download_and_merge_ops(conn: &Connection) -> Result<usize, AppError
     Ok(ops_applied)
 }
 
-/// Lädt fehlende Fotodateien anhand von `relative_path` herunter und markiert sie als synchronisiert
-async fn download_missing_photos(
-    conn: &Connection,
-    client: &reqwest_dav::Client,
-    remote_base: &str,
-) -> Result<usize, AppError> {
-    let mut downloaded = 0usize;
-
-    // Alle Photos mit (relative_path oder path) ermitteln
-    let mut stmt = conn.prepare(
-        "SELECT uuid, COALESCE(relative_path, path) AS rel
-         FROM photos
-         WHERE deleted = 0 AND (relative_path IS NOT NULL OR path IS NOT NULL)",
-    )?;
-
-    let rows = stmt.query_map([], |row| {
-        let _uuid: String = row.get(0)?; // UUID aktuell nicht benötigt
-        let rel: String = row.get(1)?;
-        Ok(rel)
-    })?;
-
-    for row in rows {
-        let rel = row.map_err(|e| AppError::Other(format!("Row error: {:?}", e)))?;
-        if rel.trim().is_empty() {
-            continue;
-        }
-
-        let abs = crate::services::photo_service::get_absolute_photo_path(&rel);
-        let abs_path = std::path::Path::new(&abs);
-        if abs_path.exists() {
-            continue;
-        }
-
-        // Remote Pfad: sync/photos/<uuid>.jpg (flache Struktur)
-        let photo_filename = if rel.contains('/') {
-            // Extrahiere Dateiname falls rel_path verschachtelt ist
-            rel.split('/').last().unwrap_or(&rel)
-        } else {
-            &rel
-        };
-
-        let remote_path = format!("{}/sync/photos/{}", remote_base, photo_filename);
-        log::info!("Downloading missing photo {} -> {}", remote_path, abs);
-
-        // Versuche Download
-        match client.get(&remote_path).await {
-            Ok(resp) => match resp.bytes().await {
-                Ok(bytes) => {
-                    if let Some(parent) = abs_path.parent() {
-                        if !parent.exists() {
-                            if let Err(e) = std::fs::create_dir_all(parent) {
-                                log::error!(
-                                    "Foto Ordner anlegen fehlgeschlagen {}: {:?}",
-                                    parent.display(),
-                                    e
-                                );
-                                continue;
-                            }
-                        }
-                    }
-                    if let Err(e) = std::fs::write(&abs_path, &bytes) {
-                        log::error!(
-                            "Speichern Foto fehlgeschlagen {}: {:?}",
-                            abs_path.display(),
-                            e
-                        );
-                        continue;
-                    }
-                    downloaded += 1;
-                }
-                Err(e) => {
-                    log::warn!("Bytes lesen fehlgeschlagen {}: {:?}", remote_path, e);
-                }
-            },
-            Err(e) => {
-                log::debug!("Foto nicht gefunden remote {}: {:?}", remote_path, e);
-            }
-        }
+/// Get the storage path based on platform
+fn get_storage_path() -> String {
+    #[cfg(target_os = "android")]
+    {
+        "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos".to_string()
     }
 
-    Ok(downloaded)
+    #[cfg(not(target_os = "android"))]
+    {
+        "./photos".to_string()
+    }
 }
 
 /// Lists directory contents (subdirectories or files)

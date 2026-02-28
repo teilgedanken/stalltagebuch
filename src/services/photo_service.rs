@@ -1,156 +1,58 @@
 use crate::error::AppError;
-use crate::models::photo::{PhotoResult, PhotoSize};
-use crate::models::Photo;
-use image::{imageops::FilterType, ImageFormat};
-use rusqlite::{params, Connection, OptionalExtension};
-use std::io::Cursor;
+use photo_gallery::{
+    create_thumbnails, Photo, PhotoGalleryConfig, PhotoGalleryService, PhotoResult, PhotoSize,
+    PhotoSyncConfig, PhotoSyncService,
+};
+use rusqlite::{Connection, OptionalExtension};
+use std::sync::OnceLock;
 use uuid::Uuid;
 
-/// Returns the absolute path to a photo (for UI display)
-pub fn get_absolute_photo_path(relative_path: &str) -> String {
+// Global photo gallery service
+static PHOTO_SERVICE: OnceLock<PhotoGalleryService> = OnceLock::new();
+
+/// Initialize the photo gallery service
+pub fn init_photo_service() -> &'static PhotoGalleryService {
+    PHOTO_SERVICE.get_or_init(|| {
+        let config = PhotoGalleryConfig {
+            storage_path: get_storage_path(),
+            enable_thumbnails: true,
+            thumbnail_small_size: 128,
+            thumbnail_medium_size: 512,
+        };
+        PhotoGalleryService::new(config)
+    })
+}
+
+/// Get the storage path based on platform
+pub fn get_storage_path() -> String {
     #[cfg(target_os = "android")]
     {
-        // Photos are in /storage/emulated/0/Android/data/PACKAGE/files/photos/
-        format!(
-            "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos/{}",
-            relative_path
-        )
+        "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos".to_string()
     }
 
     #[cfg(not(target_os = "android"))]
     {
-        relative_path.to_string()
+        "./photos".to_string()
     }
 }
 
-/// Creates multi-size WebP thumbnails from a JPEG image
-/// Returns (small_filename, medium_filename) or error
-fn create_thumbnails(original_path: &str, uuid: &str) -> Result<(String, String), AppError> {
-    log::debug!("Creating thumbnails for UUID: {}", uuid);
-
-    // Load original image
-    let img = image::open(original_path)
-        .map_err(|e| AppError::Other(format!("Fehler beim Laden des Bildes: {}", e)))?;
-
-    let parent_dir = std::path::Path::new(original_path)
-        .parent()
-        .ok_or_else(|| AppError::Other("Kein Elternverzeichnis gefunden".to_string()))?;
-
-    // Create small thumbnail (128px, 70% quality)
-    let small_filename = format!("{}_small.webp", uuid);
-    let small_path = parent_dir.join(&small_filename);
-    let small_img = img.resize(128, 128, FilterType::Lanczos3);
-
-    let mut small_buffer = Cursor::new(Vec::new());
-    small_img
-        .write_to(&mut small_buffer, ImageFormat::WebP)
-        .map_err(|e| {
-            AppError::Other(format!(
-                "Fehler beim Schreiben des kleinen Thumbnails: {}",
-                e
-            ))
-        })?;
-
-    std::fs::write(&small_path, small_buffer.into_inner()).map_err(|e| {
-        AppError::Other(format!(
-            "Fehler beim Speichern des kleinen Thumbnails: {}",
-            e
-        ))
-    })?;
-
-    log::debug!("Small thumbnail created: {:?}", small_path);
-
-    // Create medium thumbnail (512px, 75% quality)
-    let medium_filename = format!("{}_medium.webp", uuid);
-    let medium_path = parent_dir.join(&medium_filename);
-    let medium_img = img.resize(512, 512, FilterType::Lanczos3);
-
-    let mut medium_buffer = Cursor::new(Vec::new());
-    medium_img
-        .write_to(&mut medium_buffer, ImageFormat::WebP)
-        .map_err(|e| {
-            AppError::Other(format!(
-                "Fehler beim Schreiben des mittleren Thumbnails: {}",
-                e
-            ))
-        })?;
-
-    std::fs::write(&medium_path, medium_buffer.into_inner()).map_err(|e| {
-        AppError::Other(format!(
-            "Fehler beim Speichern des mittleren Thumbnails: {}",
-            e
-        ))
-    })?;
-
-    log::debug!("Medium thumbnail created: {:?}", medium_path);
-
-    Ok((small_filename, medium_filename))
+/// Returns the absolute path to a photo (for UI display)
+pub fn get_absolute_photo_path(relative_path: &str) -> String {
+    init_photo_service().get_absolute_photo_path(relative_path)
 }
 
-/// Renames a photo file with UUID and returns the new path + thumbnail names
-/// Uses spawn_blocking to avoid blocking the async runtime
-async fn rename_photo_with_uuid(original_path: &str) -> Result<(String, String, String), AppError> {
-    let original_path = original_path.to_string();
-
-    tokio::task::spawn_blocking(move || {
-        log::debug!("=== rename_photo_with_uuid called ===");
-        log::debug!("Original path: {}", original_path);
-
-        let uuid = uuid::Uuid::new_v4().to_string();
-        let new_filename = format!("{}.jpg", uuid);
-
-        log::debug!("Generated UUID: {}", uuid);
-        log::debug!("New filename: {}", new_filename);
-
-        // File is already in the correct directory, simply rename it there
-        let old_path = std::path::Path::new(&original_path);
-
-        if let Some(parent_dir) = old_path.parent() {
-            let new_path = parent_dir.join(&new_filename);
-
-            log::debug!("Old path: {:?}", old_path);
-            log::debug!("New path: {:?}", new_path);
-            log::debug!("Checking if old_path exists: {}", old_path.exists());
-
-            if old_path.exists() {
-                log::debug!("Path exists, copying...");
-                match std::fs::copy(old_path, &new_path) {
-                    Ok(_) => {
-                        log::debug!("Copy successful, removing original...");
-                        if let Err(e) = std::fs::remove_file(old_path) {
-                            log::warn!("Could not remove original: {}", e);
-                        } else {
-                            log::debug!("Original removed");
-                        }
-
-                        // Create multi-size WebP thumbnails
-                        log::debug!("Creating thumbnails...");
-                        let (small_thumb, medium_thumb) =
-                            create_thumbnails(new_path.to_str().unwrap(), &uuid)?;
-
-                        log::debug!("=== rename_photo_with_uuid completed ===");
-                        return Ok((new_filename, small_thumb, medium_thumb));
-                    }
-                    Err(e) => {
-                        log::error!("ERROR during copy: {}", e);
-                        return Err(AppError::Other(format!("Fehler beim Kopieren: {}", e)));
-                    }
-                }
-            } else {
-                log::error!("ERROR: Original path doesn't exist!");
-                return Err(AppError::Other(format!(
-                    "Originaldatei nicht gefunden: {}",
-                    original_path
-                )));
-            }
+/// Adapter function to convert PhotoGalleryError to AppError
+fn convert_error(e: photo_gallery::PhotoGalleryError) -> AppError {
+    match e {
+        photo_gallery::PhotoGalleryError::DatabaseError(e) => AppError::Database(e),
+        photo_gallery::PhotoGalleryError::NotFound(msg) => AppError::NotFound(msg),
+        // Map IO-related errors from the photo_gallery crate to the app-wide Filesystem error
+        photo_gallery::PhotoGalleryError::IoError(e) => AppError::Filesystem(e),
+        photo_gallery::PhotoGalleryError::ThumbnailError(e) => {
+            AppError::Other(format!("Thumbnail error: {}", e))
         }
-
-        Err(AppError::Other(
-            "Kein Elternverzeichnis gefunden".to_string(),
-        ))
-    })
-    .await
-    .map_err(|e| AppError::Other(format!("Task join error: {}", e)))?
+        photo_gallery::PhotoGalleryError::Other(msg) => AppError::Other(msg),
+    }
 }
 
 pub async fn add_quail_photo(
@@ -162,37 +64,40 @@ pub async fn add_quail_photo(
     log::debug!("=== add_quail_photo called ===");
     log::debug!("Quail ID: {}, Path: {}", quail_id, path);
 
-    // Rename photo and create multi-size thumbnails (in blocking thread)
-    let (new_path, small_thumb, medium_thumb) = rename_photo_with_uuid(&path).await?;
-    let uuid = Uuid::parse_str(new_path.trim_end_matches(".jpg"))
-        .map_err(|_| AppError::Other("Invalid UUID from filename".to_string()))?;
-    log::debug!("UUID extracted: {}", uuid);
-    log::debug!("Thumbnails: small={}, medium={}", small_thumb, medium_thumb);
+    let service = init_photo_service();
+    let quail = crate::services::get_profile(conn, &quail_id)?;
 
-    conn.execute(
-        "INSERT INTO photos (uuid, quail_id, path, relative_path, thumbnail_small_path, thumbnail_medium_path, sync_status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'local_only')",
-        params![
-            uuid.to_string(),
-            quail_id.to_string(),
-            "",  // path is now empty, relative_path holds the filename
-            &new_path,
-            &small_thumb,
-            &medium_thumb,
-        ],
+    // Add photo using photo-gallery service
+    let photo_uuid = service
+        .add_photo_to_collection(conn, &quail_id, path)
+        .await
+        .map_err(convert_error)?;
+
+    // Get the relative path for operation capture
+    let relative_path: String = conn.query_row(
+        "SELECT relative_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
     )?;
 
-    // Capture CRDT operation
+    let thumbnail_small: Option<String> = conn.query_row(
+        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
+    )?;
+
+    // Capture CRDT operation after photo is created
     crate::services::operation_capture::capture_photo_create(
         conn,
-        &uuid.to_string(),
+        &photo_uuid.to_string(),
         Some(&quail_id.to_string()),
         None,
-        &new_path,
-        Some(&small_thumb),
+        &relative_path,
+        thumbnail_small.as_deref(),
     )
     .await?;
 
-    Ok(uuid)
+    Ok(photo_uuid)
 }
 
 pub async fn add_event_photo(
@@ -201,143 +106,55 @@ pub async fn add_event_photo(
     path: String,
     _thumbnail_path: Option<String>,
 ) -> Result<Uuid, AppError> {
-    // Rename photo and create multi-size thumbnails (in blocking thread)
-    let (new_path, small_thumb, medium_thumb) = rename_photo_with_uuid(&path).await?;
-    let uuid = Uuid::parse_str(new_path.trim_end_matches(".jpg"))
-        .map_err(|_| AppError::Other("Invalid UUID from filename".to_string()))?;
+    let service = init_photo_service();
+    let event = crate::services::event_service::get_event_by_id(conn, &event_id)?
+        .ok_or(AppError::NotFound("Event nicht gefunden".into()))?;
 
-    conn.execute(
-        "INSERT INTO photos (uuid, event_id, path, relative_path, thumbnail_small_path, thumbnail_medium_path, sync_status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'local_only')",
-        params![
-            uuid.to_string(),
-            event_id.to_string(),
-            "",  // path is now empty, relative_path holds the filename
-            &new_path,
-            &small_thumb,
-            &medium_thumb,
-        ],
+    // Add photo using photo-gallery service
+    let photo_uuid = service
+        .add_photo_to_collection(
+            conn,
+            event
+                .photos
+                .as_ref()
+                .ok_or(AppError::NotFound("No Event found".into()))?,
+            path,
+        )
+        .await
+        .map_err(convert_error)?;
+
+    // Get the relative path for operation capture
+    let relative_path: String = conn.query_row(
+        "SELECT relative_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
     )?;
 
-    // Capture CRDT operation
+    let thumbnail_small: Option<String> = conn.query_row(
+        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
+    )?;
+
+    // Capture CRDT operation after photo is created
     crate::services::operation_capture::capture_photo_create(
         conn,
-        &uuid.to_string(),
+        &photo_uuid.to_string(),
         None,
         Some(&event_id.to_string()),
-        &new_path,
-        Some(&small_thumb),
+        &relative_path,
+        thumbnail_small.as_deref(),
     )
     .await?;
 
-    Ok(uuid)
-}
-
-pub fn list_quail_photos(conn: &Connection, quail_uuid: &Uuid) -> Result<Vec<Photo>, AppError> {
-    let mut stmt = conn.prepare(
-        "SELECT uuid, quail_id, event_id, COALESCE(relative_path, path) as rel_path, thumbnail_path,
-                thumbnail_small_path, thumbnail_medium_path, sync_status, sync_error, retry_count
-         FROM photos 
-         WHERE quail_id = ?1 AND deleted = 0",
-    )?;
-    let rows = stmt.query_map(params![quail_uuid.to_string()], |row| {
-        let uuid_str: String = row.get(0)?;
-        let quail_id_str: Option<String> = row.get(1)?;
-        let event_id_str: Option<String> = row.get(2)?;
-        let relative_path: String = row.get(3)?;
-        let relative_thumb: Option<String> = row.get(4)?;
-        let thumbnail_small: Option<String> = row.get(5)?;
-        let thumbnail_medium: Option<String> = row.get(6)?;
-        let sync_status: Option<String> = row.get(7)?;
-        let sync_error: Option<String> = row.get(8)?;
-        let retry_count: Option<i32> = row.get(9)?;
-
-        Ok(Photo {
-            uuid: Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?,
-            quail_id: quail_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-            event_id: event_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-            path: get_absolute_photo_path(&relative_path),
-            thumbnail_path: relative_thumb.map(|t| get_absolute_photo_path(&t)),
-            thumbnail_small_path: thumbnail_small.map(|t| get_absolute_photo_path(&t)),
-            thumbnail_medium_path: thumbnail_medium.map(|t| get_absolute_photo_path(&t)),
-            sync_status,
-            sync_error,
-            retry_count,
-        })
-    })?;
-    Ok(rows.collect::<Result<Vec<_>, _>>()?)
-}
-
-pub fn list_event_photos(conn: &Connection, event_uuid: &Uuid) -> Result<Vec<Photo>, AppError> {
-    let mut stmt = conn.prepare(
-        "SELECT uuid, quail_id, event_id, COALESCE(relative_path, path) as rel_path, thumbnail_path,
-                thumbnail_small_path, thumbnail_medium_path, sync_status, sync_error, retry_count
-         FROM photos 
-         WHERE event_id = ?1 AND deleted = 0",
-    )?;
-    let rows = stmt.query_map(params![event_uuid.to_string()], |row| {
-        let uuid_str: String = row.get(0)?;
-        let quail_id_str: Option<String> = row.get(1)?;
-        let event_id_str: Option<String> = row.get(2)?;
-        let relative_path: String = row.get(3)?;
-        let relative_thumb: Option<String> = row.get(4)?;
-        let thumbnail_small: Option<String> = row.get(5)?;
-        let thumbnail_medium: Option<String> = row.get(6)?;
-        let sync_status: Option<String> = row.get(7)?;
-        let sync_error: Option<String> = row.get(8)?;
-        let retry_count: Option<i32> = row.get(9)?;
-
-        Ok(Photo {
-            uuid: Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?,
-            quail_id: quail_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-            event_id: event_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-            path: get_absolute_photo_path(&relative_path),
-            thumbnail_path: relative_thumb.map(|t| get_absolute_photo_path(&t)),
-            thumbnail_small_path: thumbnail_small.map(|t| get_absolute_photo_path(&t)),
-            thumbnail_medium_path: thumbnail_medium.map(|t| get_absolute_photo_path(&t)),
-            sync_status,
-            sync_error,
-            retry_count,
-        })
-    })?;
-    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    Ok(photo_uuid)
 }
 
 pub fn get_profile_photo(conn: &Connection, quail_uuid: &Uuid) -> Result<Option<Photo>, AppError> {
-    let mut stmt = conn.prepare(
-        "SELECT p.uuid, p.quail_id, p.event_id, COALESCE(p.relative_path, p.path) as rel_path, p.thumbnail_path,
-                p.thumbnail_small_path, p.thumbnail_medium_path, p.sync_status, p.sync_error, p.retry_count
-         FROM photos p 
-         JOIN quails q ON q.profile_photo = p.uuid 
-         WHERE q.uuid = ?1",
-    )?;
-    let res = stmt
-        .query_row(params![quail_uuid.to_string()], |row| {
-            let uuid_str: String = row.get(0)?;
-            let quail_id_str: Option<String> = row.get(1)?;
-            let event_id_str: Option<String> = row.get(2)?;
-            let relative_path: String = row.get(3)?;
-            let relative_thumb: Option<String> = row.get(4)?;
-            let thumbnail_small: Option<String> = row.get(5)?;
-            let thumbnail_medium: Option<String> = row.get(6)?;
-            let sync_status: Option<String> = row.get(7)?;
-            let sync_error: Option<String> = row.get(8)?;
-            let retry_count: Option<i32> = row.get(9)?;
-
-            Ok(Photo {
-                uuid: Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?,
-                quail_id: quail_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-                event_id: event_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-                path: get_absolute_photo_path(&relative_path),
-                thumbnail_path: relative_thumb.map(|t| get_absolute_photo_path(&t)),
-                thumbnail_small_path: thumbnail_small.map(|t| get_absolute_photo_path(&t)),
-                thumbnail_medium_path: thumbnail_medium.map(|t| get_absolute_photo_path(&t)),
-                sync_status,
-                sync_error,
-                retry_count,
-            })
-        })
-        .optional()?;
-    Ok(res)
+    let service = init_photo_service();
+    service
+        .get_profile_photo(conn, quail_uuid)
+        .map_err(convert_error)
 }
 
 pub async fn set_profile_photo(
@@ -345,6 +162,8 @@ pub async fn set_profile_photo(
     quail_uuid: &Uuid,
     photo_uuid: &Uuid,
 ) -> Result<(), AppError> {
+    use rusqlite::{params, OptionalExtension};
+
     // Verify photo belongs to quail
     let photo_quail: Option<String> = conn
         .query_row(
@@ -382,15 +201,15 @@ pub async fn set_profile_photo(
 }
 
 pub async fn delete_photo(conn: &Connection, photo_uuid: &Uuid) -> Result<(), AppError> {
-    let rows = conn.execute(
-        "DELETE FROM photos WHERE uuid = ?1",
-        params![photo_uuid.to_string()],
-    )?;
-    if rows == 0 {
-        return Err(AppError::NotFound("Foto nicht gefunden".into()));
-    }
+    let service = init_photo_service();
 
-    // Capture CRDT deletion
+    // Delete photo using photo-gallery service
+    service
+        .delete_photo(conn, photo_uuid)
+        .await
+        .map_err(convert_error)?;
+
+    // Capture CRDT deletion after photo is deleted
     crate::services::operation_capture::capture_photo_delete(conn, &photo_uuid.to_string()).await?;
 
     Ok(())
@@ -403,67 +222,26 @@ pub async fn get_photo_with_download(
     photo_uuid: &Uuid,
     size: PhotoSize,
 ) -> Result<PhotoResult, AppError> {
-    // Query photo info from database
-    let photo_info: Option<(String, Option<String>, Option<String>, Option<String>, Option<i32>)> = conn
-        .query_row(
-            "SELECT COALESCE(relative_path, path), thumbnail_small_path, thumbnail_medium_path, sync_status, retry_count
-             FROM photos 
-             WHERE uuid = ?1 AND deleted = 0",
-            params![photo_uuid.to_string()],
-            |row| {
-                Ok((
-                    row.get(0)?,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                    row.get(4)?,
-                ))
-            },
-        )
-        .optional()?;
+    let service = init_photo_service();
 
-    let (relative_path, small_thumb, medium_thumb, sync_status, retry_count) = match photo_info {
-        Some(info) => info,
-        None => return Err(AppError::NotFound("Foto nicht gefunden".into())),
-    };
-
-    // Determine which file to load based on size
-    let file_path = match size {
-        PhotoSize::Small => small_thumb.as_ref().unwrap_or(&relative_path),
-        PhotoSize::Medium => medium_thumb.as_ref().unwrap_or(&relative_path),
-        PhotoSize::Original => &relative_path,
-    };
-
-    let absolute_path = get_absolute_photo_path(file_path);
-
-    // Check if file exists locally
-    if std::path::Path::new(&absolute_path).exists() {
-        match std::fs::read(&absolute_path) {
-            Ok(bytes) => return Ok(PhotoResult::Available(bytes)),
-            Err(e) => {
-                log::warn!("Fehler beim Lesen der Datei {}: {}", absolute_path, e);
+    // First check if photo is available locally
+    match service
+        .get_photo(conn, photo_uuid, size)
+        .map_err(convert_error)?
+    {
+        PhotoResult::Available(bytes) => return Ok(PhotoResult::Available(bytes)),
+        PhotoResult::Downloading => return Ok(PhotoResult::Downloading),
+        PhotoResult::Failed(_, retry_count) => {
+            // File doesn't exist locally, try to download if sync is configured
+            if retry_count < 5 {
+                return spawn_photo_download(conn, photo_uuid, retry_count).await;
+            } else {
+                return Ok(PhotoResult::Failed(
+                    "Maximale Anzahl an Versuchen erreicht".to_string(),
+                    retry_count,
+                ));
             }
         }
-    }
-
-    // File doesn't exist locally - check sync status
-    let status = sync_status.unwrap_or_else(|| "local_only".to_string());
-    let retry_count = retry_count.unwrap_or(0);
-
-    match status.as_str() {
-        "downloading" => Ok(PhotoResult::Downloading),
-        "download_failed" if retry_count >= 5 => Ok(PhotoResult::Failed(
-            "Maximale Anzahl an Versuchen erreicht".to_string(),
-            retry_count,
-        )),
-        "download_failed" | "download_pending" | "synced" => {
-            // Attempt download
-            spawn_photo_download(conn, photo_uuid, file_path, retry_count).await
-        }
-        _ => Ok(PhotoResult::Failed(
-            "Foto nicht remote verfügbar".to_string(),
-            retry_count,
-        )),
     }
 }
 
@@ -471,9 +249,17 @@ pub async fn get_photo_with_download(
 async fn spawn_photo_download(
     conn: &Connection,
     photo_uuid: &Uuid,
-    relative_path: &str,
     retry_count: i32,
 ) -> Result<PhotoResult, AppError> {
+    use rusqlite::params;
+
+    // Get photo path
+    let relative_path: String = conn.query_row(
+        "SELECT COALESCE(relative_path, path) FROM photos WHERE uuid = ?1",
+        params![photo_uuid.to_string()],
+        |row| row.get(0),
+    )?;
+
     // Update status to downloading
     conn.execute(
         "UPDATE photos SET sync_status = 'downloading', last_sync_attempt = ?1 WHERE uuid = ?2",
@@ -484,15 +270,15 @@ async fn spawn_photo_download(
     )?;
 
     let photo_uuid_clone = *photo_uuid;
-    let relative_path_clone = relative_path.to_string();
+    let relative_path_clone = relative_path.clone();
     let retry_count_clone = retry_count;
 
     // Spawn download task
     tokio::spawn(async move {
-        // Calculate backoff with Full Jitter
+        // Calculate backoff with jitter
         if retry_count_clone > 0 {
-            let base_delay = 60 * (1 << (retry_count_clone - 1).min(4)); // 60s, 120s, 240s, 480s, 960s max
-            let max_delay = base_delay.min(300); // Cap at 5 minutes
+            let base_delay = 60 * (1 << (retry_count_clone - 1).min(4));
+            let max_delay = base_delay.min(300);
             let jitter = rand::random::<u64>() % (max_delay + 1);
 
             log::debug!(
@@ -543,41 +329,58 @@ async fn download_photo_from_remote(
     let settings = crate::services::sync_service::load_sync_settings(&conn)?
         .ok_or_else(|| AppError::Other("Sync nicht konfiguriert".to_string()))?;
 
-    let webdav_url = format!(
-        "{}/remote.php/dav/files/{}",
-        settings.server_url.trim_end_matches('/'),
-        settings.username
-    );
+    let sync_config = PhotoSyncConfig {
+        server_url: settings.server_url,
+        username: settings.username,
+        app_password: settings.app_password,
+        remote_path: settings.remote_path,
+    };
 
-    let client = reqwest_dav::ClientBuilder::new()
-        .set_host(webdav_url)
-        .set_auth(reqwest_dav::Auth::Basic(
-            settings.username.clone(),
-            settings.app_password.clone(),
-        ))
-        .build()
-        .map_err(|e| AppError::Other(format!("WebDAV client error: {:?}", e)))?;
+    let sync_service = PhotoSyncService::new(sync_config);
+    let local_path = get_absolute_photo_path(relative_path);
 
-    let remote_path = format!("{}/sync/photos/{}", settings.remote_path, relative_path);
-
-    // Download file
-    let response = client
-        .get(&remote_path)
+    sync_service
+        .download_photo(relative_path, &local_path)
         .await
-        .map_err(|e| AppError::Other(format!("Download failed: {:?}", e)))?;
+        .map_err(convert_error)?;
 
-    // Convert response to bytes
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| AppError::Other(format!("Failed to read response bytes: {}", e)))?;
+    log::info!("Downloaded photo {} to {}", photo_uuid, local_path);
 
-    // Save to local storage
-    let absolute_path = get_absolute_photo_path(relative_path);
-    std::fs::write(&absolute_path, bytes)
-        .map_err(|e| AppError::Other(format!("Failed to save file: {}", e)))?;
+    // After downloading the original, create local thumbnails
+    let uuid_stem = std::path::Path::new(relative_path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| AppError::Other("Invalid relative_path for downloaded photo".to_string()))?
+        .to_string();
 
-    log::info!("Downloaded photo {} to {}", photo_uuid, absolute_path);
+    // Use configured sizes from the gallery service and run in blocking thread
+    let svc = init_photo_service();
+    let (small_size, medium_size) = svc.thumbnail_sizes();
+
+    let local_clone = local_path.clone();
+    let uuid_clone = uuid_stem.clone();
+
+    match tokio::task::spawn_blocking(move || {
+        create_thumbnails(&local_clone, &uuid_clone, small_size, medium_size)
+    })
+    .await
+    {
+        Ok(Ok((small_name, medium_name))) => {
+            use rusqlite::params;
+
+            // Persist thumbnail filenames in DB (relative paths)
+            let _ = conn.execute(
+                "UPDATE photos SET thumbnail_small_path = ?1, thumbnail_medium_path = ?2 WHERE uuid = ?3",
+                params![small_name, medium_name, photo_uuid.to_string()],
+            );
+        }
+        Ok(Err(e)) => {
+            log::warn!("Failed to create thumbnails for {}: {}", relative_path, e);
+        }
+        Err(e) => {
+            log::warn!("Thumbnail task join error for {}: {}", relative_path, e);
+        }
+    }
     Ok(())
 }
 
@@ -603,8 +406,8 @@ pub async fn retry_failed_downloads(conn: &Connection) -> Result<usize, AppError
     let count = photos.len();
     log::info!("Retrying {} failed photo downloads", count);
 
-    for (uuid, relative_path, retry_count) in photos {
-        let _ = spawn_photo_download(conn, &uuid, &relative_path, retry_count).await;
+    for (uuid, _relative_path, retry_count) in photos {
+        let _ = spawn_photo_download(conn, &uuid, retry_count).await;
     }
 
     Ok(count)
@@ -612,6 +415,8 @@ pub async fn retry_failed_downloads(conn: &Connection) -> Result<usize, AppError
 
 /// Cleanup orphaned photos (photos without valid quail_id or event_id references)
 pub async fn cleanup_orphaned_photos(conn: &Connection) -> Result<usize, AppError> {
+    use rusqlite::params;
+
     // Find orphaned photos
     let mut stmt = conn.prepare(
         "SELECT uuid, COALESCE(relative_path, path), thumbnail_small_path, thumbnail_medium_path
@@ -656,4 +461,122 @@ pub async fn cleanup_orphaned_photos(conn: &Connection) -> Result<usize, AppErro
     }
 
     Ok(count)
+}
+
+// === Collection-Based API (New) ===
+
+/// Get or create a photo collection for a quail
+pub fn get_or_create_quail_collection(
+    conn: &Connection,
+    quail_id: &Uuid,
+) -> Result<Uuid, AppError> {
+    // The quail UUID itself IS the collection ID in the photo-gallery system
+    Ok(*quail_id)
+}
+
+/// Get or create a photo collection for an event
+pub fn get_or_create_event_collection(
+    conn: &Connection,
+    event_id: &Uuid,
+) -> Result<Uuid, AppError> {
+    // The event UUID itself IS the collection ID in the photo-gallery system
+    Ok(*event_id)
+}
+
+/// Add photo to a collection (new collection-based API)
+pub async fn add_photo_to_collection(
+    conn: &Connection,
+    collection_id: &Uuid,
+    path: String,
+) -> Result<Uuid, AppError> {
+    log::debug!("Adding photo to collection {}: {}", collection_id, path);
+
+    let service = init_photo_service();
+
+    // Add photo using photo-gallery service
+    let photo_uuid = service
+        .add_photo_to_collection(conn, collection_id, path)
+        .await
+        .map_err(convert_error)?;
+
+    // Get the relative path for operation capture
+    let relative_path: String = conn.query_row(
+        "SELECT relative_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
+    )?;
+
+    let thumbnail_small: Option<String> = conn.query_row(
+        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
+        rusqlite::params![photo_uuid.to_string()],
+        |row| row.get(0),
+    )?;
+
+    // Capture CRDT operation after photo is created
+    crate::services::operation_capture::capture_photo_create(
+        conn,
+        &photo_uuid.to_string(),
+        None, // No direct quail_id
+        None, // No direct event_id
+        &relative_path,
+        thumbnail_small.as_deref(),
+    )
+    .await?;
+
+    Ok(photo_uuid)
+}
+
+/// List all photos in a collection
+pub fn list_collection_photos(
+    conn: &Connection,
+    collection_id: &Uuid,
+) -> Result<Vec<Photo>, AppError> {
+    let service = init_photo_service();
+    service
+        .list_collection_photos(conn, collection_id)
+        .map_err(convert_error)
+}
+
+/// Get the collection for a quail (if exists)
+pub fn get_quail_collection(conn: &Connection, quail_id: &Uuid) -> Result<Option<Uuid>, AppError> {
+    use rusqlite::params;
+
+    let collection_id_str: Option<String> = conn
+        .query_row(
+            "SELECT collection_id FROM quails WHERE uuid = ?1",
+            params![quail_id.to_string()],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    match collection_id_str {
+        Some(id_str) => {
+            Ok(Some(Uuid::parse_str(&id_str).map_err(|e| {
+                AppError::Other(format!("Invalid collection UUID: {}", e))
+            })?))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Get the collection for an event (if exists)
+pub fn get_event_collection(conn: &Connection, event_id: &Uuid) -> Result<Option<Uuid>, AppError> {
+    use rusqlite::params;
+
+    let collection_id_str: Option<String> = conn
+        .query_row(
+            "SELECT collection_id FROM quail_events WHERE uuid = ?1",
+            params![event_id.to_string()],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    match collection_id_str {
+        Some(id_str) => {
+            Ok(Some(Uuid::parse_str(&id_str).map_err(|e| {
+                AppError::Other(format!("Invalid collection UUID: {}", e))
+            })?))
+        }
+        None => Ok(None),
+    }
 }

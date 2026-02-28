@@ -40,5 +40,6 @@ let quails = services::profile_service::list_quails(&conn)?;
 3. UI Screen + Navigation Callback
 4. i18n Key erzeugen & Übersetzung nachziehen
 5. Android-spezifisch? → Anpassung nur über bestehende JNI-Brücke
-6. Build mit Script & testen auf Emulator
-7. Check if changes affect this file or other instruction files and update `./.github/copilot-instructions.md` accordingly
+6. format code: `cargo fmt`
+7. Build mit Script & testen auf Emulator
+8. Check if changes affect this file or other instruction files and update `./.github/copilot-instructions.md` accordingly
