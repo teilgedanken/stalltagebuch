@@ -317,13 +317,19 @@ impl PhotoGalleryService {
         log::debug!("Small thumbnail: {}", small_thumb);
         log::debug!("Medium thumbnail: {}", medium_thumb);
 
-        let photo_uuid = Uuid::new_v4();
-        // relative_path is just the filename (no prefix), since storage_path already points to the photos directory
+        // Extract UUID from the renamed filename (e.g. "{uuid}.jpg") so that the
+        // DB uuid and the on-disk filename share the same UUID – required for sync.
         let relative_path = std::path::Path::new(&new_path)
             .file_name()
             .and_then(|s| s.to_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| new_path.clone());
+
+        let photo_uuid = std::path::Path::new(&relative_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .unwrap_or_else(Uuid::new_v4);
 
         // Save to database with collection_id
         conn.execute(
@@ -363,23 +369,70 @@ impl PhotoGalleryService {
             .query_map(params![collection_id.to_string()], |row| {
                 let uuid_str: String = row.get(0)?;
                 let collection_id_str: Option<String> = row.get(1)?;
-                Ok(Photo {
-                    uuid: Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?,
-                    collection_id: collection_id_str.and_then(|s| Uuid::parse_str(&s).ok()),
-                    quail_id: None,
-                    event_id: None,
-                    path: row.get(2)?,
-                    relative_path: row.get(3)?,
-                    thumbnail_path: row.get(4)?,
-                    thumbnail_small_path: row.get(5)?,
-                    thumbnail_medium_path: row.get(6)?,
-                    sync_status: row.get(7)?,
-                    sync_error: None,
-                    retry_count: None,
-                    created_at: row.get(8)?,
-                })
+                let db_path: String = row.get(2)?;
+                let relative_path: Option<String> = row.get(3)?;
+                let thumbnail_path: Option<String> = row.get(4)?;
+                let thumbnail_small_path: Option<String> = row.get(5)?;
+                let thumbnail_medium_path: Option<String> = row.get(6)?;
+                Ok((
+                    uuid_str,
+                    collection_id_str,
+                    db_path,
+                    relative_path,
+                    thumbnail_path,
+                    thumbnail_small_path,
+                    thumbnail_medium_path,
+                    row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
+                ))
             })?
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .map(
+                |(
+                    uuid_str,
+                    collection_id_str,
+                    db_path,
+                    relative_path,
+                    thumbnail_path,
+                    thumbnail_small_path,
+                    thumbnail_medium_path,
+                    sync_status,
+                    created_at,
+                )| {
+                    // Normalise to absolute paths, matching other list/get methods.
+                    let path = if let Some(ref rel) = relative_path {
+                        self.get_absolute_photo_path(rel)
+                    } else {
+                        db_path
+                    };
+                    Photo {
+                        uuid: Uuid::parse_str(&uuid_str)
+                            .unwrap_or_else(|_| Uuid::new_v4()),
+                        collection_id: collection_id_str
+                            .as_deref()
+                            .and_then(|s| Uuid::parse_str(s).ok()),
+                        quail_id: None,
+                        event_id: None,
+                        path,
+                        relative_path: relative_path.clone(),
+                        thumbnail_path: thumbnail_path
+                            .as_deref()
+                            .map(|p| self.get_absolute_photo_path(p)),
+                        thumbnail_small_path: thumbnail_small_path
+                            .as_deref()
+                            .map(|p| self.get_absolute_photo_path(p)),
+                        thumbnail_medium_path: thumbnail_medium_path
+                            .as_deref()
+                            .map(|p| self.get_absolute_photo_path(p)),
+                        sync_status,
+                        sync_error: None,
+                        retry_count: None,
+                        created_at,
+                    }
+                },
+            )
+            .collect();
 
         Ok(photos)
     }

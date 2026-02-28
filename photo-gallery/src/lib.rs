@@ -10,8 +10,14 @@
 //!
 //! ## Platform Separation
 //!
-//! This crate focuses on cross-platform photo logic. Platform-specific code
-//! (e.g., Android JNI camera integration) should remain in the application crate.
+//! This crate focuses primarily on cross-platform photo logic (storage, thumbnails,
+//! database integration, etc.). The only platform-specific boundary currently exposed
+//! from this crate is the Android photo picker/camera bridge, which lives in the
+//! [`picker`] module and is consumed by the application crate via FFI/JNI.
+//!
+//! Application crates are responsible for wiring the UI and lifecycle on each
+//! platform, but can rely on this crate (including the `picker` module on Android)
+//! for the underlying photo handling and integration logic.
 //!
 //! ## Example Usage
 //!
