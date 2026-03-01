@@ -5,19 +5,17 @@
 //! Generate client bindings: `spacetime generate --lang rust --out-dir ../src/spacetime/module_bindings`
 //! (or `--lang dioxus` when the Dioxus binding generator is available)
 
-use spacetimedb::{reducer, table, Identity, ReducerContext, SpacetimeType, Table};
+use spacetimedb::{reducer, ReducerContext, SpacetimeType, Table};
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
 
 /// A quail in the flock.
-#[table(name = quails, public)]
+#[spacetimedb::table(accessor = quails, public)]
 pub struct Quail {
-    #[primary_key]
-    #[auto_inc]
-    pub id: u64,
     /// Client-generated UUID used as the stable cross-device identifier.
-    #[unique]
+    #[primary_key]
     pub uuid: String,
+    pub id: u64,
     pub name: String,
     /// "male" | "female" | "unknown"
     pub gender: String,
@@ -26,17 +24,16 @@ pub struct Quail {
     /// UUID of the profile photo stored in the photo-gallery / Nextcloud.
     pub profile_photo: Option<String>,
     /// The SpacetimeDB identity of the user who owns this quail.
-    pub owner: Identity,
+    pub owner: String,
 }
 
 /// A lifecycle event for a quail.
-#[table(name = quail_events, public)]
+#[spacetimedb::table(accessor = quail_events, public)]
 pub struct QuailEvent {
+    /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
-    #[auto_inc]
-    pub id: u64,
-    #[unique]
     pub uuid: String,
+    pub id: u64,
     pub quail_uuid: String,
     /// "born" | "alive" | "sick" | "healthy" | "marked_for_slaughter" | "slaughtered" | "died"
     pub event_type: String,
@@ -45,22 +42,21 @@ pub struct QuailEvent {
     pub notes: Option<String>,
     /// UUID of an attached photo stored on Nextcloud.
     pub photos: Option<String>,
-    pub owner: Identity,
+    pub owner: String,
 }
 
 /// A daily egg-production record.
-#[table(name = egg_records, public)]
+#[spacetimedb::table(accessor = egg_records, public)]
 pub struct EggRecord {
+    /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
-    #[auto_inc]
-    pub id: u64,
-    #[unique]
     pub uuid: String,
+    pub id: u64,
     /// ISO 8601 date string YYYY-MM-DD.
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
-    pub owner: Identity,
+    pub owner: String,
 }
 
 // ─── Reducer argument types ────────────────────────────────────────────────────
@@ -116,41 +112,37 @@ pub struct UpsertEggRecordArgs {
 #[reducer]
 pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
     ctx.db.quails().insert(Quail {
-        id: 0,
         uuid: args.uuid,
+        id: 0,
         name: args.name,
         gender: args.gender,
         ring_color: args.ring_color,
         profile_photo: args.profile_photo,
-        owner: ctx.sender,
+        owner: ctx.sender().to_string(),
     });
 }
 
 /// Update an existing quail profile owned by the caller.
 #[reducer]
 pub fn update_quail(ctx: &ReducerContext, args: UpdateQuailArgs) {
-    if let Some(existing) = ctx.db.quails().uuid().find(&args.uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(mut existing) = ctx.db.quails().iter().find(|q| q.uuid == args.uuid) {
+        if existing.owner != ctx.sender().to_string() {
             log::warn!("update_quail: caller is not the owner");
             return;
         }
-        ctx.db.quails().uuid().update(Quail {
-            id: existing.id,
-            uuid: args.uuid,
-            name: args.name,
-            gender: args.gender,
-            ring_color: args.ring_color,
-            profile_photo: args.profile_photo,
-            owner: existing.owner,
-        });
+        existing.name = args.name;
+        existing.gender = args.gender;
+        existing.ring_color = args.ring_color;
+        existing.profile_photo = args.profile_photo;
+        ctx.db.quails().uuid().update(existing);
     }
 }
 
 /// Delete a quail and all its events (owner-only).
 #[reducer]
 pub fn delete_quail(ctx: &ReducerContext, uuid: String) {
-    if let Some(existing) = ctx.db.quails().uuid().find(&uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(existing) = ctx.db.quails().iter().find(|q| q.uuid == uuid) {
+        if existing.owner != ctx.sender().to_string() {
             log::warn!("delete_quail: caller is not the owner");
             return;
         }
@@ -159,7 +151,7 @@ pub fn delete_quail(ctx: &ReducerContext, uuid: String) {
             .db
             .quail_events()
             .iter()
-            .filter(|e| e.quail_uuid == uuid && e.owner == ctx.sender)
+            .filter(|e| e.quail_uuid == uuid && e.owner == ctx.sender().to_string())
             .map(|e| e.uuid.clone())
             .collect();
         for event_uuid in event_uuids {
@@ -172,14 +164,12 @@ pub fn delete_quail(ctx: &ReducerContext, uuid: String) {
 /// Update only the profile photo of a quail (owner-only).
 #[reducer]
 pub fn set_quail_photo(ctx: &ReducerContext, quail_uuid: String, photo_uuid: Option<String>) {
-    if let Some(existing) = ctx.db.quails().uuid().find(&quail_uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(mut existing) = ctx.db.quails().iter().find(|q| q.uuid == quail_uuid) {
+        if existing.owner != ctx.sender().to_string() {
             return;
         }
-        ctx.db.quails().uuid().update(Quail {
-            profile_photo: photo_uuid,
-            ..existing
-        });
+        existing.profile_photo = photo_uuid;
+        ctx.db.quails().uuid().update(existing);
     }
 }
 
@@ -187,42 +177,37 @@ pub fn set_quail_photo(ctx: &ReducerContext, quail_uuid: String, photo_uuid: Opt
 #[reducer]
 pub fn create_event(ctx: &ReducerContext, args: CreateEventArgs) {
     ctx.db.quail_events().insert(QuailEvent {
-        id: 0,
         uuid: args.uuid,
+        id: 0,
         quail_uuid: args.quail_uuid,
         event_type: args.event_type,
         event_date: args.event_date,
         notes: args.notes,
         photos: args.photos,
-        owner: ctx.sender,
+        owner: ctx.sender().to_string(),
     });
 }
 
 /// Update a lifecycle event (owner-only).
 #[reducer]
 pub fn update_event(ctx: &ReducerContext, args: UpdateEventArgs) {
-    if let Some(existing) = ctx.db.quail_events().uuid().find(&args.uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(mut existing) = ctx.db.quail_events().iter().find(|e| e.uuid == args.uuid) {
+        if existing.owner != ctx.sender().to_string() {
             return;
         }
-        ctx.db.quail_events().uuid().update(QuailEvent {
-            id: existing.id,
-            uuid: args.uuid,
-            quail_uuid: existing.quail_uuid,
-            event_type: args.event_type,
-            event_date: args.event_date,
-            notes: args.notes,
-            photos: args.photos,
-            owner: existing.owner,
-        });
+        existing.event_type = args.event_type;
+        existing.event_date = args.event_date;
+        existing.notes = args.notes;
+        existing.photos = args.photos;
+        ctx.db.quail_events().uuid().update(existing);
     }
 }
 
 /// Delete a lifecycle event (owner-only).
 #[reducer]
 pub fn delete_event(ctx: &ReducerContext, uuid: String) {
-    if let Some(existing) = ctx.db.quail_events().uuid().find(&uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(existing) = ctx.db.quail_events().iter().find(|e| e.uuid == uuid) {
+        if existing.owner != ctx.sender().to_string() {
             return;
         }
         ctx.db.quail_events().uuid().delete(&uuid);
@@ -233,29 +218,25 @@ pub fn delete_event(ctx: &ReducerContext, uuid: String) {
 #[reducer]
 pub fn upsert_egg_record(ctx: &ReducerContext, args: UpsertEggRecordArgs) {
     // Check whether an egg record already exists for this date + owner.
+    let sender_str = ctx.sender().to_string();
     let existing = ctx
         .db
         .egg_records()
         .iter()
-        .find(|r| r.record_date == args.record_date && r.owner == ctx.sender);
+        .find(|r| r.record_date == args.record_date && r.owner == sender_str);
 
-    if let Some(existing) = existing {
-        ctx.db.egg_records().uuid().update(EggRecord {
-            id: existing.id,
-            uuid: existing.uuid,
-            record_date: args.record_date,
-            total_eggs: args.total_eggs,
-            notes: args.notes,
-            owner: existing.owner,
-        });
+    if let Some(mut existing) = existing {
+        existing.total_eggs = args.total_eggs;
+        existing.notes = args.notes;
+        ctx.db.egg_records().uuid().update(existing);
     } else {
         ctx.db.egg_records().insert(EggRecord {
-            id: 0,
             uuid: args.uuid,
+            id: 0,
             record_date: args.record_date,
             total_eggs: args.total_eggs,
             notes: args.notes,
-            owner: ctx.sender,
+            owner: sender_str,
         });
     }
 }
@@ -263,8 +244,8 @@ pub fn upsert_egg_record(ctx: &ReducerContext, args: UpsertEggRecordArgs) {
 /// Delete an egg record (owner-only).
 #[reducer]
 pub fn delete_egg_record(ctx: &ReducerContext, uuid: String) {
-    if let Some(existing) = ctx.db.egg_records().uuid().find(&uuid) {
-        if existing.owner != ctx.sender {
+    if let Some(existing) = ctx.db.egg_records().iter().find(|r| r.uuid == uuid) {
+        if existing.owner != ctx.sender().to_string() {
             return;
         }
         ctx.db.egg_records().uuid().delete(&uuid);

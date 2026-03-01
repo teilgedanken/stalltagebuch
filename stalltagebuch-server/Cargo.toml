@@ -9,5 +9,8 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-spacetimedb = "2.0.2"
+spacetimedb = { git = "https://github.com/enaut/SpacetimeDB.git", branch = "copilot/create-pr-for-dioxus-changes" }
 log = "0.4"
+
+[workspace]
+members = []

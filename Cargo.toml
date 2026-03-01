@@ -9,6 +9,7 @@ members = [
     # wasm32-unknown-unknown for SpacetimeDB and is built separately via
     # `spacetime publish stalltagebuch-server --project-path stalltagebuch-server`.
 ]
+exclude = ["stalltagebuch-server"]
 resolver = "2"
 
 [package]
