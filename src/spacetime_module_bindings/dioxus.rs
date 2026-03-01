@@ -20,6 +20,8 @@ pub type SharedConnection = Arc<DbConnection>;
 #[derive(Clone)]
 pub struct TableSignals {
     pub egg_records: SyncSignal<Vec<EggRecord>>,
+    pub photo_collections: SyncSignal<Vec<PhotoCollection>>,
+    pub photos: SyncSignal<Vec<Photo>>,
     pub quail_events: SyncSignal<Vec<QuailEvent>>,
     pub quails: SyncSignal<Vec<Quail>>,
 }
@@ -76,6 +78,8 @@ pub fn use_spacetimedb_context_provider(
 
     let mut table_signals = TableSignals {
         egg_records: use_signal_sync(Vec::new),
+        photo_collections: use_signal_sync(Vec::new),
+        photos: use_signal_sync(Vec::new),
         quail_events: use_signal_sync(Vec::new),
         quails: use_signal_sync(Vec::new),
     };
@@ -122,6 +126,46 @@ pub fn use_spacetimedb_context_provider(
                     conn.db.egg_records().on_delete(move |ctx, _row| {
                         let updated: Vec<EggRecord> = ctx.db.egg_records().iter().collect();
                         table_signals.egg_records.set(updated);
+                    });
+                    // Populate initial rows for photo_collections
+                    let current: Vec<PhotoCollection> =
+                        conn.db.photo_collections().iter().collect();
+                    table_signals.photo_collections.set(current);
+
+                    // Keep signal in sync on changes
+                    conn.db.photo_collections().on_insert(move |ctx, _row| {
+                        let updated: Vec<PhotoCollection> =
+                            ctx.db.photo_collections().iter().collect();
+                        table_signals.photo_collections.set(updated);
+                    });
+                    conn.db
+                        .photo_collections()
+                        .on_update(move |ctx, _old, _new| {
+                            let updated: Vec<PhotoCollection> =
+                                ctx.db.photo_collections().iter().collect();
+                            table_signals.photo_collections.set(updated);
+                        });
+                    conn.db.photo_collections().on_delete(move |ctx, _row| {
+                        let updated: Vec<PhotoCollection> =
+                            ctx.db.photo_collections().iter().collect();
+                        table_signals.photo_collections.set(updated);
+                    });
+                    // Populate initial rows for photos
+                    let current: Vec<Photo> = conn.db.photos().iter().collect();
+                    table_signals.photos.set(current);
+
+                    // Keep signal in sync on changes
+                    conn.db.photos().on_insert(move |ctx, _row| {
+                        let updated: Vec<Photo> = ctx.db.photos().iter().collect();
+                        table_signals.photos.set(updated);
+                    });
+                    conn.db.photos().on_update(move |ctx, _old, _new| {
+                        let updated: Vec<Photo> = ctx.db.photos().iter().collect();
+                        table_signals.photos.set(updated);
+                    });
+                    conn.db.photos().on_delete(move |ctx, _row| {
+                        let updated: Vec<Photo> = ctx.db.photos().iter().collect();
+                        table_signals.photos.set(updated);
                     });
                     // Populate initial rows for quail_events
                     let current: Vec<QuailEvent> = conn.db.quail_events().iter().collect();
@@ -228,6 +272,20 @@ pub fn use_table_egg_records() -> SyncSignal<Vec<EggRecord>> {
     ctx.tables.egg_records
 }
 
+/// Get a reactive signal containing all rows of the `photo_collections` table.
+#[must_use]
+pub fn use_table_photo_collections() -> SyncSignal<Vec<PhotoCollection>> {
+    let ctx = use_spacetimedb_context();
+    ctx.tables.photo_collections
+}
+
+/// Get a reactive signal containing all rows of the `photos` table.
+#[must_use]
+pub fn use_table_photos() -> SyncSignal<Vec<Photo>> {
+    let ctx = use_spacetimedb_context();
+    ctx.tables.photos
+}
+
 /// Get a reactive signal containing all rows of the `quail_events` table.
 #[must_use]
 pub fn use_table_quail_events() -> SyncSignal<Vec<QuailEvent>> {
@@ -253,6 +311,32 @@ pub fn use_reducer_create_event(
     move |args: create_event_args_type::CreateEventArgs| {
         if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_event(args);
+        }
+    }
+}
+
+/// Get a callback to invoke the `create_photo` reducer.
+#[must_use]
+pub fn use_reducer_create_photo(
+) -> impl Fn(create_photo_args_type::CreatePhotoArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: create_photo_args_type::CreatePhotoArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.create_photo(args);
+        }
+    }
+}
+
+/// Get a callback to invoke the `create_photo_collection` reducer.
+#[must_use]
+pub fn use_reducer_create_photo_collection(
+) -> impl Fn(create_photo_collection_args_type::CreatePhotoCollectionArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: create_photo_collection_args_type::CreatePhotoCollectionArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.create_photo_collection(args);
         }
     }
 }
@@ -294,6 +378,30 @@ pub fn use_reducer_delete_event() -> impl Fn(String) + Clone + 'static {
     }
 }
 
+/// Get a callback to invoke the `delete_photo` reducer.
+#[must_use]
+pub fn use_reducer_delete_photo() -> impl Fn(String) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |uuid: String| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.delete_photo(uuid);
+        }
+    }
+}
+
+/// Get a callback to invoke the `delete_photo_collection` reducer.
+#[must_use]
+pub fn use_reducer_delete_photo_collection() -> impl Fn(String) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |uuid: String| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.delete_photo_collection(uuid);
+        }
+    }
+}
+
 /// Get a callback to invoke the `delete_quail` reducer.
 #[must_use]
 pub fn use_reducer_delete_quail() -> impl Fn(String) + Clone + 'static {
@@ -327,6 +435,32 @@ pub fn use_reducer_update_event(
     move |args: update_event_args_type::UpdateEventArgs| {
         if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_event(args);
+        }
+    }
+}
+
+/// Get a callback to invoke the `update_photo_collection` reducer.
+#[must_use]
+pub fn use_reducer_update_photo_collection(
+) -> impl Fn(update_photo_collection_args_type::UpdatePhotoCollectionArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: update_photo_collection_args_type::UpdatePhotoCollectionArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.update_photo_collection(args);
+        }
+    }
+}
+
+/// Get a callback to invoke the `update_photo_sync_status` reducer.
+#[must_use]
+pub fn use_reducer_update_photo_sync_status(
+) -> impl Fn(update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.update_photo_sync_status(args);
         }
     }
 }

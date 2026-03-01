@@ -41,3 +41,29 @@ pub struct RemoteEggRecord {
     pub notes: Option<String>,
     pub owner: String,
 }
+
+/// Mirror of the `photo_collections` table row.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RemotePhotoCollection {
+    pub id: u64,
+    pub uuid: String,
+    pub quail_uuid: Option<String>,
+    pub event_uuid: Option<String>,
+    pub preview_photo_uuid: Option<String>,
+    pub name: String,
+    pub owner: String,
+}
+
+/// Mirror of the `photos` table row.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RemotePhoto {
+    pub id: u64,
+    pub uuid: String,
+    pub collection_uuid: String,
+    pub relative_path: String,
+    pub sync_status: String,
+    pub sync_error: Option<String>,
+    pub last_sync_attempt: Option<i64>,
+    pub retry_count: i32,
+    pub owner: String,
+}

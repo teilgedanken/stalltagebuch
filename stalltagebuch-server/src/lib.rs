@@ -59,6 +59,46 @@ pub struct EggRecord {
     pub owner: String,
 }
 
+/// A collection of photos (for a quail or event).
+#[spacetimedb::table(accessor = photo_collections, public)]
+pub struct PhotoCollection {
+    /// Client-generated UUID used as the stable cross-device identifier.
+    #[primary_key]
+    pub uuid: String,
+    pub id: u64,
+    /// UUID of the quail this collection belongs to (if applicable).
+    pub quail_uuid: Option<String>,
+    /// UUID of the event this collection belongs to (if applicable).
+    pub event_uuid: Option<String>,
+    /// UUID of the photo used as preview for this collection.
+    pub preview_photo_uuid: Option<String>,
+    /// Name/description of the collection.
+    pub name: String,
+    pub owner: String,
+}
+
+/// A photo in a collection.
+#[spacetimedb::table(accessor = photos, public)]
+pub struct Photo {
+    /// Client-generated UUID used as the stable cross-device identifier.
+    #[primary_key]
+    pub uuid: String,
+    pub id: u64,
+    /// UUID of the collection this photo belongs to.
+    pub collection_uuid: String,
+    /// Relative path from the app's photos directory (e.g. "quail-123/photo.jpg").
+    pub relative_path: String,
+    /// Sync status regarding Nextcloud upload: "local_only" | "uploading" | "synced" | "download_pending" | "downloading" | "download_failed"
+    pub sync_status: String,
+    /// Error message if sync failed.
+    pub sync_error: Option<String>,
+    /// Timestamp of last sync attempt.
+    pub last_sync_attempt: Option<i64>,
+    /// Number of failed retry attempts.
+    pub retry_count: i32,
+    pub owner: String,
+}
+
 // ─── Reducer argument types ────────────────────────────────────────────────────
 
 #[derive(SpacetimeType)]
@@ -104,6 +144,36 @@ pub struct UpsertEggRecordArgs {
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
+}
+
+#[derive(SpacetimeType)]
+pub struct CreatePhotoCollectionArgs {
+    pub uuid: String,
+    pub quail_uuid: Option<String>,
+    pub event_uuid: Option<String>,
+    pub name: String,
+}
+
+#[derive(SpacetimeType)]
+pub struct UpdatePhotoCollectionArgs {
+    pub uuid: String,
+    pub preview_photo_uuid: Option<String>,
+}
+
+#[derive(SpacetimeType)]
+pub struct CreatePhotoArgs {
+    pub uuid: String,
+    pub collection_uuid: String,
+    pub relative_path: String,
+}
+
+#[derive(SpacetimeType)]
+pub struct UpdatePhotoSyncStatusArgs {
+    pub uuid: String,
+    pub sync_status: String,
+    pub sync_error: Option<String>,
+    pub last_sync_attempt: Option<i64>,
+    pub retry_count: i32,
 }
 
 // ─── Reducers ─────────────────────────────────────────────────────────────────
@@ -249,5 +319,100 @@ pub fn delete_egg_record(ctx: &ReducerContext, uuid: String) {
             return;
         }
         ctx.db.egg_records().uuid().delete(&uuid);
+    }
+}
+
+/// Create a photo collection.
+#[reducer]
+pub fn create_photo_collection(ctx: &ReducerContext, args: CreatePhotoCollectionArgs) {
+    ctx.db.photo_collections().insert(PhotoCollection {
+        uuid: args.uuid,
+        id: 0,
+        quail_uuid: args.quail_uuid,
+        event_uuid: args.event_uuid,
+        preview_photo_uuid: None,
+        name: args.name,
+        owner: ctx.sender().to_string(),
+    });
+}
+
+/// Update photo collection preview (owner-only).
+#[reducer]
+pub fn update_photo_collection(ctx: &ReducerContext, args: UpdatePhotoCollectionArgs) {
+    if let Some(mut existing) = ctx
+        .db
+        .photo_collections()
+        .iter()
+        .find(|c| c.uuid == args.uuid)
+    {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        existing.preview_photo_uuid = args.preview_photo_uuid;
+        ctx.db.photo_collections().uuid().update(existing);
+    }
+}
+
+/// Delete a photo collection and all its photos (owner-only).
+#[reducer]
+pub fn delete_photo_collection(ctx: &ReducerContext, uuid: String) {
+    if let Some(existing) = ctx.db.photo_collections().iter().find(|c| c.uuid == uuid) {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        // Cascade-delete photos in this collection.
+        let photo_uuids: Vec<String> = ctx
+            .db
+            .photos()
+            .iter()
+            .filter(|p| p.collection_uuid == uuid && p.owner == ctx.sender().to_string())
+            .map(|p| p.uuid.clone())
+            .collect();
+        for photo_uuid in photo_uuids {
+            ctx.db.photos().uuid().delete(&photo_uuid);
+        }
+        ctx.db.photo_collections().uuid().delete(&uuid);
+    }
+}
+
+/// Create a new photo in a collection.
+#[reducer]
+pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
+    ctx.db.photos().insert(Photo {
+        uuid: args.uuid,
+        id: 0,
+        collection_uuid: args.collection_uuid,
+        relative_path: args.relative_path,
+        sync_status: "local_only".to_string(),
+        sync_error: None,
+        last_sync_attempt: None,
+        retry_count: 0,
+        owner: ctx.sender().to_string(),
+    });
+}
+
+/// Update photo sync status (owner-only).
+#[reducer]
+pub fn update_photo_sync_status(ctx: &ReducerContext, args: UpdatePhotoSyncStatusArgs) {
+    if let Some(mut existing) = ctx.db.photos().iter().find(|p| p.uuid == args.uuid) {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        existing.sync_status = args.sync_status;
+        existing.sync_error = args.sync_error;
+        existing.last_sync_attempt = args.last_sync_attempt;
+        existing.retry_count = args.retry_count;
+        ctx.db.photos().uuid().update(existing);
+    }
+}
+
+/// Delete a photo (owner-only).
+#[reducer]
+pub fn delete_photo(ctx: &ReducerContext, uuid: String) {
+    if let Some(existing) = ctx.db.photos().iter().find(|p| p.uuid == uuid) {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        ctx.db.photos().uuid().delete(&uuid);
     }
 }

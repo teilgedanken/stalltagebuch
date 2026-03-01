@@ -10,13 +10,23 @@ pub mod dioxus;
 
 pub mod create_event_args_type;
 pub mod create_event_reducer;
+pub mod create_photo_args_type;
+pub mod create_photo_collection_args_type;
+pub mod create_photo_collection_reducer;
+pub mod create_photo_reducer;
 pub mod create_quail_args_type;
 pub mod create_quail_reducer;
 pub mod delete_egg_record_reducer;
 pub mod delete_event_reducer;
+pub mod delete_photo_collection_reducer;
+pub mod delete_photo_reducer;
 pub mod delete_quail_reducer;
 pub mod egg_record_type;
 pub mod egg_records_table;
+pub mod photo_collection_type;
+pub mod photo_collections_table;
+pub mod photo_type;
+pub mod photos_table;
 pub mod quail_event_type;
 pub mod quail_events_table;
 pub mod quail_type;
@@ -24,6 +34,10 @@ pub mod quails_table;
 pub mod set_quail_photo_reducer;
 pub mod update_event_args_type;
 pub mod update_event_reducer;
+pub mod update_photo_collection_args_type;
+pub mod update_photo_collection_reducer;
+pub mod update_photo_sync_status_args_type;
+pub mod update_photo_sync_status_reducer;
 pub mod update_quail_args_type;
 pub mod update_quail_reducer;
 pub mod upsert_egg_record_args_type;
@@ -31,13 +45,23 @@ pub mod upsert_egg_record_reducer;
 
 pub use create_event_args_type::CreateEventArgs;
 pub use create_event_reducer::create_event;
+pub use create_photo_args_type::CreatePhotoArgs;
+pub use create_photo_collection_args_type::CreatePhotoCollectionArgs;
+pub use create_photo_collection_reducer::create_photo_collection;
+pub use create_photo_reducer::create_photo;
 pub use create_quail_args_type::CreateQuailArgs;
 pub use create_quail_reducer::create_quail;
 pub use delete_egg_record_reducer::delete_egg_record;
 pub use delete_event_reducer::delete_event;
+pub use delete_photo_collection_reducer::delete_photo_collection;
+pub use delete_photo_reducer::delete_photo;
 pub use delete_quail_reducer::delete_quail;
 pub use egg_record_type::EggRecord;
 pub use egg_records_table::*;
+pub use photo_collection_type::PhotoCollection;
+pub use photo_collections_table::*;
+pub use photo_type::Photo;
+pub use photos_table::*;
 pub use quail_event_type::QuailEvent;
 pub use quail_events_table::*;
 pub use quail_type::Quail;
@@ -45,6 +69,10 @@ pub use quails_table::*;
 pub use set_quail_photo_reducer::set_quail_photo;
 pub use update_event_args_type::UpdateEventArgs;
 pub use update_event_reducer::update_event;
+pub use update_photo_collection_args_type::UpdatePhotoCollectionArgs;
+pub use update_photo_collection_reducer::update_photo_collection;
+pub use update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs;
+pub use update_photo_sync_status_reducer::update_photo_sync_status;
 pub use update_quail_args_type::UpdateQuailArgs;
 pub use update_quail_reducer::update_quail;
 pub use upsert_egg_record_args_type::UpsertEggRecordArgs;
@@ -61,6 +89,12 @@ pub enum Reducer {
     CreateEvent {
         args: CreateEventArgs,
     },
+    CreatePhoto {
+        args: CreatePhotoArgs,
+    },
+    CreatePhotoCollection {
+        args: CreatePhotoCollectionArgs,
+    },
     CreateQuail {
         args: CreateQuailArgs,
     },
@@ -68,6 +102,12 @@ pub enum Reducer {
         uuid: String,
     },
     DeleteEvent {
+        uuid: String,
+    },
+    DeletePhoto {
+        uuid: String,
+    },
+    DeletePhotoCollection {
         uuid: String,
     },
     DeleteQuail {
@@ -79,6 +119,12 @@ pub enum Reducer {
     },
     UpdateEvent {
         args: UpdateEventArgs,
+    },
+    UpdatePhotoCollection {
+        args: UpdatePhotoCollectionArgs,
+    },
+    UpdatePhotoSyncStatus {
+        args: UpdatePhotoSyncStatusArgs,
     },
     UpdateQuail {
         args: UpdateQuailArgs,
@@ -96,12 +142,18 @@ impl __sdk::Reducer for Reducer {
     fn reducer_name(&self) -> &'static str {
         match self {
             Reducer::CreateEvent { .. } => "create_event",
+            Reducer::CreatePhoto { .. } => "create_photo",
+            Reducer::CreatePhotoCollection { .. } => "create_photo_collection",
             Reducer::CreateQuail { .. } => "create_quail",
             Reducer::DeleteEggRecord { .. } => "delete_egg_record",
             Reducer::DeleteEvent { .. } => "delete_event",
+            Reducer::DeletePhoto { .. } => "delete_photo",
+            Reducer::DeletePhotoCollection { .. } => "delete_photo_collection",
             Reducer::DeleteQuail { .. } => "delete_quail",
             Reducer::SetQuailPhoto { .. } => "set_quail_photo",
             Reducer::UpdateEvent { .. } => "update_event",
+            Reducer::UpdatePhotoCollection { .. } => "update_photo_collection",
+            Reducer::UpdatePhotoSyncStatus { .. } => "update_photo_sync_status",
             Reducer::UpdateQuail { .. } => "update_quail",
             Reducer::UpsertEggRecord { .. } => "upsert_egg_record",
             _ => unreachable!(),
@@ -113,6 +165,12 @@ impl __sdk::Reducer for Reducer {
             Reducer::CreateEvent { args } => {
                 __sats::bsatn::to_vec(&create_event_reducer::CreateEventArgs { args: args.clone() })
             }
+            Reducer::CreatePhoto { args } => {
+                __sats::bsatn::to_vec(&create_photo_reducer::CreatePhotoArgs { args: args.clone() })
+            }
+            Reducer::CreatePhotoCollection { args } => __sats::bsatn::to_vec(
+                &create_photo_collection_reducer::CreatePhotoCollectionArgs { args: args.clone() },
+            ),
             Reducer::CreateQuail { args } => {
                 __sats::bsatn::to_vec(&create_quail_reducer::CreateQuailArgs { args: args.clone() })
             }
@@ -124,6 +182,12 @@ impl __sdk::Reducer for Reducer {
             Reducer::DeleteEvent { uuid } => {
                 __sats::bsatn::to_vec(&delete_event_reducer::DeleteEventArgs { uuid: uuid.clone() })
             }
+            Reducer::DeletePhoto { uuid } => {
+                __sats::bsatn::to_vec(&delete_photo_reducer::DeletePhotoArgs { uuid: uuid.clone() })
+            }
+            Reducer::DeletePhotoCollection { uuid } => __sats::bsatn::to_vec(
+                &delete_photo_collection_reducer::DeletePhotoCollectionArgs { uuid: uuid.clone() },
+            ),
             Reducer::DeleteQuail { uuid } => {
                 __sats::bsatn::to_vec(&delete_quail_reducer::DeleteQuailArgs { uuid: uuid.clone() })
             }
@@ -137,6 +201,12 @@ impl __sdk::Reducer for Reducer {
             Reducer::UpdateEvent { args } => {
                 __sats::bsatn::to_vec(&update_event_reducer::UpdateEventArgs { args: args.clone() })
             }
+            Reducer::UpdatePhotoCollection { args } => __sats::bsatn::to_vec(
+                &update_photo_collection_reducer::UpdatePhotoCollectionArgs { args: args.clone() },
+            ),
+            Reducer::UpdatePhotoSyncStatus { args } => __sats::bsatn::to_vec(
+                &update_photo_sync_status_reducer::UpdatePhotoSyncStatusArgs { args: args.clone() },
+            ),
             Reducer::UpdateQuail { args } => {
                 __sats::bsatn::to_vec(&update_quail_reducer::UpdateQuailArgs { args: args.clone() })
             }
@@ -155,6 +225,8 @@ impl __sdk::Reducer for Reducer {
 #[doc(hidden)]
 pub struct DbUpdate {
     egg_records: __sdk::TableUpdate<EggRecord>,
+    photo_collections: __sdk::TableUpdate<PhotoCollection>,
+    photos: __sdk::TableUpdate<Photo>,
     quail_events: __sdk::TableUpdate<QuailEvent>,
     quails: __sdk::TableUpdate<Quail>,
 }
@@ -168,6 +240,12 @@ impl TryFrom<__ws::v2::TransactionUpdate> for DbUpdate {
                 "egg_records" => db_update
                     .egg_records
                     .append(egg_records_table::parse_table_update(table_update)?),
+                "photo_collections" => db_update
+                    .photo_collections
+                    .append(photo_collections_table::parse_table_update(table_update)?),
+                "photos" => db_update
+                    .photos
+                    .append(photos_table::parse_table_update(table_update)?),
                 "quail_events" => db_update
                     .quail_events
                     .append(quail_events_table::parse_table_update(table_update)?),
@@ -203,6 +281,12 @@ impl __sdk::DbUpdate for DbUpdate {
         diff.egg_records = cache
             .apply_diff_to_table::<EggRecord>("egg_records", &self.egg_records)
             .with_updates_by_pk(|row| &row.uuid);
+        diff.photo_collections = cache
+            .apply_diff_to_table::<PhotoCollection>("photo_collections", &self.photo_collections)
+            .with_updates_by_pk(|row| &row.uuid);
+        diff.photos = cache
+            .apply_diff_to_table::<Photo>("photos", &self.photos)
+            .with_updates_by_pk(|row| &row.uuid);
         diff.quail_events = cache
             .apply_diff_to_table::<QuailEvent>("quail_events", &self.quail_events)
             .with_updates_by_pk(|row| &row.uuid);
@@ -218,6 +302,12 @@ impl __sdk::DbUpdate for DbUpdate {
             match &table_rows.table[..] {
                 "egg_records" => db_update
                     .egg_records
+                    .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
+                "photo_collections" => db_update
+                    .photo_collections
+                    .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
+                "photos" => db_update
+                    .photos
                     .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
                 "quail_events" => db_update
                     .quail_events
@@ -241,6 +331,12 @@ impl __sdk::DbUpdate for DbUpdate {
                 "egg_records" => db_update
                     .egg_records
                     .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
+                "photo_collections" => db_update
+                    .photo_collections
+                    .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
+                "photos" => db_update
+                    .photos
+                    .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
                 "quail_events" => db_update
                     .quail_events
                     .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
@@ -263,6 +359,8 @@ impl __sdk::DbUpdate for DbUpdate {
 #[doc(hidden)]
 pub struct AppliedDiff<'r> {
     egg_records: __sdk::TableAppliedDiff<'r, EggRecord>,
+    photo_collections: __sdk::TableAppliedDiff<'r, PhotoCollection>,
+    photos: __sdk::TableAppliedDiff<'r, Photo>,
     quail_events: __sdk::TableAppliedDiff<'r, QuailEvent>,
     quails: __sdk::TableAppliedDiff<'r, Quail>,
     __unused: std::marker::PhantomData<&'r ()>,
@@ -279,6 +377,12 @@ impl<'r> __sdk::AppliedDiff<'r> for AppliedDiff<'r> {
         callbacks: &mut __sdk::DbCallbacks<RemoteModule>,
     ) {
         callbacks.invoke_table_row_callbacks::<EggRecord>("egg_records", &self.egg_records, event);
+        callbacks.invoke_table_row_callbacks::<PhotoCollection>(
+            "photo_collections",
+            &self.photo_collections,
+            event,
+        );
+        callbacks.invoke_table_row_callbacks::<Photo>("photos", &self.photos, event);
         callbacks.invoke_table_row_callbacks::<QuailEvent>(
             "quail_events",
             &self.quail_events,
@@ -930,8 +1034,16 @@ impl __sdk::SpacetimeModule for RemoteModule {
 
     fn register_tables(client_cache: &mut __sdk::ClientCache<Self>) {
         egg_records_table::register_table(client_cache);
+        photo_collections_table::register_table(client_cache);
+        photos_table::register_table(client_cache);
         quail_events_table::register_table(client_cache);
         quails_table::register_table(client_cache);
     }
-    const ALL_TABLE_NAMES: &'static [&'static str] = &["egg_records", "quail_events", "quails"];
+    const ALL_TABLE_NAMES: &'static [&'static str] = &[
+        "egg_records",
+        "photo_collections",
+        "photos",
+        "quail_events",
+        "quails",
+    ];
 }
