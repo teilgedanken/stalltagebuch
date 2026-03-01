@@ -1,5 +1,6 @@
 use crate::database;
 use crate::services;
+use crate::spacetime::{use_spacetimedb_context, ConnectionState};
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -8,6 +9,8 @@ use dioxus_i18n::t;
 pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut db_status = use_signal(|| Err(t!("status-initializing")));
     let mut profile_count = use_signal(|| 0i32);
+    let spacetimedb_ctx = use_spacetimedb_context();
+    let connection_state = spacetimedb_ctx.state;
 
     // Initialize database on mount
     use_effect(move || match database::init_database() {
@@ -87,7 +90,18 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                     "Arch: {std::env::consts::ARCH}"
                 }
                 p { style: "font-size: 11px; color: #888; margin: 4px 0; word-break: break-all;",
-                    {t!("info-db-path", path : database::get_database_path().display().to_string())} // DB: {path}
+                    {
+                        match connection_state() {
+                            ConnectionState::Disconnected => {
+                                t!("info-spacetimedb-disconnected").to_string()
+                            }
+                            ConnectionState::Connecting => t!("info-spacetimedb-connecting").to_string(),
+                            ConnectionState::Connected(_, _) => {
+                                t!("info-spacetimedb-connected").to_string()
+                            }
+                            ConnectionState::Error => t!("info-spacetimedb-error").to_string(),
+                        }
+                    }
                 }
             }
         }

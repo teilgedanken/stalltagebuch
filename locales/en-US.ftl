@@ -1,117 +1,118 @@
 # Generated translation template by dx-i18n
-# Contains 225 translation keys
+# Contains 231 translation keys
 
 # Add event
-# Source: ./src/components/profile_detail.rs:409
+# Source: ./src/components/profile_detail.rs:427
 action-add-event = 
 
-# Source: ./src/components/profile_add.rs:112
+# Source: ./src/components/profile_add.rs:135
 action-back = 
 
-# Source: ./src/components/profile_add.rs:280
+# Source: ./src/components/profile_add.rs:310
 action-camera = 
 
 # Cancel
-# Source: ./src/components/profile_edit.rs:384
+# Source: ./src/components/event_add.rs:192
 action-cancel = 
 
 # Source: ./src/components/profile_detail.rs:500
+# UNUSED: This key is no longer used in the code
 action-close = 
 
-# Source: ./src/components/event_edit.rs:474
+# Source: ./src/components/event_edit.rs:512
 action-delete = 
 
-# Source: ./src/components/profile_edit.rs:402
+# Source: ./src/components/profile_edit.rs:417
 action-delete-permanently = 
 
-# Source: ./src/components/profile_edit.rs:416
+# Source: ./src/components/profile_edit.rs:431
 action-delete-quail = 
 
-# Source: ./src/components/profile_detail.rs:474
+# Source: ./src/components/profile_detail.rs:493
 action-edit = 
 
-# Source: ./src/components/profile_add.rs:250
+# Source: ./src/components/event_edit.rs:417
 action-gallery = 
 
-# Source: ./src/components/profile_add.rs:247
+# Source: ./src/components/profile_add.rs:277
 action-loading = 
 
 # New
-# Source: ./src/components/profile_list.rs:72
+# Source: ./src/components/profile_list.rs:95
 action-new = 
 
-# Source: ./src/components/event_edit.rs:441
+# Source: ./src/components/event_edit.rs:479
 action-photo = 
 
-# Source: ./src/components/settings.rs:143
+# Source: ./src/components/settings.rs:298
 action-retry = 
 
-# Source: ./src/components/profile_edit.rs:376
+# Source: ./src/components/egg_tracking.rs:251
 action-save = 
 
-# Source: ./src/components/profile_edit.rs:373
+# Source: ./src/components/event_add.rs:179
 action-saving = 
 
 # Source: ./src/components/egg_tracking.rs:249
 action-update = 
 
-# Source: ./src/components/home.rs:34
+# Source: ./src/components/home.rs:37
 app-title = 
 
-# Source: ./src/components/settings.rs:896
+# Source: ./src/components/settings.rs:1063
 backup-cleanup-button = 🧹 Delete orphaned photos
 
-# Source: ./src/components/settings.rs:866
+# Source: ./src/components/settings.rs:1026
 backup-cleanup-description = Removes photos without a valid quail or event assignment.
 
-# Source: ./src/components/settings.rs:884
+# Source: ./src/components/settings.rs:1050
 # Parameters: $error
 backup-cleanup-error = ❌ Cleanup error: { $error }
 
-# Source: ./src/components/settings.rs:881
+# Source: ./src/components/settings.rs:1046
 # Parameters: $count
 backup-cleanup-success = ✅ Deleted { $count } orphaned photos
 
-# Source: ./src/components/settings.rs:864
+# Source: ./src/components/settings.rs:1023
 backup-cleanup-title = 🧹 Storage cleanup
 
-# Source: ./src/components/settings.rs:889
+# Source: ./src/components/settings.rs:1056
 # Parameters: $error
 backup-db-error = ❌ Database error: { $error }
 
-# Source: ./src/components/settings.rs:930
+# Source: ./src/components/settings.rs:1111
 backup-export-button = 📤 Export data
 
-# Source: ./src/components/settings.rs:904
+# Source: ./src/components/settings.rs:1073
 backup-export-description = Creates a ZIP backup with quails, events, eggs and photos that can be imported again.
 
-# Source: ./src/components/settings.rs:920
+# Source: ./src/components/settings.rs:1100
 # Parameters: $error
 backup-export-error = ❌ Export error: { $error }
 
-# Source: ./src/components/settings.rs:917
+# Source: ./src/components/settings.rs:1094
 # Parameters: $path
 backup-export-success = ✅ Export created: { $path }
 
-# Source: ./src/components/settings.rs:902
+# Source: ./src/components/settings.rs:1070
 backup-export-title = 📦 Backup & restore data
 
-# Source: ./src/components/settings.rs:965
+# Source: ./src/components/settings.rs:1169
 backup-import-button = 📥 Import data from import.zip
 
-# Source: ./src/components/settings.rs:955
+# Source: ./src/components/settings.rs:1158
 # Parameters: $error
 backup-import-error = ❌ Import error: { $error }
 
-# Source: ./src/components/settings.rs:946
+# Source: ./src/components/settings.rs:1132
 # Parameters: $path
 backup-import-missing = ❌ Import file not found: { $path }
 
-# Source: ./src/components/settings.rs:952
+# Source: ./src/components/settings.rs:1151
 # Parameters: $path
 backup-import-success = ✅ Import successful from { $path }
 
-# Source: ./src/components/profile_edit.rs:394
+# Source: ./src/components/profile_edit.rs:409
 confirm-delete-quail = 
 
 # Source: ./src/components/egg_history.rs:124
@@ -137,45 +138,49 @@ egg-tracking-show-history =
 # Source: ./src/components/egg_tracking.rs:167
 egg-tracking-success = 
 
-# Source: ./src/components/home.rs:59
+# Source: ./src/components/home.rs:62
 egg-tracking-title = 
 
-# Source: ./src/components/profile_add.rs:235
+# Source: ./src/components/profile_add.rs:36
+# Parameters: $error
 error = 
 
-# Source: ./src/components/settings.rs:264
+# Source: ./src/components/settings.rs:419
 error-access-failed = 
 
-# Source: ./src/components/profile_add.rs:240
+# Source: ./src/components/profile_add.rs:270
 error-android-only = 
 
-# Source: ./src/components/event_edit.rs:431
+# Source: ./src/components/event_edit.rs:469
 error-android-only-camera = 
 
-# Source: ./src/components/event_edit.rs:378
+# Source: ./src/components/event_edit.rs:407
 error-android-only-gallery = 
 
 # Source: ./src/components/statistics.rs:54
 error-calculation = 
 
-# Source: ./src/components/profile_detail.rs:292
+# Source: ./src/components/profile_detail.rs:310
 error-camera-android-only = 
 
-# Source: ./src/components/profile_detail.rs:286
+# Source: ./src/components/profile_detail.rs:304
 error-capture-failed = 
 
-# Source: ./src/components/event_edit.rs:425
+# Source: ./src/components/event_edit.rs:463
 # Parameters: $error
 error-capture-photo = 
 
-# Source: ./src/components/settings.rs:65
+# Source: ./src/components/settings.rs:219
 error-client = 
 
-# Source: ./src/components/settings.rs:593
+# Source: ./src/components/profile_detail.rs:296
+error-collection-failed = 
+
+# Source: ./src/components/settings.rs:748
 error-connection = 
 
-# Database error
-# Source: ./src/components/profile_edit.rs:61
+# Database connection error
+# Source: ./src/components/egg_history.rs:28
 # Parameters: $error
 error-database = 
 
@@ -186,17 +191,17 @@ error-database-detail =
 # Source: ./src/components/egg_tracking.rs:78
 error-date-format = 
 
-# Source: ./src/components/event_edit.rs:226
+# Source: ./src/components/event_edit.rs:256
 error-db-unavailable = 
 
-# Source: ./src/components/event_edit.rs:243
+# Source: ./src/components/event_edit.rs:273
 # Parameters: $error
 error-delete = 
 
-# Source: ./src/components/profile_edit.rs:151
+# Source: ./src/components/profile_edit.rs:357
 error-delete-failed = 
 
-# Source: ./src/components/settings.rs:609
+# Source: ./src/components/settings.rs:764
 error-deleting = 
 
 # Source: ./src/components/egg_tracking.rs:56
@@ -208,121 +213,125 @@ error-eggs-count-invalid =
 # Source: ./src/components/egg_tracking.rs:63
 error-eggs-count-negative = 
 
-# Source: ./src/components/event_edit.rs:181
+# Source: ./src/components/event_edit.rs:211
 error-empty-date = 
 
-# Source: ./src/components/event_add.rs:90
+# Source: ./src/components/event_add.rs:94
 # Parameters: $error
 error-event-save = 
 
 # Source: ./src/components/event_add.rs:50
 error-invalid-date = 
 
-# Source: ./src/components/settings.rs:489
+# Source: ./src/components/settings.rs:644
 error-json = 
 
 # Failed to load events
 # Source: ./src/components/profile_detail.rs:67
+# UNUSED: This key is no longer used in the code
 error-load-events-failed = 
 
-# Failed to load
-# Source: ./src/components/profile_edit.rs:38
+# Source: ./src/components/egg_history.rs:23
 # Parameters: $error
 error-load-failed = 
 
-# Source: ./src/components/profile_edit.rs:54
+# Source: ./src/components/profile_edit.rs:88
 error-load-photos-failed = 
 
 # Failed to load profiles
 # Source: ./src/components/profile_list.rs:29
+# UNUSED: This key is no longer used in the code
 error-load-profiles-failed = 
 
-# Source: ./src/components/event_edit.rs:164
+# Source: ./src/components/event_edit.rs:180
 # Parameters: $error
 error-loading = 
 
-# Source: ./src/components/settings.rs:564
+# Source: ./src/components/settings.rs:719
 error-login-timeout = 
 
-# Source: ./src/components/profile_detail.rs:226
+# Source: ./src/components/profile_detail.rs:236
 error-multiselect-android-only = 
 
-# Name is required
-# Source: ./src/components/profile_edit.rs:69
+# Name cannot be empty
+# Source: ./src/components/profile_add.rs:31
 error-name-required = 
 
-# Source: ./src/components/settings.rs:56
+# Source: ./src/components/settings.rs:210
 error-network = 
 
-# Source: ./src/components/event_edit.rs:372
+# Source: ./src/components/profile_edit.rs:103
+error-not-connected = Not connected to SpacetimeDB
+
+# Source: ./src/components/event_edit.rs:401
 # Parameters: $error
 error-pick-images = 
 
-# Source: ./src/components/profile_add.rs:90
+# Source: ./src/components/egg_tracking.rs:128
 # Parameters: $error
 error-save = 
 
-# Source: ./src/components/profile_edit.rs:125
+# Source: ./src/components/profile_detail.rs:290
 error-save-failed = 
 
-# Source: ./src/components/profile_detail.rs:220
+# Source: ./src/components/profile_detail.rs:230
 error-selection-failed = 
 
-# Source: ./src/components/settings.rs:584
+# Source: ./src/components/settings.rs:739
 error-server = 
 
 # Error message when loading trend data fails
 # Source: ./src/components/statistics.rs:62
 error-trend-load = 
 
-# Source: ./src/components/settings.rs:503
+# Source: ./src/components/settings.rs:658
 error-unexpected-status = 
 
-# Source: ./src/components/settings.rs:433
+# Source: ./src/components/settings.rs:588
 error-webdav-client = 
 
-# Source: ./src/components/event_add.rs:108
+# Source: ./src/components/event_add.rs:112
 # Parameters: $name
 event-add-for = 
 
-# Source: ./src/components/event_add.rs:107
+# Source: ./src/components/event_add.rs:111
 event-add-title = 
 
-# Source: ./src/components/event_edit.rs:259
+# Source: ./src/components/event_edit.rs:289
 event-edit-title = 
 
-# Source: ./src/components/event_edit.rs:163
+# Source: ./src/components/event_edit.rs:179
 event-not-found = 
 
-# Source: ./src/components/event_add.rs:132
+# Source: ./src/components/event_add.rs:136
 event-type-alive = 
 
-# Source: ./src/components/event_add.rs:131
+# Source: ./src/components/event_add.rs:135
 event-type-born = 
 
-# Source: ./src/components/event_add.rs:137
+# Source: ./src/components/event_add.rs:141
 event-type-died = 
 
-# Source: ./src/components/event_add.rs:134
+# Source: ./src/components/event_add.rs:138
 event-type-healthy = 
 
-# Source: ./src/components/event_add.rs:135
+# Source: ./src/components/event_add.rs:139
 event-type-marked = 
 
-# Source: ./src/components/event_add.rs:133
+# Source: ./src/components/event_add.rs:137
 event-type-sick = 
 
-# Source: ./src/components/event_add.rs:136
+# Source: ./src/components/event_add.rs:140
 event-type-slaughtered = 
 
 # No events available
-# Source: ./src/components/profile_detail.rs:415
+# Source: ./src/components/profile_detail.rs:434
 events-empty = 
 
-# Source: ./src/components/profile_detail.rs:395
+# Source: ./src/components/profile_detail.rs:413
 events-timeline-title = 
 
-# Source: ./src/components/event_add.rs:144
+# Source: ./src/components/event_add.rs:148
 field-date = 
 
 # Source: ./src/components/egg_tracking.rs:203
@@ -337,74 +346,87 @@ field-eggs-count-placeholder =
 # Source: ./src/components/egg_tracking.rs:212
 field-eggs-count-required = 
 
-# Source: ./src/components/event_add.rs:121
+# Source: ./src/components/event_add.rs:125
 field-event-type = 
 
 # Gender
-# Source: ./src/components/profile_edit.rs:221
+# Source: ./src/components/profile_edit.rs:238
 field-gender = 
 
 # e.g. Hen 1
-# Source: ./src/components/profile_edit.rs:211
+# Source: ./src/components/profile_edit.rs:227
 field-name-placeholder = 
 
 # Name *
-# Source: ./src/components/profile_edit.rs:206
+# Source: ./src/components/profile_edit.rs:222
 field-name-required = 
 
 # Source: ./src/components/egg_tracking.rs:229
 field-notes = 
 
-# Source: ./src/components/event_add.rs:157
+# Source: ./src/components/event_add.rs:161
 field-notes-optional = 
 
 # Source: ./src/components/egg_tracking.rs:234
 field-notes-placeholder = 
 
 # Photos count
-# Source: ./src/components/profile_edit.rs:264
+# Source: ./src/components/profile_edit.rs:283
 field-photos = 
 
 # Ring color
-# Source: ./src/components/profile_edit.rs:236
+# Source: ./src/components/profile_edit.rs:254
 field-ring-color = 
 
-# Source: ./src/components/event_edit.rs:277
+# Source: ./src/components/event_edit.rs:307
 field-type = 
 
-# Female
-# Source: ./src/components/profile_edit.rs:228
+# Female gender option
+# Source: ./src/components/profile_add.rs:183
 gender-female = 
 
-# Male
-# Source: ./src/components/profile_edit.rs:229
+# Male gender option
+# Source: ./src/components/profile_add.rs:184
 gender-male = 
 
-# Unknown
-# Source: ./src/components/profile_edit.rs:227
+# Unknown gender option
+# Source: ./src/components/profile_add.rs:182
 gender-unknown = 
 
 # DB: {path}
 # Source: ./src/components/home.rs:90
 # Parameters: $database, $path
+# UNUSED: This key is no longer used in the code
 info-db-path = 
 
-# Source: ./src/components/profile_edit.rs:258
+# Source: ./src/components/profile_edit.rs:276
 info-photos-detail-view = 
 
+# Source: ./src/components/home.rs:97
+info-spacetimedb-connected = SpacetimeDB: connected
+
+# Source: ./src/components/home.rs:96
+info-spacetimedb-connecting = SpacetimeDB: connecting...
+
+# Source: ./src/components/home.rs:95
+info-spacetimedb-disconnected = SpacetimeDB: not connected
+
+# Source: ./src/components/home.rs:98
+info-spacetimedb-error = SpacetimeDB: connection error
+
 # Tap a photo to mark it as profile photo.
-# Source: ./src/components/profile_edit.rs:359
+# Source: ./src/components/profile_edit.rs:374
 info-tap-photo-to-mark = 
 
-# Source: ./src/components/event_edit.rs:478
+# Source: ./src/components/event_edit.rs:516
 loading-event = 
 
 # Loading profile...
-# Source: ./src/components/profile_detail.rs:480
+# Source: ./src/components/profile_detail.rs:499
 loading-profile = 
 
 # the format string for the chrono format time.
-# Source: ./src/components/settings.rs:13
+# Source: ./src/components/settings.rs:16
 log-time-format = %H:%M:%S
 
 # Eier
@@ -424,11 +446,11 @@ nav-profiles =
 nav-statistics = 
 
 # Network connectivity check in progress
-# Source: ./src/components/settings.rs:123
+# Source: ./src/components/settings.rs:277
 network-checking = 
 
 # No internet connection message
-# Source: ./src/components/settings.rs:136
+# Source: ./src/components/settings.rs:291
 network-offline = 
 
 # Time period filter buttons
@@ -448,116 +470,117 @@ period-week =
 period-year = 
 
 # No photo selected message
-# Source: ./src/components/profile_add.rs:217
+# Source: ./src/components/profile_add.rs:247
 photo-none-selected = 
 
 # Photo selected status message
-# Source: ./src/components/profile_add.rs:202
+# Source: ./src/components/profile_add.rs:231
 photo-selected = 
 
-# Source: ./src/components/event_edit.rs:321
+# Source: ./src/components/event_edit.rs:351
 # Parameters: $count
 photos-count = 
 
 # No photos available. Add photos in detail view.
 # Source: ./src/components/profile_edit.rs:269
+# UNUSED: This key is no longer used in the code
 photos-empty = 
 
-# Source: ./src/components/event_add.rs:163
+# Source: ./src/components/event_add.rs:167
 placeholder-event-notes = 
 
-# Source: ./src/components/profile_add.rs:186
+# Source: ./src/components/profile_add.rs:213
 profile-add-info = 
 
 # New profile page title
-# Source: ./src/components/profile_add.rs:115
+# Source: ./src/components/profile_add.rs:139
 profile-add-title = 
 
-# Source: ./src/components/profile_add.rs:128
+# Source: ./src/components/profile_add.rs:152
 profile-created-success = 
 
 # Profile
-# Source: ./src/components/profile_detail.rs:84
+# Source: ./src/components/profile_detail.rs:121
 profile-detail-title = 
 
-# Source: ./src/components/profile_edit.rs:180
+# Source: ./src/components/profile_edit.rs:195
 profile-edit-title = 
 
 # Gender field label
-# Source: ./src/components/profile_add.rs:150
+# Source: ./src/components/profile_add.rs:176
 profile-gender-label = 
 
 # No profiles available
-# Source: ./src/components/profile_list.rs:94
+# Source: ./src/components/profile_list.rs:116
 profile-list-empty = 
 
-# Source: ./src/components/home.rs:53
+# Source: ./src/components/home.rs:56
 profile-list-title = 
 
 # Name field label with required marker
-# Source: ./src/components/profile_add.rs:136
+# Source: ./src/components/profile_add.rs:161
 profile-name-label = 
 
 # Example name placeholder
-# Source: ./src/components/profile_add.rs:141
+# Source: ./src/components/profile_add.rs:166
 profile-name-placeholder = 
 
 # Photo field label
-# Source: ./src/components/profile_add.rs:191
+# Source: ./src/components/profile_add.rs:219
 profile-photo-label = 
 
 # Ring color field label
-# Source: ./src/components/profile_add.rs:164
+# Source: ./src/components/profile_add.rs:191
 profile-ring-color-label = 
 
-# Black
-# Source: ./src/components/profile_edit.rs:251
+# Black ring color
+# Source: ./src/components/profile_add.rs:206
 ring-color-black = 
 
-# Dark blue
-# Source: ./src/components/profile_edit.rs:246
+# Dark blue ring color
+# Source: ./src/components/profile_add.rs:201
 ring-color-dark-blue = 
 
-# Green
-# Source: ./src/components/profile_edit.rs:252
+# Green ring color
+# Source: ./src/components/profile_add.rs:207
 ring-color-green = 
 
-# Light blue
-# Source: ./src/components/profile_edit.rs:245
+# Light blue ring color
+# Source: ./src/components/profile_add.rs:200
 ring-color-light-blue = 
 
-# None
-# Source: ./src/components/profile_edit.rs:242
+# No ring color option
+# Source: ./src/components/profile_add.rs:197
 ring-color-none = 
 
-# Orange
-# Source: ./src/components/profile_edit.rs:248
+# Orange ring color
+# Source: ./src/components/profile_add.rs:203
 ring-color-orange = 
 
-# Pink
-# Source: ./src/components/profile_edit.rs:244
+# Pink ring color
+# Source: ./src/components/profile_add.rs:199
 ring-color-pink = 
 
-# Purple
-# Source: ./src/components/profile_edit.rs:243
+# Purple ring color
+# Source: ./src/components/profile_add.rs:198
 ring-color-purple = 
 
-# Red
-# Source: ./src/components/profile_edit.rs:247
+# Red ring color
+# Source: ./src/components/profile_add.rs:202
 ring-color-red = 
 
-# White
-# Source: ./src/components/profile_edit.rs:249
+# White ring color
+# Source: ./src/components/profile_add.rs:204
 ring-color-white = 
 
-# Yellow
-# Source: ./src/components/profile_edit.rs:250
+# Yellow ring color
+# Source: ./src/components/profile_add.rs:205
 ring-color-yellow = 
 
-# Source: ./src/components/profile_list.rs:82
+# Source: ./src/components/profile_list.rs:105
 search-placeholder-name = 
 
-# Source: ./src/components/home.rs:74
+# Source: ./src/components/home.rs:77
 settings-title = 
 
 # Source: ./src/components/statistics.rs:208
@@ -595,7 +618,7 @@ stats-overview =
 # Source: ./src/components/statistics.rs:162
 stats-period = 
 
-# Source: ./src/components/home.rs:64
+# Source: ./src/components/home.rs:67
 stats-title = 
 
 # Total number of eggs collected
@@ -613,145 +636,145 @@ stats-until =
 # Source: ./src/components/statistics.rs:149
 stats-weekly-avg = 
 
-# Source: ./src/components/profile_detail.rs:339
+# Source: ./src/components/profile_detail.rs:357
 status-alive = 
 
-# Source: ./src/components/profile_detail.rs:333
+# Source: ./src/components/profile_detail.rs:351
 status-born = 
 
-# Source: ./src/components/home.rs:26
+# Source: ./src/components/home.rs:29
 # Parameters: $error
 status-db-error = 
 
-# Source: ./src/components/home.rs:17
+# Source: ./src/components/home.rs:20
 # Parameters: $count
 status-db-ready = 
 
-# Source: ./src/components/profile_detail.rs:371
+# Source: ./src/components/profile_detail.rs:389
 status-died = 
 
-# Source: ./src/components/profile_detail.rs:351
+# Source: ./src/components/profile_detail.rs:369
 status-healthy = 
 
-# Source: ./src/components/home.rs:9
+# Source: ./src/components/home.rs:10
 status-initializing = 
 
-# Source: ./src/components/profile_detail.rs:358
+# Source: ./src/components/profile_detail.rs:376
 status-marked = 
 
-# Source: ./src/components/profile_detail.rs:345
+# Source: ./src/components/profile_detail.rs:363
 status-sick = 
 
-# Source: ./src/components/profile_detail.rs:365
+# Source: ./src/components/profile_detail.rs:383
 status-slaughtered = 
 
-# Source: ./src/components/profile_edit.rs:188
+# Source: ./src/components/profile_edit.rs:203
 success-profile-updated = 
 
-# Source: ./src/components/settings.rs:656
+# Source: ./src/components/settings.rs:814
 sync-configured = 
 
-# Source: ./src/components/settings.rs:1025
+# Source: ./src/components/settings.rs:1234
 sync-connecting = 
 
-# Source: ./src/components/settings.rs:744
+# Source: ./src/components/settings.rs:902
 sync-delete-config = 
 
-# Source: ./src/components/settings.rs:1061
+# Source: ./src/components/settings.rs:1270
 sync-error = 
 
-# Source: ./src/components/settings.rs:731
+# Source: ./src/components/settings.rs:889
 sync-failed = 
 
-# Source: ./src/components/settings.rs:697
+# Source: ./src/components/settings.rs:855
 sync-last-sync = 
 
-# Source: ./src/components/settings.rs:1019
+# Source: ./src/components/settings.rs:1228
 sync-login = 
 
-# Source: ./src/components/settings.rs:1046
+# Source: ./src/components/settings.rs:1255
 sync-login-browser = 
 
-# Source: ./src/components/settings.rs:1078
+# Source: ./src/components/settings.rs:1287
 sync-login-info-title = 
 
 # Login instructions
-# Source: ./src/components/settings.rs:1040
+# Source: ./src/components/settings.rs:1249
 sync-login-instructions = 
 
 # Step 1: Click login button
-# Source: ./src/components/settings.rs:1081
+# Source: ./src/components/settings.rs:1291
 sync-login-step1 = 
 
 # Step 2: Open browser link
-# Source: ./src/components/settings.rs:1082
+# Source: ./src/components/settings.rs:1292
 sync-login-step2 = 
 
 # Step 3: Login to Nextcloud
-# Source: ./src/components/settings.rs:1083
+# Source: ./src/components/settings.rs:1293
 sync-login-step3 = 
 
 # Step 4: Confirm access
-# Source: ./src/components/settings.rs:1084
+# Source: ./src/components/settings.rs:1294
 sync-login-step4 = 
 
 # Step 5: Return to app
-# Source: ./src/components/settings.rs:1085
+# Source: ./src/components/settings.rs:1295
 sync-login-step5 = 
 
-# Source: ./src/components/settings.rs:1054
+# Source: ./src/components/settings.rs:1263
 sync-login-success = 
 
-# Source: ./src/components/settings.rs:458
+# Source: ./src/components/settings.rs:613
 sync-login-success-folder = 
 
-# Source: ./src/components/settings.rs:280
+# Source: ./src/components/settings.rs:435
 sync-not-configured = 
 
-# Source: ./src/components/settings.rs:737
+# Source: ./src/components/settings.rs:895
 sync-now = 
 
-# Source: ./src/components/settings.rs:674
+# Source: ./src/components/settings.rs:832
 sync-path = 
 
 # Remote path hint text
-# Source: ./src/components/settings.rs:1007
+# Source: ./src/components/settings.rs:1216
 sync-path-hint = 
 
 # Remote path input label
-# Source: ./src/components/settings.rs:997
+# Source: ./src/components/settings.rs:1205
 sync-path-label = 
 
 # Polling in background message
-# Source: ./src/components/settings.rs:1036
+# Source: ./src/components/settings.rs:1245
 sync-polling-background = 
 
-# Source: ./src/components/settings.rs:660
+# Source: ./src/components/settings.rs:818
 sync-server = 
 
 # Server URL hint text
-# Source: ./src/components/settings.rs:990
+# Source: ./src/components/settings.rs:1197
 sync-server-hint = 
 
 # Server URL input label
-# Source: ./src/components/settings.rs:980
+# Source: ./src/components/settings.rs:1186
 sync-server-url = 
 
-# Source: ./src/components/settings.rs:606
+# Source: ./src/components/settings.rs:761
 sync-settings-deleted = 
 
 # Setup sync heading
-# Source: ./src/components/settings.rs:974
+# Source: ./src/components/settings.rs:1179
 sync-setup-title = 
 
-# Source: ./src/components/settings.rs:667
+# Source: ./src/components/settings.rs:825
 sync-username = 
 
 # Waiting for login message
-# Source: ./src/components/settings.rs:1034
+# Source: ./src/components/settings.rs:1243
 sync-waiting = 
 
-# Source: ./src/components/event_edit.rs:270
+# Source: ./src/components/event_edit.rs:300
 updated = 
 
 # Source: ./src/components/egg_history.rs:95

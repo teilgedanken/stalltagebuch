@@ -1,8 +1,8 @@
 use crate::{
     database,
     models::{EventType, QuailEvent},
-    services::{event_service, photo_service},
-    Screen,
+    services::photo_service,
+    spacetime, Screen,
 };
 use base64::Engine;
 use chrono::NaiveDate;
@@ -132,6 +132,16 @@ pub fn EventEditScreen(
     quail_id: String,
     on_navigate: EventHandler<Screen>,
 ) -> Element {
+    // Spacetime subscriptions and data
+    let quail_events = spacetime::use_table_quail_events();
+    let connection = spacetime::use_connection();
+    let update_event_reducer = spacetime::use_reducer_update_event();
+    let delete_event_reducer = spacetime::use_reducer_delete_event();
+
+    // Subscribe to quail_events table
+    spacetime::use_subscription(&["SELECT * FROM quail_events"]);
+
+    // Local state signals
     let mut event = use_signal(|| None::<QuailEvent>);
     let mut event_type = use_signal(|| EventType::Alive);
     let mut event_date_str = use_signal(|| {
@@ -145,7 +155,7 @@ pub fn EventEditScreen(
     let mut error = use_signal(|| String::new());
     let mut success = use_signal(|| false);
     let mut uploading = use_signal(|| false);
-    let saving = use_signal(|| false);
+    let mut saving = use_signal(|| false);
 
     #[cfg(target_os = "android")]
     let event_id_for_gallery = event_id.clone();
@@ -164,22 +174,39 @@ pub fn EventEditScreen(
         });
     });
 
-    // Load event + photos
+    // Load event + photos from Spacetime table and local photo service
     let event_id_for_load = event_id.clone();
     use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_for_load) {
-                match event_service::get_event_by_id(&conn, &e_uuid) {
-                    Ok(Some(e)) => {
-                        event.set(Some(e.clone()));
-                        event_type.set(e.event_type.clone());
-                        event_date_str.set(e.event_date.format("%Y-%m-%d").to_string());
-                        notes.set(e.notes.unwrap_or_default());
-                    }
-                    Ok(None) => error.set(t!("event-not-found")),
-                    Err(e) => error.set(t!("error-loading", error: e.to_string())),
-                }
-                // Load photos using collection-based API
+        if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_for_load) {
+            // Find event in Spacetime table
+            if let Some(e) = quail_events()
+                .into_iter()
+                .find(|ev| ev.uuid == e_uuid.to_string())
+            {
+                // Extract data from spacetime event
+                let parsed_event_type = EventType::from_str(&e.event_type);
+                let parsed_date = chrono::NaiveDate::parse_from_str(&e.event_date, "%Y-%m-%d")
+                    .unwrap_or_else(|_| chrono::Local::now().naive_local().date());
+
+                event_type.set(parsed_event_type.clone());
+                event_date_str.set(parsed_date.format("%Y-%m-%d").to_string());
+                notes.set(e.notes.clone().unwrap_or_default());
+
+                // Create a local event for display
+                let local_event = QuailEvent {
+                    uuid: e_uuid,
+                    quail_id: uuid::Uuid::parse_str(&e.quail_uuid)
+                        .unwrap_or_else(|_| uuid::Uuid::nil()),
+                    event_type: parsed_event_type,
+                    event_date: parsed_date,
+                    notes: e.notes.clone(),
+                    photos: None,
+                };
+                event.set(Some(local_event));
+            }
+
+            // Load photos using local service
+            if let Ok(conn) = database::init_database() {
                 let photo_list =
                     match crate::services::photo_service::get_event_collection(&conn, &e_uuid) {
                         Ok(Some(collection_id)) => {
@@ -204,19 +231,26 @@ pub fn EventEditScreen(
     // Save handler
     let event_id_for_save = event_id.clone();
     let quail_id_for_save = quail_id.clone();
-    let mut saving_signal = saving.clone();
     let mut handle_save = move || {
-        saving_signal.set(true);
+        // Check if connected to Spacetime
+        if connection.read().is_none() {
+            error.set(t!("error-not-connected"));
+            return;
+        }
+
+        saving.set(true);
+        error.set(String::new());
+
         if event_date_str().is_empty() {
             error.set(t!("error-empty-date"));
-            saving_signal.set(false);
+            saving.set(false);
             return;
         }
         let parsed_date = match NaiveDate::parse_from_str(&event_date_str(), "%Y-%m-%d") {
             Ok(d) => d,
             Err(_) => {
                 error.set(t!("error-invalid-date"));
-                saving_signal.set(false);
+                saving.set(false);
                 return;
             }
         };
@@ -228,33 +262,24 @@ pub fn EventEditScreen(
         } else {
             Some(notes())
         };
-        let mut saving_signal = saving_signal.clone();
+
+        let update_reducer = update_event_reducer.clone();
+        let on_navigate_save = on_navigate.clone();
+
         spawn(async move {
-            if let Ok(conn) = database::init_database() {
-                if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                    match event_service::update_event_full(
-                        &conn,
-                        &e_uuid,
-                        event_type_val,
-                        parsed_date,
-                        notes_val,
-                    )
-                    .await
-                    {
-                        Ok(_) => {
-                            success.set(true);
-                            saving_signal.set(false);
-                            on_navigate.call(Screen::ProfileDetail(quail_id_clone.clone()));
-                        }
-                        Err(e) => {
-                            error.set(t!("error-save", error: e.to_string()));
-                            saving_signal.set(false);
-                        }
-                    }
-                }
-            } else {
-                error.set(t!("error-db-unavailable"));
-                saving_signal.set(false);
+            if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
+                // Call the reducer to update the event
+                update_reducer(spacetime::UpdateEventArgs {
+                    uuid: e_uuid.to_string(),
+                    event_type: event_type_val.as_str().to_string(),
+                    event_date: parsed_date.format("%Y-%m-%d").to_string(),
+                    notes: notes_val,
+                    photos: None,
+                });
+
+                success.set(true);
+                saving.set(false);
+                on_navigate_save.call(Screen::ProfileDetail(quail_id_clone.clone()));
             }
         });
     };
@@ -262,17 +287,22 @@ pub fn EventEditScreen(
     // Delete handler
     let event_id_for_delete = event_id.clone();
     let quail_id_for_delete = quail_id.clone();
-    let handle_delete = move || {
+    let mut handle_delete = move || {
+        // Check if connected to Spacetime
+        if connection.read().is_none() {
+            error.set(t!("error-not-connected"));
+            return;
+        }
+
         let event_id_clone = event_id_for_delete.clone();
         let quail_id_clone = quail_id_for_delete.clone();
+        let delete_reducer_call = delete_event_reducer.clone();
+        let on_navigate_delete = on_navigate.clone();
+
         spawn(async move {
-            if let Ok(conn) = database::init_database() {
-                if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                    match event_service::delete_event(&conn, &e_uuid).await {
-                        Ok(_) => on_navigate.call(Screen::ProfileDetail(quail_id_clone.clone())),
-                        Err(e) => error.set(t!("error-delete", error: e.to_string())),
-                    }
-                }
+            if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
+                delete_reducer_call(e_uuid.to_string());
+                on_navigate_delete.call(Screen::ProfileDetail(quail_id_clone.clone()));
             }
         });
     };
