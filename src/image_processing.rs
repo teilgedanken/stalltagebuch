@@ -61,22 +61,6 @@ pub fn image_path_to_data_url(path: &str) -> Result<String, AppError> {
     Ok(format!("data:{};base64,{}", mime, b64))
 }
 
-/// Creates a thumbnail for an image (placeholder implementation)
-/// Currently only copies the file with _thumb.jpg suffix
-pub fn create_thumbnail(path: &str) -> Result<String, AppError> {
-    let p = Path::new(path);
-    let parent = p.parent().unwrap_or(Path::new("/"));
-    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("img");
-    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("jpg");
-    let thumb_path = parent.join(format!("{}_thumb.{}", stem, ext));
-
-    // Copy file as thumbnail (TODO: real resizing)
-    std::fs::copy(p, &thumb_path)
-        .map_err(|e| AppError::ImageProcessing(format!("Thumbnail creation failed: {}", e)))?;
-
-    Ok(thumb_path.to_string_lossy().to_string())
-}
-
 /// Resize an image maintaining aspect ratio
 #[allow(dead_code)]
 fn calculate_resize_dimensions(

@@ -1,4 +1,3 @@
-use crate::error::AppError;
 use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -127,36 +126,6 @@ impl Gender {
     }
 }
 
-impl Quail {
-    /// Creates a new quail with generated UUID
-    pub fn new(name: String) -> Self {
-        Self {
-            uuid: Uuid::new_v4(),
-            name,
-            gender: Gender::Unknown,
-            ring_color: None,
-            profile_photo: None,
-        }
-    }
-
-    /// Validates all fields of the quail
-    pub fn validate(&self) -> Result<(), AppError> {
-        // Name must not be empty
-        if self.name.trim().is_empty() {
-            return Err(AppError::Validation("Name must not be empty".to_string()));
-        }
-
-        // Name should not be too long
-        if self.name.len() > 100 {
-            return Err(AppError::Validation(
-                "Name must not exceed 100 characters".to_string(),
-            ));
-        }
-
-        Ok(())
-    }
-}
-
 impl<'r> TryFrom<&Row<'r>> for Quail {
     type Error = rusqlite::Error;
 
@@ -184,21 +153,6 @@ impl<'r> TryFrom<&Row<'r>> for Quail {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_new_quail() {
-        let quail = Quail::new("Test".to_string());
-        assert_eq!(quail.name, "Test");
-        assert_eq!(quail.gender, Gender::Unknown);
-        assert!(quail.uuid.is_nil() == false);
-    }
-
-    #[test]
-    fn test_validate_empty_name() {
-        let mut quail = Quail::new("".to_string());
-        quail.name = "   ".to_string();
-        assert!(quail.validate().is_err());
-    }
 
     #[test]
     fn test_gender_conversion() {

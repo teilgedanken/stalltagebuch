@@ -4,9 +4,6 @@
 use crate::error::AppError;
 use std::path::PathBuf;
 
-// Re-export photo-gallery picker functionality
-pub use photo_gallery::picker::{AndroidPickerConfig, PickerError};
-
 // Helper function to convert PickerError to AppError
 fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {
     match e {
@@ -22,14 +19,17 @@ fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError 
     }
 }
 
+#[allow(dead_code)]
 pub fn pick_image() -> Result<PathBuf, AppError> {
     photo_gallery::picker::pick_image().map_err(picker_error_to_app_error)
 }
 
+#[allow(dead_code)]
 pub fn pick_images() -> Result<Vec<PathBuf>, AppError> {
     photo_gallery::picker::pick_images().map_err(picker_error_to_app_error)
 }
 
+#[allow(dead_code)]
 pub fn capture_photo() -> Result<PathBuf, AppError> {
     photo_gallery::picker::capture_photo().map_err(picker_error_to_app_error)
 }

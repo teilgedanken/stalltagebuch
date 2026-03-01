@@ -109,7 +109,7 @@ fn App() -> Element {
         spacetime::use_spacetimedb_context_provider(&spacetime_uri, &spacetime_module, saved_token);
 
     // Watch for successful connections and persist the authentication token
-    spacetime::use_persist_spacetime_token();
+    let _token_persist = spacetime::use_persist_spacetime_token();
 
     // Legacy: also initialise the local SQLite DB so that the photo
     // gallery and other local services that still depend on it work

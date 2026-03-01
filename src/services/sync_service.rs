@@ -79,24 +79,6 @@ pub fn save_sync_settings(conn: &Connection, settings: &SyncSettings) -> Result<
     }
 }
 
-/// Updates the timestamp of the last synchronization
-pub fn update_last_sync(conn: &Connection) -> Result<(), AppError> {
-    conn.execute(
-        "UPDATE sync_settings SET last_sync = CURRENT_TIMESTAMP WHERE id = (SELECT MAX(id) FROM sync_settings)",
-        [],
-    )?;
-    Ok(())
-}
-
-/// Enables or disables synchronization
-pub fn set_sync_enabled(conn: &Connection, enabled: bool) -> Result<(), AppError> {
-    conn.execute(
-        "UPDATE sync_settings SET enabled = ?1 WHERE id = (SELECT MAX(id) FROM sync_settings)",
-        [enabled],
-    )?;
-    Ok(())
-}
-
 /// Deletes all synchronization settings
 pub fn delete_sync_settings(conn: &Connection) -> Result<(), AppError> {
     conn.execute("DELETE FROM sync_settings", [])?;
