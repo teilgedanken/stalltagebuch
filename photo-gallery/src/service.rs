@@ -407,8 +407,7 @@ impl PhotoGalleryService {
                         db_path
                     };
                     Photo {
-                        uuid: Uuid::parse_str(&uuid_str)
-                            .unwrap_or_else(|_| Uuid::new_v4()),
+                        uuid: Uuid::parse_str(&uuid_str).unwrap_or_else(|_| Uuid::new_v4()),
                         collection_id: collection_id_str
                             .as_deref()
                             .and_then(|s| Uuid::parse_str(s).ok()),

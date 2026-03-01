@@ -4,7 +4,7 @@ use crate::models::SyncSettings;
 use crate::services::export_import_service::ImportMode;
 use crate::services::spacetime_settings_service;
 use crate::services::sync_service;
-use crate::spacetime::context::{ConnectionState, SpacetimeContext};
+use crate::spacetime::{use_spacetimedb_context, ConnectionState};
 use crate::Screen;
 use chrono::{Local, TimeZone};
 use dioxus::prelude::*;
@@ -20,14 +20,12 @@ fn format_hms(ts_ms: i64) -> String {
 
 // ─── SpacetimeDB settings card ────────────────────────────────────────────────
 
-/// Card component that lets the user configure (and test) the SpacetimeDB
-/// connection.  It reads/writes settings via
-/// [`spacetime_settings_service`] and connects/disconnects the shared
-/// [`SpacetimeContext`].
+/// Card component that displays connection status and allows configuring
+/// SpacetimeDB connection settings.
+/// Note: Full integration with the generated SDK hooks is in progress.
 #[component]
 fn SpacetimeDbCard() -> Element {
-    let mut stdb = use_context::<SpacetimeContext>();
-    let mut stdb2 = stdb.clone();
+    let ctx = use_spacetimedb_context();
 
     // Load persisted settings on mount.
     let saved = spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
@@ -36,15 +34,15 @@ fn SpacetimeDbCard() -> Element {
     let mut token = use_signal(|| saved.token.clone());
     let mut status_msg = use_signal(|| String::new());
 
-    let conn_state = stdb.connection_state;
+    let conn_state = ctx.state;
 
     let save_and_connect = move |_| {
         let url = server_url();
         let db = database_name();
         let tok = token();
 
-        if url.is_empty() || db.is_empty() || tok.is_empty() {
-            status_msg.set("⚠️ Please fill in server URL, database name, and token.".to_string());
+        if url.is_empty() || db.is_empty() {
+            status_msg.set("⚠️ Please fill in server URL, database name".to_string());
             return;
         }
 
@@ -57,42 +55,36 @@ fn SpacetimeDbCard() -> Element {
         match spacetime_settings_service::save_spacetime_settings(&settings) {
             Ok(()) => {
                 status_msg.set("✅ Settings saved.".to_string());
+                // TODO: Trigger reconnection with new settings via generated SDK hooks
             }
             Err(e) => {
                 status_msg.set(format!("❌ Save failed: {e}"));
                 return;
             }
         }
-
-        stdb.connect(url, db, tok);
-    };
-
-    let disconnect = move |_| {
-        stdb2.disconnect();
-        status_msg.set("Disconnected.".to_string());
     };
 
     rsx! {
         div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;",
-                "🗄️ SpacetimeDB"
-            }
+            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "🗄️ SpacetimeDB" }
 
             // Connection state indicator
-            {match conn_state() {
-                ConnectionState::Disconnected => rsx! {
-                    p { style: "margin: 0 0 10px 0; color: #888;", "Not connected" }
-                },
-                ConnectionState::Connecting => rsx! {
-                    p { style: "margin: 0 0 10px 0; color: #f57c00;", "⏳ Connecting…" }
-                },
-                ConnectionState::Connected => rsx! {
-                    p { style: "margin: 0 0 10px 0; color: #2e7d32;", "✅ Connected" }
-                },
-                ConnectionState::Error(ref e) => rsx! {
-                    p { style: "margin: 0 0 10px 0; color: #c62828;", "❌ Error: {e}" }
-                },
-            }}
+            {
+                match conn_state() {
+                    ConnectionState::Disconnected => rsx! {
+                        p { style: "margin: 0 0 10px 0; color: #888;", "Not connected" }
+                    },
+                    ConnectionState::Connecting => rsx! {
+                        p { style: "margin: 0 0 10px 0; color: #f57c00;", "⏳ Connecting…" }
+                    },
+                    ConnectionState::Connected(_, _) => rsx! {
+                        p { style: "margin: 0 0 10px 0; color: #2e7d32;", "✅ Connected" }
+                    },
+                    ConnectionState::Error => rsx! {
+                        p { style: "margin: 0 0 10px 0; color: #c62828;", "❌ Error connecting" }
+                    },
+                }
+            }
 
             // Server URL
             label { style: "display: block; font-size: 13px; color: #555; margin-bottom: 4px;",
@@ -121,7 +113,7 @@ fn SpacetimeDbCard() -> Element {
                 "Auth token (from spacetime login)"
             }
             input {
-                r#type: "password",
+                r#type: "text",
                 value: "{token}",
                 style: "width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 12px;",
                 oninput: move |e| token.set(e.value()),
@@ -132,14 +124,7 @@ fn SpacetimeDbCard() -> Element {
                     class: "btn-primary",
                     style: "flex: 1;",
                     onclick: save_and_connect,
-                    "💾 Save & Connect"
-                }
-                if conn_state() == ConnectionState::Connected {
-                    button {
-                        class: "btn-secondary",
-                        onclick: disconnect,
-                        "Disconnect"
-                    }
+                    "💾 Save Settings"
                 }
             }
 
@@ -152,12 +137,31 @@ fn SpacetimeDbCard() -> Element {
                     "ℹ️ How to deploy the server module"
                 }
                 div { style: "margin-top: 8px; font-size: 13px; color: #555; line-height: 1.6;",
-                    p { "1. Install the SpacetimeDB CLI from " a { href: "https://spacetimedb.com/install", target: "_blank", "spacetimedb.com/install" } " (verify the script before running)." }
-                    p { "2. From the project root: " code { "spacetime publish stalltagebuch-server --project-path stalltagebuch-server" } }
-                    p { "3. Get your token: " code { "spacetime login" } " (or use an identity token from the web console)." }
-                    p { "Dioxus bindings can be regenerated with: "
-                        code { "spacetime generate --lang dioxus --out-dir src/spacetime/module_bindings --project-path stalltagebuch-server" }
-                        " (requires the Dioxus binding generator PR to be merged)."
+                    p {
+                        "1. Install the SpacetimeDB CLI from "
+                        a {
+                            href: "https://spacetimedb.com/install",
+                            target: "_blank",
+                            "spacetimedb.com/install"
+                        }
+                        " (verify the script before running)."
+                    }
+                    p {
+                        "2. From the project root: "
+                        code {
+                            "spacetime publish stalltagebuch-server --project-path stalltagebuch-server"
+                        }
+                    }
+                    p {
+                        "3. Get your token: "
+                        code { "spacetime login" }
+                        " (or use an identity token from the web console)."
+                    }
+                    p {
+                        "Dioxus bindings are auto-generated with: "
+                        code {
+                            "spacetime generate --lang dioxus --out-dir src/spacetime_module_bindings --module-path stalltagebuch-server"
+                        }
                     }
                 }
             }
@@ -282,7 +286,8 @@ fn NetworkCheckCard() -> Element {
                         div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 12px;",
                             div { style: "font-size: 24px;", "❌" }
                             div {
-                                p { style: "margin: 0; font-weight: 600; font-size: 14px; color: #c62828;",
+                                p {
+                                    style: "margin: 0; font-weight: 600; font-size: 14px; color: #c62828;",
                                     {t!("network-offline")} // No internet connection message
                                 }
                                 p { style: "margin: 0; font-size: 12px; color: #666;", "{error}" }
@@ -1014,7 +1019,9 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
                     // Cleanup orphaned photos
                     div { style: "margin-top: 16px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #ddd;",
-                        h3 { style: "margin: 0 0 8px 0; font-size: 16px;", {t!("backup-cleanup-title")} }
+                        h3 { style: "margin: 0 0 8px 0; font-size: 16px;",
+                            {t!("backup-cleanup-title")}
+                        }
                         p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
                             {t!("backup-cleanup-description")}
                         }
@@ -1029,17 +1036,24 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                         spawn(async move {
                                             match database::init_database() {
                                                 Ok(conn) => {
-                                                    match crate::services::photo_service::cleanup_orphaned_photos(&conn).await {
+                                                    match crate::services::photo_service::cleanup_orphaned_photos(
+                                                            &conn,
+                                                        )
+                                                        .await
+                                                    {
                                                         Ok(count) => {
-                                                            status_message.set(t!("backup-cleanup-success", count: count));
+                                                            status_message
+                                                                .set(t!("backup-cleanup-success", count : count));
                                                         }
                                                         Err(e) => {
-                                                            status_message.set(t!("backup-cleanup-error", error: e.to_string()));
+                                                            status_message
+                                                                .set(t!("backup-cleanup-error", error : e.to_string()));
                                                         }
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    status_message.set(t!("backup-db-error", error: e.to_string()));
+                                                    status_message
+                                                        .set(t!("backup-db-error", error : e.to_string()));
                                                 }
                                             }
                                         });
@@ -1052,7 +1066,9 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
                     // Daten-Export / -Import
                     div { style: "margin-top: 16px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #ddd;",
-                        h3 { style: "margin: 0 0 8px 0; font-size: 16px;", {t!("backup-export-title")} }
+                        h3 { style: "margin: 0 0 8px 0; font-size: 16px;",
+                            {t!("backup-export-title")}
+                        }
                         p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
                             {t!("backup-export-description")}
                         }
@@ -1065,16 +1081,28 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     move |_| {
                                         spawn(async move {
                                             match database::init_database() {
-                                                Ok(conn) => match crate::services::export_import_service::export_to_zip(&conn).await {
-                                                    Ok(path) => {
-                                                        status_message.set(t!("backup-export-success", path: path.display().to_string()));
+                                                Ok(conn) => {
+                                                    match crate::services::export_import_service::export_to_zip(
+                                                            &conn,
+                                                        )
+                                                        .await
+                                                    {
+                                                        Ok(path) => {
+                                                            status_message
+                                                                .set(
+                                                                    t!(
+                                                                        "backup-export-success", path : path.display().to_string()
+                                                                    ),
+                                                                );
+                                                        }
+                                                        Err(e) => {
+                                                            status_message
+                                                                .set(t!("backup-export-error", error : e.to_string()));
+                                                        }
                                                     }
-                                                    Err(e) => {
-                                                        status_message.set(t!("backup-export-error", error: e.to_string()));
-                                                    }
-                                                },
+                                                }
                                                 Err(e) => {
-                                                    status_message.set(t!("backup-db-error", error: e.to_string()));
+                                                    status_message.set(t!("backup-db-error", error : e.to_string()));
                                                 }
                                             }
                                         });
@@ -1090,26 +1118,49 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     move |_| {
                                         spawn(async move {
                                             let base_dir = if cfg!(target_os = "android") {
-                                                std::path::PathBuf::from("/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/exports")
+                                                std::path::PathBuf::from(
+                                                    "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/exports",
+                                                )
                                             } else {
                                                 std::path::PathBuf::from("./exports")
                                             };
                                             let import_path = base_dir.join("import.zip");
                                             if !import_path.exists() {
-                                                status_message.set(t!("backup-import-missing", path: import_path.display().to_string()));
+                                                status_message
+                                                    .set(
+                                                        t!(
+                                                            "backup-import-missing", path : import_path.display()
+                                                            .to_string()
+                                                        ),
+                                                    );
                                                 return;
                                             }
                                             match database::init_database() {
-                                                Ok(conn) => match crate::services::export_import_service::import_from_zip(&conn, &import_path, ImportMode::MergePreferImport).await {
-                                                    Ok(()) => {
-                                                        status_message.set(t!("backup-import-success", path: import_path.display().to_string()));
+                                                Ok(conn) => {
+                                                    match crate::services::export_import_service::import_from_zip(
+                                                            &conn,
+                                                            &import_path,
+                                                            ImportMode::MergePreferImport,
+                                                        )
+                                                        .await
+                                                    {
+                                                        Ok(()) => {
+                                                            status_message
+                                                                .set(
+                                                                    t!(
+                                                                        "backup-import-success", path : import_path.display()
+                                                                        .to_string()
+                                                                    ),
+                                                                );
+                                                        }
+                                                        Err(e) => {
+                                                            status_message
+                                                                .set(t!("backup-import-error", error : e.to_string()));
+                                                        }
                                                     }
-                                                    Err(e) => {
-                                                        status_message.set(t!("backup-import-error", error: e.to_string()));
-                                                    }
-                                                },
+                                                }
                                                 Err(e) => {
-                                                    status_message.set(t!("backup-db-error", error: e.to_string()));
+                                                    status_message.set(t!("backup-db-error", error : e.to_string()));
                                                 }
                                             }
                                         });
@@ -1123,13 +1174,15 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
             } else {
                 // Setup form
                 div { class: "card",
-                    h2 { style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
+                    h2 {
+                        style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
                         {t!("sync-setup-title")} // Setup sync heading
                     }
 
                     // Server URL
                     div { style: "margin-bottom: 16px;",
-                        label { style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
+                        label {
+                            style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
                             {t!("sync-server-url")} // Server URL input label
                         }
                         input {
@@ -1139,14 +1192,16 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                             placeholder: "https://cloud.example.com",
                             style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
                         }
-                        p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
+                        p {
+                            style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
                             {t!("sync-server-hint")} // Server URL hint text
                         }
                     }
 
                     // Remote Path
                     div { style: "margin-bottom: 16px;",
-                        label { style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
+                        label {
+                            style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
                             {t!("sync-path-label")} // Remote path input label
                         }
                         input {
@@ -1156,7 +1211,8 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                             placeholder: "/Stalltagebuch",
                             style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
                         }
-                        p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
+                        p {
+                            style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
                             {t!("sync-path-hint")} // Remote path hint text
                         }
                     }
@@ -1212,7 +1268,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 p { style: "margin: 0 0 12px 0; font-weight: 600;",
                                     "\u{274c} "
                                     {t!("sync-error")}
-                                } // Login error heading
+                                } // Login error heading // Login error heading
                                 p { style: "margin: 0; font-size: 14px;", "{error}" }
                                 button {
                                     class: "btn-primary",
@@ -1230,7 +1286,8 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                             "\u{2139}\u{fe0f} " // How login works heading
                             {t!("sync-login-info-title")}
                         }
-                        ul { style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
+                        ul {
+                            style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
                             li { {t!("sync-login-step1")} } // Step 1: Click login button
                             li { {t!("sync-login-step2")} } // Step 2: Open browser link
                             li { {t!("sync-login-step3")} } // Step 3: Login to Nextcloud

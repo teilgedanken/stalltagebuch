@@ -1,7 +1,7 @@
 use crate::{
     database,
     models::{Gender, Quail, RingColor},
-    services, Screen,
+    spacetime, Screen,
 };
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
@@ -10,6 +10,16 @@ use photo_gallery::Photo;
 
 #[component]
 pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
+    // Spacetime subscriptions and data
+    let quails = spacetime::use_table_quails();
+    let connection = spacetime::use_connection();
+    let update_quail_reducer = spacetime::use_reducer_update_quail();
+    let delete_quail_reducer = spacetime::use_reducer_delete_quail();
+
+    // Subscribe to quails table
+    spacetime::use_subscription(&["SELECT * FROM quails"]);
+
+    // Local state signals
     let mut profile = use_signal(|| None::<Quail>);
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
@@ -21,61 +31,79 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
 
-    // Load profile and photos
+    // Load profile and photos from Spacetime table
     let quail_id_for_load = quail_id.clone();
     use_effect(move || {
-        match database::init_database() {
-            Ok(conn) => {
-                if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_load) {
-                    match services::profile_service::get_profile(&conn, &uuid) {
-                        Ok(p) => {
-                            name.set(p.name.clone());
-                            gender.set(p.gender.as_str().to_string());
-                            if let Some(rc) = &p.ring_color {
-                                ring_color.set(rc.as_str().to_string());
+        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_load) {
+            // Find quail in Spacetime table
+            if let Some(quail) = quails().into_iter().find(|q| q.uuid == uuid.to_string()) {
+                // Convert spacetime quail to local model
+                let local_quail = Quail {
+                    uuid: uuid::Uuid::parse_str(&quail.uuid).unwrap_or_else(|_| uuid::Uuid::nil()),
+                    name: quail.name.clone(),
+                    gender: match quail.gender.as_str() {
+                        "male" => Gender::Male,
+                        "female" => Gender::Female,
+                        _ => Gender::Unknown,
+                    },
+                    ring_color: if let Some(rc) = &quail.ring_color {
+                        Some(RingColor::from_str(rc))
+                    } else {
+                        None
+                    },
+                    profile_photo: quail
+                        .profile_photo
+                        .as_ref()
+                        .and_then(|uuid_str| uuid::Uuid::parse_str(uuid_str).ok()),
+                };
+
+                name.set(local_quail.name.clone());
+                gender.set(local_quail.gender.as_str().to_string());
+                if let Some(rc) = &local_quail.ring_color {
+                    ring_color.set(rc.as_str().to_string());
+                }
+                profile.set(Some(local_quail));
+            }
+        }
+
+        // Load photos (still from local service)
+        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_load) {
+            if let Ok(conn) = database::init_database() {
+                match crate::services::photo_service::get_quail_collection(&conn, &uuid) {
+                    Ok(Some(collection_id)) => {
+                        let photo_list = crate::services::photo_service::list_collection_photos(
+                            &conn,
+                            &collection_id,
+                        )
+                        .ok();
+                        if let Some(list) = photo_list {
+                            // Find current profile photo
+                            if let Ok(Some(profile_photo)) =
+                                crate::services::photo_service::get_profile_photo(&conn, &uuid)
+                            {
+                                selected_profile_photo_id.set(Some(profile_photo.uuid.to_string()));
                             }
-                            profile.set(Some(p));
-                        }
-                        Err(e) => {
-                            error.set(t!("error-load-failed", error: e.to_string()));
-                            // Failed to load
+                            photos.set(list);
+                        } else {
+                            log::error!("{}", t!("error-load-photos-failed"));
                         }
                     }
-                    // Lade alle Fotos (using collection-based API)
-                    let photo_list =
-                        match crate::services::photo_service::get_quail_collection(&conn, &uuid) {
-                            Ok(Some(collection_id)) => {
-                                crate::services::photo_service::list_collection_photos(
-                                    &conn,
-                                    &collection_id,
-                                )
-                                .ok()
-                            }
-                            _ => None,
-                        };
-
-                    if let Some(list) = photo_list {
-                        // Finde aktuelles Profilbild
-                        if let Ok(Some(profile_photo)) =
-                            crate::services::photo_service::get_profile_photo(&conn, &uuid)
-                        {
-                            selected_profile_photo_id.set(Some(profile_photo.uuid.to_string()));
-                        }
-                        photos.set(list);
-                    } else {
-                        log::error!("{}", t!("error-load-photos-failed"));
-                        // Failed to load photos
+                    _ => {
+                        // No photos, that's ok
                     }
                 }
-            }
-            Err(e) => {
-                error.set(format!("{}: {}", t!("error-database"), e)); // Database error
             }
         }
     });
 
     let quail_id_for_submit = quail_id.clone();
     let mut handle_submit = move || {
+        // Check if connected to Spacetime
+        if connection.read().is_none() {
+            error.set(t!("error-not-connected"));
+            return;
+        }
+
         if name().trim().is_empty() {
             error.set(t!("error-name-required")); // Name is required
             return;
@@ -83,91 +111,67 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
         saving.set(true);
 
-        if let Some(mut updated_profile) = profile() {
-            updated_profile.name = name().trim().to_string();
-            updated_profile.gender = match gender().as_str() {
-                "male" => Gender::Male,
-                "female" => Gender::Female,
-                _ => Gender::Unknown,
+        if let Some(updated_profile) = profile() {
+            let updated_name = name().trim().to_string();
+            let updated_gender = match gender().as_str() {
+                "male" => "male".to_string(),
+                "female" => "female".to_string(),
+                _ => "unknown".to_string(),
             };
 
             // Ring Color
             let ring_color_value = ring_color();
             let ring_color_trimmed = ring_color_value.trim();
-            updated_profile.ring_color = if ring_color_trimmed.is_empty() {
-                None
+            let updated_ring_color = if ring_color_trimmed.is_empty() {
+                "".to_string()
             } else {
-                Some(RingColor::from_str(ring_color_trimmed))
+                ring_color_trimmed.to_string()
             };
 
-            let updated_profile_clone = updated_profile.clone();
-            let quail_id_clone = quail_id_for_submit.clone();
+            let quail_uuid = updated_profile.uuid.to_string();
             let selected_photo = selected_profile_photo_id();
+            let update_reducer = update_quail_reducer.clone();
+            let on_navigate_submit = on_navigate.clone();
+            let quail_id_clone = quail_id_for_submit.clone();
+
             spawn(async move {
-                match database::init_database() {
-                    Ok(conn) => {
-                        match services::profile_service::update_profile(
-                            &conn,
-                            &updated_profile_clone,
-                        )
-                        .await
-                        {
-                            Ok(_) => {
-                                // Aktualisiere Profilbild falls ausgewählt
-                                if let Some(photo_uuid_str) = selected_photo {
-                                    if let (Ok(quail_uuid), Ok(photo_uuid)) = (
-                                        uuid::Uuid::parse_str(&quail_id_clone),
-                                        uuid::Uuid::parse_str(&photo_uuid_str),
-                                    ) {
-                                        let _ = crate::services::photo_service::set_profile_photo(
-                                            &conn,
-                                            &quail_uuid,
-                                            &photo_uuid,
-                                        )
-                                        .await;
-                                    }
-                                }
-                                success.set(true);
-                                saving.set(false);
-                                // Navigate back immediately
-                                on_navigate.call(Screen::ProfileDetail(quail_id_clone.clone()));
-                            }
-                            Err(e) => {
-                                error.set(format!("{}: {}", t!("error-save-failed"), e));
-                                saving.set(false);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error.set(format!("{}: {}", t!("error-database"), e)); // Database error
-                        saving.set(false);
-                    }
-                }
+                // Create reducer call for update
+                update_reducer(spacetime::UpdateQuailArgs {
+                    uuid: quail_uuid.clone(),
+                    name: updated_name,
+                    gender: updated_gender,
+                    ring_color: if updated_ring_color.is_empty() {
+                        None
+                    } else {
+                        Some(updated_ring_color)
+                    },
+                    profile_photo: selected_photo,
+                });
+
+                success.set(true);
+                saving.set(false);
+                // Navigate back after update
+                on_navigate_submit.call(Screen::ProfileDetail(quail_id_clone));
             });
         }
     };
 
     let quail_id_for_delete = quail_id.clone();
-    let handle_delete = move || {
+    let mut handle_delete = move || {
+        // Check if connected to Spacetime
+        if connection.read().is_none() {
+            error.set(t!("error-not-connected"));
+            return;
+        }
+
         let quail_id_clone = quail_id_for_delete.clone();
+        let delete_reducer_call = delete_quail_reducer.clone();
+        let on_navigate_delete = on_navigate.clone();
+
         spawn(async move {
-            match database::init_database() {
-                Ok(conn) => {
-                    if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                        match services::profile_service::delete_profile(&conn, &uuid).await {
-                            Ok(_) => {
-                                on_navigate.call(Screen::ProfileList);
-                            }
-                            Err(e) => {
-                                error.set(format!("{}: {}", t!("error-delete-failed"), e));
-                                // Failed to delete
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error.set(t!("error-database", error: e.to_string())); // Database error
-                }
+            if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                delete_reducer_call(uuid.to_string());
+                on_navigate_delete.call(Screen::ProfileList);
             }
         });
     };
@@ -213,7 +217,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 // Name Field
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("field-name-required")} // Name *
                     }
                     input {
@@ -228,7 +233,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 // Gender Field
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("field-gender")} // Gender
                     }
                     select {
@@ -243,7 +249,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 // Ring Color Field
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("field-ring-color")} // Ring color
                     }
                     select {
@@ -271,7 +278,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 // Photo Gallery with Profile Selection
                 div { style: "margin-bottom: 24px;",
-                    label { style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
                         {format!("{} ({})", t!("field-photos"), photos().len())} // Photos count
                     }
 
@@ -316,7 +324,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                                     .await
                                                 {
                                                     Ok(_) => {
-                                                        if let Ok(q_uuid) = uuid::Uuid::parse_str(&qid) {
+                                                        if let Ok(q_uuid) =
+                                                            uuid::Uuid::parse_str(&qid)
+                                                        {
                                                             let photo_list = match crate::services::photo_service::get_quail_collection(
                                                                 &conn,
                                                                 &q_uuid,
@@ -332,10 +342,13 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                                             };
                                                             if let Some(list) = photo_list {
                                                                 photos.set(list);
-                                                                if selected_profile_photo_id().as_ref().map(|s| s.as_str())
+                                                                if selected_profile_photo_id()
+                                                                    .as_ref()
+                                                                    .map(|s| s.as_str())
                                                                     == Some(&photo_id)
                                                                 {
-                                                                    selected_profile_photo_id.set(None);
+                                                                    selected_profile_photo_id
+                                                                        .set(None);
                                                                 }
                                                             }
                                                         }
@@ -356,7 +369,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     }
 
                     if !photos().is_empty() {
-                        div { style: "margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 6px; font-size: 12px; color: #666;",
+                        div {
+                            style: "margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 6px; font-size: 12px; color: #666;",
                             {t!("info-tap-photo-to-mark")} // Tap a photo to mark it as profile photo.
                         }
                     }

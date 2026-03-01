@@ -1,40 +1,64 @@
 use crate::database;
-use crate::models::{Quail, RingColor};
-use crate::services;
+use crate::models::{EventType, Gender, Quail, RingColor};
+use crate::spacetime;
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 use photo_gallery::ThumbnailImage;
+use spacetimedb_sdk::DbContext;
 
 #[component]
 pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
-    let mut profiles = use_signal(|| Vec::<Quail>::new());
     let mut search_filter = use_signal(|| String::new());
     // Toggle zeigt "nur Tote" an; Standard (false) zeigt Lebende + Markierte
     let mut show_dead = use_signal(|| false);
+    let quails = spacetime::use_table_quails();
+    let events = spacetime::use_table_quail_events();
+    let connection = spacetime::use_connection();
 
-    // Load profiles
-    let mut load_profiles = move || match database::init_database() {
-        Ok(conn) => {
-            let search_value = search_filter();
-            let filter = if search_value.is_empty() {
-                None
-            } else {
-                Some(search_value.as_str())
-            };
+    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events"]);
 
-            match services::profile_service::list_profiles_with_status(&conn, filter, !show_dead())
-            {
-                Ok(list) => profiles.set(list),
-                Err(e) => log::error!("{}: {}", t!("error-load-profiles-failed"), e), // Failed to load profiles
+    let filtered_profiles = use_memo(move || {
+        let owner = connection
+            .read()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        let all_events = events.read().clone();
+        let search = search_filter().to_lowercase();
+        let dead_only = show_dead();
+
+        let mut rows = Vec::<(Quail, Option<EventType>)>::new();
+
+        for remote_quail in quails.read().iter() {
+            if let Some(owner_value) = owner.as_ref() {
+                if &remote_quail.owner != owner_value {
+                    continue;
+                }
+            }
+
+            if !search.is_empty() && !remote_quail.name.to_lowercase().contains(&search) {
+                continue;
+            }
+
+            let status = latest_status_for(&remote_quail.uuid, &all_events);
+
+            if dead_only {
+                if !matches!(status, Some(EventType::Died | EventType::Slaughtered)) {
+                    continue;
+                }
+            } else if matches!(status, Some(EventType::Died | EventType::Slaughtered)) {
+                continue;
+            }
+
+            if let Some(local_quail) = to_local_quail(remote_quail) {
+                rows.push((local_quail, status));
             }
         }
-        Err(e) => log::error!("DB-Fehler: {}", e),
-    };
 
-    // Load on mount
-    use_effect(move || {
-        load_profiles();
+        rows.sort_by(|a, b| a.0.name.to_lowercase().cmp(&b.0.name.to_lowercase()));
+        rows
     });
 
     rsx! {
@@ -59,7 +83,6 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                         ),
                         onclick: move |_| {
                             show_dead.set(!show_dead());
-                            load_profiles();
                         },
                         // Tombstone Emoji
                         "🪦"
@@ -83,21 +106,21 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     value: "{search_filter}",
                     oninput: move |e| {
                         search_filter.set(e.value());
-                        load_profiles();
                     },
                 }
             }
 
             // Profile Grid
-            if profiles().is_empty() {
+            if filtered_profiles().is_empty() {
                 div { style: "text-align: center; padding: 40px; color: #999;",
                     {t!("profile-list-empty")} // No profiles available
                 }
             } else {
                 div { class: "profile-grid",
-                    for profile in profiles() {
+                    for (profile , status) in filtered_profiles() {
                         ProfileCard {
                             profile: profile.clone(),
+                            status: status.clone(),
                             on_click: move |_| {
                                 on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string()));
                             },
@@ -110,7 +133,11 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 }
 
 #[component]
-pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
+pub fn ProfileCard(
+    profile: Quail,
+    status: Option<EventType>,
+    on_click: EventHandler<()>,
+) -> Element {
     let profile_uuid = profile.uuid;
 
     // image state / loading handled by ThumbnailImage component and resource
@@ -119,7 +146,7 @@ pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
     let profile_photo_uuid = use_resource(move || async move {
         log::debug!("##### Lade Profilbild UUID für {:?}", profile_uuid);
         if let Ok(conn) = database::init_database() {
-            match services::photo_service::get_profile_photo(&conn, &profile_uuid) {
+            match crate::services::photo_service::get_profile_photo(&conn, &profile_uuid) {
                 Ok(Some(photo)) => Some(photo.uuid),
                 Ok(None) => {
                     log::debug!("Kein Profilbild in DB gefunden für UUID: {}", profile_uuid);
@@ -132,20 +159,6 @@ pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
             }
         } else {
             None
-        }
-    });
-
-    // Load current status from events
-    let mut current_status = use_signal(|| None::<crate::models::EventType>);
-    let profile_uuid_for_effect = profile.uuid;
-    use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(status) = services::profile_service::get_profile_current_status(
-                &conn,
-                &profile_uuid_for_effect,
-            ) {
-                current_status.set(status);
-            }
         }
     });
 
@@ -189,26 +202,26 @@ pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
 
                 // Status Overlay Emoji (top right corner)
                 {
-                    if let Some(status) = current_status() {
+                    if let Some(status) = status {
                         match status {
-                            crate::models::EventType::Sick => rsx! {
+                            EventType::Sick => rsx! {
                                 div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
                                     "🤒"
                                 }
                             },
-                            crate::models::EventType::MarkedForSlaughter => {
+                            EventType::MarkedForSlaughter => {
                                 rsx! {
                                     div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
                                         "🥩"
                                     }
                                 }
                             }
-                            crate::models::EventType::Died => rsx! {
+                            EventType::Died => rsx! {
                                 div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
                                     "🪦"
                                 }
                             },
-                            crate::models::EventType::Slaughtered => {
+                            EventType::Slaughtered => {
                                 rsx! {
                                     div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
                                         "🥩"
@@ -224,6 +237,37 @@ pub fn ProfileCard(profile: Quail, on_click: EventHandler<()>) -> Element {
             }
         }
     }
+}
+
+fn latest_status_for(quail_uuid: &str, events: &[spacetime::QuailEvent]) -> Option<EventType> {
+    events
+        .iter()
+        .filter(|event| event.quail_uuid == quail_uuid)
+        .max_by(|a, b| {
+            a.event_date
+                .cmp(&b.event_date)
+                .then_with(|| a.id.cmp(&b.id))
+        })
+        .map(|event| EventType::from_str(&event.event_type))
+}
+
+fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {
+    let uuid = uuid::Uuid::parse_str(&remote.uuid).ok()?;
+    let profile_photo = remote
+        .profile_photo
+        .as_ref()
+        .and_then(|value| uuid::Uuid::parse_str(value).ok());
+
+    Some(Quail {
+        uuid,
+        name: remote.name.clone(),
+        gender: Gender::from_str(&remote.gender),
+        ring_color: remote
+            .ring_color
+            .as_ref()
+            .map(|value| RingColor::from_str(value)),
+        profile_photo,
+    })
 }
 
 /// Helper function to convert color names to light versions

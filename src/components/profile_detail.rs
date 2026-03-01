@@ -1,12 +1,13 @@
 use crate::database;
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
-use crate::models::{Quail, QuailEvent};
-use crate::services::{event_service, profile_service};
+use crate::models::{EventType, Gender};
+use crate::spacetime;
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 // Photo type is not needed in this file - preview/fullscreen components handle loading
 use photo_gallery::{CollectionFullscreen, PreviewCollection};
+use spacetimedb_sdk::DbContext;
 
 /// Helper function to resolve photo path to absolute path
 /// Handles both full paths (starting with /) and relative filenames
@@ -14,9 +15,11 @@ use photo_gallery::{CollectionFullscreen, PreviewCollection};
 
 #[component]
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
-    let mut profile = use_signal(|| None::<Quail>);
-    let mut events = use_signal(|| Vec::<QuailEvent>::new());
-    let mut error = use_signal(|| String::new());
+    let quails = spacetime::use_table_quails();
+    let all_events = spacetime::use_table_quail_events();
+    let connection = spacetime::use_connection();
+    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events"]);
+
     // preview UUID shown in the main profile area (PreviewCollection)
     let mut quail_photo_collection_uuid = use_signal(|| None::<uuid::Uuid>);
     // uuids for fullscreen viewer (filled when opening fullscreen)
@@ -33,6 +36,14 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
     // clone used for opening fullscreen without moving the original id
     let quail_id_for_fullscreen = quail_id.clone();
 
+    // Set default preview collection UUID from profile UUID.
+    let quail_id_for_preview = quail_id.clone();
+    use_effect(move || {
+        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_preview) {
+            quail_photo_collection_uuid.set(Some(uuid));
+        }
+    });
+
     // Retry failed downloads beim Mount
     use_effect(move || {
         spawn(async move {
@@ -45,27 +56,54 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         });
     });
 
-    // Profil und Events laden
-    let quail_id_for_profile = quail_id.clone();
-    use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_profile) {
-                match profile_service::get_profile(&conn, &uuid) {
-                    Ok(p) => {
-                        quail_photo_collection_uuid.set(Some(uuid));
-                        profile.set(Some(p));
-                        error.set(String::new());
-                    }
-                    Err(e) => error.set(t!("error-load-failed", error: e.to_string())), // Failed to load
-                }
+    let quail_id_for_profile_memo = quail_id.clone();
+    let profile = use_memo(move || {
+        let owner = connection
+            .read()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
 
-                // Load events
-                match event_service::get_events_for_quail(&conn, &uuid) {
-                    Ok(evts) => events.set(evts),
-                    Err(e) => log::error!("{}: {}", t!("error-load-events-failed"), e), // Failed to load events
-                }
-            }
-        }
+        quails
+            .read()
+            .iter()
+            .find(|quail| {
+                quail.uuid == quail_id_for_profile_memo
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &quail.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
+    });
+
+    let quail_id_for_events_memo = quail_id.clone();
+    let events = use_memo(move || {
+        let owner = connection
+            .read()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        let mut rows: Vec<spacetime::QuailEvent> = all_events
+            .read()
+            .iter()
+            .filter(|event| {
+                event.quail_uuid == quail_id_for_events_memo
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &event.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| {
+            b.event_date
+                .cmp(&a.event_date)
+                .then_with(|| b.id.cmp(&a.id))
+        });
+        rows
     });
 
     rsx! {
@@ -81,13 +119,6 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                 h1 {
                     style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
                     {t!("profile-detail-title")} // Profile
-                }
-            }
-
-            if !error().is_empty() {
-                div { style: "background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "⚠️ "
-                    {error}
                 }
             }
 
@@ -306,39 +337,39 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         }
                         div { style: "display:flex; flex-wrap:wrap; gap:8px;",
                             span { style: "padding:6px 14px; background:#e8f4f8; border-radius:16px; font-size:13px; color:#0066cc;",
-                                "ID {p.uuid.to_string().chars().take(8).collect::<String>()}"
+                                "ID {p.uuid.chars().take(8).collect::<String>()}"
                             }
                             span { style: "padding:6px 14px; background:#fff3e0; border-radius:16px; font-size:13px; color:#ff8c00;",
-                                "{p.gender.display_name()}"
+                                "{Gender::from_str(&p.gender).display_name()}"
                             }
                             // Status Badge basierend auf letztem Event
                             if let Some(latest_event) = events().first() {
-                                match latest_event.event_type {
-                                    crate::models::EventType::Born => rsx! {
+                                match EventType::from_str(&latest_event.event_type) {
+                                    EventType::Born => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "🐣 "
                                             {t!("status-born")}
                                         }
                                     },
-                                    crate::models::EventType::Alive => rsx! {
+                                    EventType::Alive => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "✅ "
                                             {t!("status-alive")}
                                         }
                                     },
-                                    crate::models::EventType::Sick => rsx! {
+                                    EventType::Sick => rsx! {
                                         span { style: "padding:6px 14px; background:#ffe0e0; border-radius:16px; font-size:13px; color:#cc3333;",
                                             "🤒 "
                                             {t!("status-sick")}
                                         }
                                     },
-                                    crate::models::EventType::Healthy => rsx! {
+                                    EventType::Healthy => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "💪 "
                                             {t!("status-healthy")}
                                         }
                                     },
-                                    crate::models::EventType::MarkedForSlaughter => {
+                                    EventType::MarkedForSlaughter => {
                                         rsx! {
                                             span { style: "padding:6px 14px; background:#fff3e0; border-radius:16px; font-size:13px; color:#ff8800;",
                                                 "🥩 "
@@ -346,13 +377,13 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                             }
                                         }
                                     }
-                                    crate::models::EventType::Slaughtered => rsx! {
+                                    EventType::Slaughtered => rsx! {
                                         span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
                                             "🥩 "
                                             {t!("status-slaughtered")}
                                         }
                                     },
-                                    crate::models::EventType::Died => rsx! {
+                                    EventType::Died => rsx! {
                                         span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
                                             "🪦 "
                                             {t!("status-died")}
@@ -420,22 +451,22 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                         },
                                         div { style: "display:flex; gap:10px; align-items:center; margin-bottom:8px;",
                                             span { style: "font-size:20px;",
-                                                match event.event_type {
-                                                    crate::models::EventType::Born => "🐣",
-                                                    crate::models::EventType::Alive => "✅",
-                                                    crate::models::EventType::Sick => "🤒",
-                                                    crate::models::EventType::Healthy => "💪",
-                                                    crate::models::EventType::MarkedForSlaughter => "🥩",
-                                                    crate::models::EventType::Slaughtered => "🥩",
-                                                    crate::models::EventType::Died => "🪦",
+                                                match EventType::from_str(&event.event_type) {
+                                                    EventType::Born => "🐣",
+                                                    EventType::Alive => "✅",
+                                                    EventType::Sick => "🤒",
+                                                    EventType::Healthy => "💪",
+                                                    EventType::MarkedForSlaughter => "🥩",
+                                                    EventType::Slaughtered => "🥩",
+                                                    EventType::Died => "🪦",
                                                 }
                                             }
                                             div {
                                                 div { style: "font-size:14px; font-weight:600; color:#333;",
-                                                    "{event.event_type.display_name()}"
+                                                    "{EventType::from_str(&event.event_type).display_name()}"
                                                 }
                                                 div { style: "font-size:12px; color:#666;",
-                                                    {event.event_date.format("%d.%m.%Y").to_string()}
+                                                    {format_event_date(&event.event_date)}
                                                 }
                                             }
                                         }
@@ -479,4 +510,10 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             }
         }
     }
+}
+
+fn format_event_date(value: &str) -> String {
+    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map(|date| date.format("%d.%m.%Y").to_string())
+        .unwrap_or_else(|_| value.to_string())
 }

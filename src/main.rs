@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
 use photo_gallery::PhotoGalleryContext;
-use spacetime::context::SpacetimeContext;
 
 mod camera;
 mod components;
@@ -12,6 +11,7 @@ mod image_processing;
 mod models;
 mod services;
 mod spacetime;
+mod spacetime_module_bindings;
 
 use components::{
     AddProfileScreen, EggHistoryScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
@@ -86,34 +86,40 @@ fn App() -> Element {
     // Provide PhotoGalleryContext to photo-gallery components (storage path from service)
     use_context_provider(|| PhotoGalleryContext::new(services::photo_service::get_storage_path()));
 
-    // Provide the SpacetimeDB context tree-wide.
-    // Components access it via `use_context::<SpacetimeContext>()` or the
-    // `use_spacetime()` convenience hook.
-    use_context_provider(SpacetimeContext::disconnected);
+    // Load saved SpacetimeDB authentication token from persistent storage
+    let saved_settings =
+        services::spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
+    let spacetime_uri = if !saved_settings.server_url.is_empty() {
+        saved_settings.server_url.clone()
+    } else {
+        "http://127.0.0.1:3000".to_string()
+    };
+    let spacetime_module = if !saved_settings.database_name.is_empty() {
+        saved_settings.database_name.clone()
+    } else {
+        "stalltagebuch-server".to_string()
+    };
 
-    // Auto-connect to SpacetimeDB if settings are already persisted.
-    use_effect(move || {
-        let mut stdb = use_context::<SpacetimeContext>();
-        match services::spacetime_settings_service::load_spacetime_settings() {
-            Ok(settings) if settings.is_spacetime_configured() => {
-                log::info!("Auto-connecting to SpacetimeDB at {}", settings.server_url);
-                stdb.connect(settings.server_url, settings.database_name, settings.token);
-            }
-            Ok(_) => {
-                log::info!("SpacetimeDB not yet configured – open Settings to connect");
-            }
-            Err(e) => {
-                log::error!("Failed to load SpacetimeDB settings: {e}");
-            }
-        }
+    // Load the saved authentication token to maintain SpacetimeDB client identity across restarts
+    let saved_token = spacetime::load_saved_token();
 
-        // Legacy: also initialise the local SQLite DB so that the photo
-        // gallery and other local services that still depend on it work
-        // correctly during the transition period.
+    // Provide the generated SpacetimeDB context tree-wide.
+    // Pass the saved token so we reconnect as the same client identity.
+    let _spacetime_ctx =
+        spacetime::use_spacetimedb_context_provider(&spacetime_uri, &spacetime_module, saved_token);
+
+    // Watch for successful connections and persist the authentication token
+    spacetime::use_persist_spacetime_token();
+
+    // Legacy: also initialise the local SQLite DB so that the photo
+    // gallery and other local services that still depend on it work
+    // correctly during the transition period.
+    let db_init = use_effect(move || {
         if let Err(e) = database::init_database() {
             log::error!("Local database init failed: {e}");
         }
     });
+    let _ = db_init;
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }

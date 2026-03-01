@@ -1,7 +1,7 @@
 use crate::{
     database,
-    models::{Gender, Quail, RingColor},
-    services, Screen,
+    models::{Gender, RingColor},
+    spacetime, Screen,
 };
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -17,6 +17,9 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut error = use_signal(|| None::<String>);
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
+    let create_quail = spacetime::use_reducer_create_quail();
+    let set_quail_photo = spacetime::use_reducer_set_quail_photo();
+    let connection = spacetime::use_connection();
 
     let mut handle_submit = move || {
         error.set(None);
@@ -29,11 +32,14 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
+        if connection.read().is_none() {
+            error.set(Some(t!("error", error: "SpacetimeDB not connected")));
+            return;
+        }
+
         saving.set(true);
-
-        let mut quail = Quail::new(name_trimmed.to_string());
-
-        quail.gender = match gender().as_str() {
+        let quail_uuid = uuid::Uuid::new_v4().to_string();
+        let gender_value = match gender().as_str() {
             "male" => Gender::Male,
             "female" => Gender::Female,
             _ => Gender::Unknown,
@@ -41,72 +47,79 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
 
         let ring_color_value = ring_color();
         let ring_color_trimmed = ring_color_value.trim();
-        quail.ring_color = if ring_color_trimmed.is_empty() {
+        let ring_color_value = if ring_color_trimmed.is_empty() {
             None
         } else {
-            Some(RingColor::from_str(ring_color_trimmed))
+            Some(RingColor::from_str(ring_color_trimmed).as_str().to_string())
         };
 
+        create_quail(spacetime::CreateQuailArgs {
+            uuid: quail_uuid.clone(),
+            name: name_trimmed.to_string(),
+            gender: gender_value.as_str().to_string(),
+            ring_color: ring_color_value,
+            profile_photo: None,
+        });
+
+        let on_navigate_submit = on_navigate.clone();
+        let set_quail_photo_reducer = set_quail_photo.clone();
+
         spawn(async move {
-            match database::init_database() {
-                Ok(conn) => {
-                    match services::create_profile(&conn, &quail).await {
+            if let Some(path) = photo_path() {
+                match database::init_database() {
+                    Ok(conn) => match uuid::Uuid::parse_str(&quail_uuid) {
                         Ok(quail_id) => {
-                            // Speichere Profilfoto falls vorhanden
-                            if let Some(path) = photo_path() {
-                                let path_str = path.to_string_lossy().to_string();
-                                // Use collection-based API
-                                match crate::services::photo_service::get_or_create_quail_collection(
-                                    &conn, &quail_id,
-                                ) {
-                                    Ok(collection_id) => {
-                                        match crate::services::photo_service::add_photo_to_collection(
-                                            &conn,
-                                            &collection_id,
-                                            path_str,
-                                        )
-                                        .await
-                                        {
-                                            Ok(photo_uuid) => {
-                                                // Setze dieses Foto als Profilbild
-                                                let _ = crate::services::photo_service::set_profile_photo(
+                            let path_str = path.to_string_lossy().to_string();
+                            match crate::services::photo_service::get_or_create_quail_collection(
+                                &conn, &quail_id,
+                            ) {
+                                Ok(collection_id) => {
+                                    match crate::services::photo_service::add_photo_to_collection(
+                                        &conn,
+                                        &collection_id,
+                                        path_str,
+                                    )
+                                    .await
+                                    {
+                                        Ok(photo_uuid) => {
+                                            let _ =
+                                                crate::services::photo_service::set_profile_photo(
                                                     &conn,
                                                     &quail_id,
                                                     &photo_uuid,
                                                 )
                                                 .await;
-                                            }
-                                            Err(e) => {
-                                                log::error!(
-                                                    "Fehler beim Hinzufügen des Profilfotos: {}",
-                                                    e
-                                                );
-                                            }
+                                            set_quail_photo_reducer(
+                                                quail_uuid.clone(),
+                                                Some(photo_uuid.to_string()),
+                                            );
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Fehler beim Hinzufügen des Profilfotos: {}",
+                                                e
+                                            );
                                         }
                                     }
-                                    Err(e) => {
-                                        log::error!(
-                                            "Fehler beim Erstellen der Foto-Sammlung: {}",
-                                            e
-                                        );
-                                    }
+                                }
+                                Err(e) => {
+                                    log::error!("Fehler beim Erstellen der Foto-Sammlung: {}", e);
                                 }
                             }
-                            success.set(true);
-                            saving.set(false);
-                            on_navigate.call(Screen::ProfileList);
                         }
                         Err(e) => {
-                            error.set(Some(format!("{}: {}", t!("error-save"), e)));
-                            saving.set(false);
+                            log::error!("Ungültige Quail UUID: {}", e);
                         }
+                    },
+                    Err(e) => {
+                        log::error!("Fehler beim Öffnen der lokalen DB für Fotos: {}", e);
                     }
                 }
-                Err(e) => {
-                    error.set(Some(t!("error-database", error: e.to_string())));
-                    saving.set(false);
-                }
             }
+
+            success.set(true);
+            saving.set(false);
+            on_navigate_submit.call(Screen::ProfileList);
         });
     };
 
@@ -121,7 +134,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                     "← "
                     {t!("action-back")}
                 }
-                h1 { style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
+                h1 {
+                    style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
                     {t!("profile-add-title")} // New profile page title
                 }
             }
@@ -142,7 +156,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             div { class: "card",
 
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("profile-name-label")} // Name field label with required marker
                     }
                     input {
@@ -156,7 +171,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("profile-gender-label")} // Gender field label
                     }
                     select {
@@ -170,7 +186,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("profile-ring-color-label")} // Ring color field label
                     }
                     select {
@@ -197,7 +214,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
+                    label {
+                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
                         {t!("profile-photo-label")} // Photo field label
                     }
 
@@ -208,7 +226,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     "📷"
                                 }
                                 div { style: "flex: 1;",
-                                    div { style: "font-size: 14px; font-weight: 600; color: #333;",
+                                    div {
+                                        style: "font-size: 14px; font-weight: 600; color: #333;",
                                         {t!("photo-selected")} // Photo selected status message
                                     }
                                     div { style: "font-size: 12px; color: #666; word-break: break-all;",
@@ -223,7 +242,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 }
                             }
                         } else {
-                            div { style: "width: 100%; height: 120px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px;",
+                            div {
+                                style: "width: 100%; height: 120px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px;",
                                 {t!("photo-none-selected")} // No photo selected message
                             }
                         }
