@@ -55,111 +55,6 @@ fn convert_error(e: photo_gallery::PhotoGalleryError) -> AppError {
     }
 }
 
-pub async fn add_quail_photo(
-    conn: &Connection,
-    quail_id: Uuid,
-    path: String,
-    _thumbnail_path: Option<String>,
-) -> Result<Uuid, AppError> {
-    log::debug!("=== add_quail_photo called ===");
-    log::debug!("Quail ID: {}, Path: {}", quail_id, path);
-
-    let service = init_photo_service();
-
-    // Ensure the quail exists before attaching a photo.
-    let exists: i32 = conn.query_row(
-        "SELECT COUNT(*) FROM quails WHERE uuid = ?1 AND deleted = 0",
-        rusqlite::params![quail_id.to_string()],
-        |row| row.get(0),
-    )?;
-    if exists == 0 {
-        return Err(AppError::NotFound("Wachtel nicht gefunden".into()));
-    }
-
-    // Add photo using photo-gallery service
-    let photo_uuid = service
-        .add_photo_to_collection(conn, &quail_id, path)
-        .await
-        .map_err(convert_error)?;
-
-    // Get the relative path for operation capture
-    let relative_path: String = conn.query_row(
-        "SELECT relative_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    let thumbnail_small: Option<String> = conn.query_row(
-        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    // Capture CRDT operation after photo is created
-    crate::services::operation_capture::capture_photo_create(
-        conn,
-        &photo_uuid.to_string(),
-        Some(&quail_id.to_string()),
-        None,
-        &relative_path,
-        thumbnail_small.as_deref(),
-    )
-    .await?;
-
-    Ok(photo_uuid)
-}
-
-pub async fn add_event_photo(
-    conn: &Connection,
-    event_id: Uuid,
-    path: String,
-    _thumbnail_path: Option<String>,
-) -> Result<Uuid, AppError> {
-    let service = init_photo_service();
-
-    // Ensure the event exists before attaching a photo.
-    let exists: i32 = conn.query_row(
-        "SELECT COUNT(*) FROM quail_events WHERE uuid = ?1 AND deleted = 0",
-        rusqlite::params![event_id.to_string()],
-        |row| row.get(0),
-    )?;
-    if exists == 0 {
-        return Err(AppError::NotFound("Event nicht gefunden".into()));
-    }
-
-    // Add photo using photo-gallery service
-    let photo_uuid = service
-        .add_photo_to_collection(conn, &event_id, path)
-        .await
-        .map_err(convert_error)?;
-
-    // Get the relative path for operation capture
-    let relative_path: String = conn.query_row(
-        "SELECT relative_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    let thumbnail_small: Option<String> = conn.query_row(
-        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    // Capture CRDT operation after photo is created
-    crate::services::operation_capture::capture_photo_create(
-        conn,
-        &photo_uuid.to_string(),
-        None,
-        Some(&event_id.to_string()),
-        &relative_path,
-        thumbnail_small.as_deref(),
-    )
-    .await?;
-
-    Ok(photo_uuid)
-}
-
 pub fn get_profile_photo(conn: &Connection, quail_uuid: &Uuid) -> Result<Option<Photo>, AppError> {
     let service = init_photo_service();
     service
@@ -194,15 +89,6 @@ pub async fn set_profile_photo(
                 return Err(AppError::NotFound("Wachtel nicht gefunden".into()));
             }
 
-            // Capture CRDT operation for the update
-            crate::services::operation_capture::capture_quail_update(
-                conn,
-                &quail_uuid.to_string(),
-                "profile_photo",
-                serde_json::Value::String(photo_uuid.to_string()),
-            )
-            .await?;
-
             Ok(())
         }
         Some(_) => Err(AppError::NotFound("Foto gehört nicht zur Wachtel".into())),
@@ -218,9 +104,6 @@ pub async fn delete_photo(conn: &Connection, photo_uuid: &Uuid) -> Result<(), Ap
         .delete_photo(conn, photo_uuid)
         .await
         .map_err(convert_error)?;
-
-    // Capture CRDT deletion after photo is deleted
-    crate::services::operation_capture::capture_photo_delete(conn, &photo_uuid.to_string()).await?;
 
     Ok(())
 }
@@ -485,6 +368,7 @@ pub fn get_or_create_quail_collection(
 }
 
 /// Get or create a photo collection for an event
+#[allow(dead_code)]
 pub fn get_or_create_event_collection(
     _conn: &Connection,
     event_id: &Uuid,
@@ -508,30 +392,6 @@ pub async fn add_photo_to_collection(
         .add_photo_to_collection(conn, collection_id, path)
         .await
         .map_err(convert_error)?;
-
-    // Get the relative path for operation capture
-    let relative_path: String = conn.query_row(
-        "SELECT relative_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    let thumbnail_small: Option<String> = conn.query_row(
-        "SELECT thumbnail_small_path FROM photos WHERE uuid = ?1",
-        rusqlite::params![photo_uuid.to_string()],
-        |row| row.get(0),
-    )?;
-
-    // Capture CRDT operation after photo is created
-    crate::services::operation_capture::capture_photo_create(
-        conn,
-        &photo_uuid.to_string(),
-        None, // No direct quail_id
-        None, // No direct event_id
-        &relative_path,
-        thumbnail_small.as_deref(),
-    )
-    .await?;
 
     Ok(photo_uuid)
 }
