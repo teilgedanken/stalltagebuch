@@ -1,28 +1,24 @@
 use crate::database;
-use crate::services;
-use crate::spacetime::{use_spacetimedb_context, ConnectionState};
+use crate::spacetime::{self, use_spacetimedb_context, ConnectionState};
 use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 
 #[component]
 pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
+    let quails = spacetime::use_table_quails();
+    spacetime::use_subscription(&["SELECT * FROM quails"]);
+
     let mut db_status = use_signal(|| Err(t!("status-initializing")));
-    let mut profile_count = use_signal(|| 0i32);
     let spacetimedb_ctx = use_spacetimedb_context();
     let connection_state = spacetimedb_ctx.state;
 
     // Initialize database on mount
     use_effect(move || match database::init_database() {
-        Ok(conn) => match services::count_profiles(&conn) {
-            Ok(count) => {
-                profile_count.set(count);
-                db_status.set(Ok(format!("✅ {}", t!( "status-db-ready", count: count))));
-            }
-            Err(e) => {
-                db_status.set(Err(format!("⚠️ {}", e)));
-            }
-        },
+        Ok(_) => {
+            let count = quails().len();
+            db_status.set(Ok(format!("✅ {}", t!( "status-db-ready", count: count))));
+        }
         Err(e) => {
             db_status.set(Err(format!(
                 "❌ {}",

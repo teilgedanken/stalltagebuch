@@ -1,76 +1,67 @@
-use crate::{database, models::EggRecord, services, Screen};
+use crate::{models::EggRecord, spacetime, Screen};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 
 #[component]
 pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
-    let mut records = use_signal(|| Vec::<EggRecord>::new());
-    let mut status_message = use_signal(|| String::new());
+    let egg_records = spacetime::use_table_egg_records();
+    spacetime::use_subscription(&["SELECT * FROM egg_records"]);
 
-    // Load records
-    let mut load_records = move || match database::init_database() {
-        Ok(conn) => match services::list_egg_records(&conn, None, None) {
-            Ok(list) => {
-                records.set(list);
-                status_message.set(format!(
-                    "✅ {}",
-                    t!("egg-history-loaded", count: records().len())
-                ));
-            }
-            Err(e) => {
-                status_message.set(format!(
-                    "❌ {}",
-                    t!("error-load-failed", error: e.to_string())
-                ));
-            }
-        },
-        Err(e) => {
-            status_message.set(format!("❌ {}", t!("error-database", error: e.to_string())));
-        }
-    };
+    let records = use_memo(move || {
+        let mut mapped: Vec<EggRecord> = egg_records()
+            .into_iter()
+            .filter_map(|record| {
+                let uuid = uuid::Uuid::parse_str(&record.uuid).ok()?;
+                let record_date =
+                    chrono::NaiveDate::parse_from_str(&record.record_date, "%Y-%m-%d").ok()?;
 
-    // Load on mount
-    use_effect(move || {
-        load_records();
+                Some(EggRecord {
+                    uuid,
+                    record_date,
+                    total_eggs: record.total_eggs,
+                    notes: record.notes,
+                })
+            })
+            .collect();
+
+        mapped.sort_by(|a, b| b.record_date.cmp(&a.record_date));
+        mapped
     });
 
+    let status_message = format!("✅ {}", t!("egg-history-loaded", count: records().len()));
+
     rsx! {
-        div {
-            style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
+        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
 
             // Header
-            div {
-                style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-top: 8px;",
-                h1 {
-                    style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
-                    "📋 ",
-                    { t!("egg-history-title") }
+            div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-top: 8px;",
+                h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
+                    "📋 "
+                    {t!("egg-history-title")}
                 }
                 button {
                     class: "btn-success",
                     style: "padding: 10px 20px; font-size: 16px; font-weight: 500;",
                     onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
-                    "+ ",
-                    { t!("action-new") }
+                    "+ "
+                    {t!("action-new")}
                 }
             }
 
             // Status
-            if !status_message().is_empty() {
-                div {
-                    style: "padding: 12px 16px; background: #e8f4f8; border-radius: 8px; color: #333; font-size: 14px; margin-bottom: 12px; border-left: 3px solid #0066cc;",
+            if !status_message.is_empty() {
+                div { style: "padding: 12px 16px; background: #e8f4f8; border-radius: 8px; color: #333; font-size: 14px; margin-bottom: 12px; border-left: 3px solid #0066cc;",
                     "{status_message}"
                 }
             }
 
             // Records List
             if records().is_empty() {
-                div {
-                    style: "text-align: center; padding: 40px; color: #999;",
-                    { t!("egg-history-empty") }
+                div { style: "text-align: center; padding: 40px; color: #999;",
+                    {t!("egg-history-empty")}
                 }
             } else {
-                for record in records() {
+                for record in records().iter() {
                     EggRecordCard {
                         record: record.clone(),
                         on_edit: move |date| on_navigate.call(Screen::EggTracking(Some(date))),
@@ -104,40 +95,30 @@ fn EggRecordCard(record: EggRecord, on_edit: EventHandler<String>) -> Element {
             style: "padding: 16px; margin: 8px 0; border-left: 4px solid #ff8c00; cursor: pointer;",
             onclick: move |_| on_edit.call(date_str.clone()),
 
-            div {
-                style: "display: flex; justify-content: space-between; align-items: start;",
+            div { style: "display: flex; justify-content: space-between; align-items: start;",
 
-                div {
-                    style: "flex: 1; min-width: 0;",
-                    div {
-                        style: "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;",
-                        h3 {
-                            style: "margin: 0; font-size: 18px; color: #333; font-weight: 600;",
+                div { style: "flex: 1; min-width: 0;",
+                    div { style: "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;",
+                        h3 { style: "margin: 0; font-size: 18px; color: #333; font-weight: 600;",
                             "📅 {display_date} ({weekday})"
                         }
                     }
-                    div {
-                        style: "display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;",
-                        span {
-                            style: "display: inline-block; padding: 6px 14px; background: #fff3e0; border-radius: 12px; font-size: 16px; color: #ff8c00; font-weight: 600;",
-                            "🥚 ",
-                            { t!("egg-history-eggs-count", count: record.total_eggs) }
+                    div { style: "display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;",
+                        span { style: "display: inline-block; padding: 6px 14px; background: #fff3e0; border-radius: 12px; font-size: 16px; color: #ff8c00; font-weight: 600;",
+                            "🥚 "
+                            {t!("egg-history-eggs-count", count : record.total_eggs)}
                         }
                     }
                     if let Some(notes) = &record.notes {
                         if !notes.trim().is_empty() {
-                            div {
-                                style: "margin-top: 12px; padding: 8px; background: #f8f9fa; border-radius: 6px; font-size: 13px; color: #666;",
+                            div { style: "margin-top: 12px; padding: 8px; background: #f8f9fa; border-radius: 6px; font-size: 13px; color: #666;",
                                 "💬 {notes}"
                             }
                         }
                     }
                 }
 
-                div {
-                    style: "margin-left: 12px; color: #999; font-size: 18px;",
-                    "✏️"
-                }
+                div { style: "margin-left: 12px; color: #999; font-size: 18px;", "✏️" }
             }
         }
     }

@@ -65,7 +65,16 @@ pub async fn add_quail_photo(
     log::debug!("Quail ID: {}, Path: {}", quail_id, path);
 
     let service = init_photo_service();
-    let quail = crate::services::get_profile(conn, &quail_id)?;
+
+    // Ensure the quail exists before attaching a photo.
+    let exists: i32 = conn.query_row(
+        "SELECT COUNT(*) FROM quails WHERE uuid = ?1 AND deleted = 0",
+        rusqlite::params![quail_id.to_string()],
+        |row| row.get(0),
+    )?;
+    if exists == 0 {
+        return Err(AppError::NotFound("Wachtel nicht gefunden".into()));
+    }
 
     // Add photo using photo-gallery service
     let photo_uuid = service
@@ -107,19 +116,20 @@ pub async fn add_event_photo(
     _thumbnail_path: Option<String>,
 ) -> Result<Uuid, AppError> {
     let service = init_photo_service();
-    let event = crate::services::event_service::get_event_by_id(conn, &event_id)?
-        .ok_or(AppError::NotFound("Event nicht gefunden".into()))?;
+
+    // Ensure the event exists before attaching a photo.
+    let exists: i32 = conn.query_row(
+        "SELECT COUNT(*) FROM quail_events WHERE uuid = ?1 AND deleted = 0",
+        rusqlite::params![event_id.to_string()],
+        |row| row.get(0),
+    )?;
+    if exists == 0 {
+        return Err(AppError::NotFound("Event nicht gefunden".into()));
+    }
 
     // Add photo using photo-gallery service
     let photo_uuid = service
-        .add_photo_to_collection(
-            conn,
-            event
-                .photos
-                .as_ref()
-                .ok_or(AppError::NotFound("No Event found".into()))?,
-            path,
-        )
+        .add_photo_to_collection(conn, &event_id, path)
         .await
         .map_err(convert_error)?;
 
@@ -467,7 +477,7 @@ pub async fn cleanup_orphaned_photos(conn: &Connection) -> Result<usize, AppErro
 
 /// Get or create a photo collection for a quail
 pub fn get_or_create_quail_collection(
-    conn: &Connection,
+    _conn: &Connection,
     quail_id: &Uuid,
 ) -> Result<Uuid, AppError> {
     // The quail UUID itself IS the collection ID in the photo-gallery system
@@ -476,7 +486,7 @@ pub fn get_or_create_quail_collection(
 
 /// Get or create a photo collection for an event
 pub fn get_or_create_event_collection(
-    conn: &Connection,
+    _conn: &Connection,
     event_id: &Uuid,
 ) -> Result<Uuid, AppError> {
     // The event UUID itself IS the collection ID in the photo-gallery system

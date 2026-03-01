@@ -5,7 +5,8 @@ Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, E
 ## Architektur & Muster
 - Navigation: Enum `Screen` in `src/main.rs`, Wechsel über `Signal<Screen>` und Props `on_navigate: Fn(Screen)` in Komponenten.
 - UI Komponenten: In `src/components/*`; jede Screen-Komponente akzeptiert eigene Props + einen `on_navigate` Callback. Keine veralteten APIs (`cx`, `Scope`, `use_state`); benutze `use_signal`, `use_memo`, `use_effect`.
-- Services: Fachlogik unter `src/services/*` (z.B. `profile_service`, `egg_service`, `analytics_service`, Sync/CRDT in `crdt_service`, `background_sync`). Schreib neue Logik hier – Screens bleiben dünn.
+- SpacetimeDB-first: CRUD fuer Quails/Events/EggRecords ueber generated bindings in `src/spacetime_module_bindings/*` und Re-Exports in `src/spacetime/*` (`use_table_*`, `use_reducer_*`, `use_subscription`).
+- Services: `src/services/*` fuer lokale Hilfslogik (Fotoverwaltung, Sync/CRDT, Export/Import). Keine neuen SQLite-CRUD Pfade fuer Quails/Events/EggRecords einfuehren.
 - Modelle: `src/models/*` als reine Datenstrukturen (Owned Types, `PartialEq`, `Clone` wenn als Props genutzt).
 - Datenbank: Schema + Migration in `database/schema.rs` – CRDT Felder (`rev`, `logical_clock`, `deleted`) und `op_log`/`sync_queue` für Sync. Änderungen: neue Migration statt direktes Anpassen bestehender CREATE.
 - Sync: Settings via `sync_settings` Tabelle; Autostart in `App` über `use_effect` nach `init_database`.
@@ -30,13 +31,13 @@ let mut current_screen = use_signal(|| Screen::Home);
 NavigationBar { current_screen: current_screen(), on_navigate: move |s| current_screen.set(s) }
 ```
 ```rust
-// Service-Aufruf in Screen
-let quails = services::profile_service::list_quails(&conn)?;
+// Spacetime Table im Screen
+let quails = spacetime::use_table_quails();
 ```
 
 ## Prüfliste für neue Features
 1. Datenmodell erweitern (models + Migration)
-2. Service-Funktion ergänzen (CRUD/Analyse)
+2. Spacetime reducer/table anpassen bzw. verwenden (CRUD/Analyse)
 3. UI Screen + Navigation Callback
 4. i18n Key erzeugen & Übersetzung nachziehen
 5. Android-spezifisch? → Anpassung nur über bestehende JNI-Brücke
