@@ -6,7 +6,7 @@ use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 // Photo type is not needed in this file - preview/fullscreen components handle loading
-use photo_gallery::{CollectionFullscreen, PreviewCollection};
+use photo_gallery::CollectionFullscreen;
 use spacetimedb_sdk::DbContext;
 
 /// Helper function to resolve photo path to absolute path
@@ -17,9 +17,24 @@ use spacetimedb_sdk::DbContext;
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
     let quails = spacetime::use_table_quails();
     let all_events = spacetime::use_table_quail_events();
+    #[cfg(target_os = "android")]
+    let photo_collections = spacetime::use_table_photo_collections();
+    #[cfg(target_os = "android")]
+    let _photos = spacetime::use_table_photos();
     let connection = spacetime::use_connection();
-    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events"]);
-
+    #[cfg(target_os = "android")]
+    let create_photo_collection = spacetime::use_reducer_create_photo_collection();
+    #[cfg(target_os = "android")]
+    let create_photo = spacetime::use_reducer_create_photo();
+    #[cfg(target_os = "android")]
+    let set_quail_photo = spacetime::use_reducer_set_quail_photo();
+    spacetime::use_subscription(&[
+        "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
+        "SELECT * FROM photo_collections",
+        "SELECT * FROM photos",
+    ]);
+    
     // preview UUID shown in the main profile area (PreviewCollection)
     let mut quail_photo_collection_uuid = use_signal(|| None::<uuid::Uuid>);
     // uuids for fullscreen viewer (filled when opening fullscreen)
@@ -35,6 +50,20 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
     let quail_id_for_camera = quail_id.clone();
     // clone used for opening fullscreen without moving the original id
     let quail_id_for_fullscreen = quail_id.clone();
+
+    // Clone reducers for use in button handlers
+    #[cfg(target_os = "android")]
+    let create_photo_collection_gallery = create_photo_collection.clone();
+    #[cfg(target_os = "android")]
+    let create_photo_gallery = create_photo.clone();
+    #[cfg(target_os = "android")]
+    let create_photo_collection_camera = create_photo_collection.clone();
+    #[cfg(target_os = "android")]
+    let create_photo_camera = create_photo.clone();
+    #[cfg(target_os = "android")]
+    let set_quail_photo_gallery = set_quail_photo.clone();
+    #[cfg(target_os = "android")]
+    let set_quail_photo_camera = set_quail_photo.clone();
 
     // Set default preview collection UUID from profile UUID.
     let quail_id_for_preview = quail_id.clone();
@@ -164,10 +193,31 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     }
                                 });
                             },
-                            {
-                                rsx! {
-                                    PreviewCollection { preview_collection_uuid: quail_photo_collection_uuid(), on_click: None }
+                            // Display photo from SpacetimeDB directly
+                            if let Some(photo_uuid_str) = p.profile_photo.as_ref() {
+                                if let Ok(photo_uuid) = uuid::Uuid::parse_str(photo_uuid_str) {
+                                    {rsx! {
+                                        photo_gallery::PreviewImage {
+                                            key: "{photo_uuid_str}",
+                                            photo_uuid: Some(photo_uuid),
+                                            alt: "Profile Photo".to_string(),
+                                        }
+                                    }}
+                                } else {
+                                    {rsx! {
+                                        div {
+                                            style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;",
+                                            "🐦"
+                                        }
+                                    }}
                                 }
+                            } else {
+                                {rsx! {
+                                    div {
+                                        style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;",
+                                        "🐦"
+                                    }
+                                }}
                             }
                         }
                         // Zwei halbtransparente Overlay-Buttons (Galerie Mehrfach / Kamera Einzel)
@@ -182,39 +232,82 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     upload_error.set(String::new());
                                     #[cfg(target_os = "android")]
                                     let quail_id_clone = quail_id_for_gallery.clone();
+                                    #[cfg(target_os = "android")]
+                                    let needs_profile_photo = profile()
+                                        .as_ref()
+                                        .and_then(|p| p.profile_photo.as_ref())
+                                        .is_none();
+                                    #[cfg(target_os = "android")]
+                                    let create_photo_collection_gallery_fn =
+                                        create_photo_collection_gallery.clone();
+                                    #[cfg(target_os = "android")]
+                                    let create_photo_gallery_fn = create_photo_gallery.clone();
+                                    #[cfg(target_os = "android")]
+                                    let set_quail_photo_gallery_fn = set_quail_photo_gallery.clone();
                                     spawn(async move {
                                         #[cfg(target_os = "android")]
                                         {
                                             match crate::camera::pick_images() {
                                                 Ok(paths) => {
                                                     if let Ok(conn) = database::init_database() {
-                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                                                            // Create or get PhotoCollection for this quail
+                                                            let collection_uuid = quail_uuid;
                                                             match crate::services::photo_service::get_or_create_quail_collection(
                                                                 &conn,
-                                                                &uuid,
+                                                                &quail_uuid,
                                                             ) {
                                                                 Ok(collection_id) => {
+                                                                    // Ensure collection exists in Spacetime
+                                                                    create_photo_collection_gallery_fn(spacetime::CreatePhotoCollectionArgs {
+                                                                        uuid: collection_uuid.to_string(),
+                                                                        quail_uuid: Some(quail_uuid.to_string()),
+                                                                        event_uuid: None,
+                                                                        name: format!("Quail-{}", quail_uuid.to_string().chars().take(8).collect::<String>()),
+                                                                    });
+
+                                                                    let mut profile_photo_set = false;
                                                                     for pth in paths {
                                                                         let path_str = pth.to_string_lossy().to_string();
                                                                         match crate::services::photo_service::add_photo_to_collection(
                                                                                 &conn,
                                                                                 &collection_id,
-                                                                                path_str,
+                                                                                path_str.clone(),
                                                                             )
                                                                             .await
                                                                         {
-                                                                            Ok(_) => {}
+                                                                            Ok(photo_uuid) => {
+                                                                                // Register photo in Spacetime
+                                                                                create_photo_gallery_fn(spacetime::CreatePhotoArgs {
+                                                                                    uuid: photo_uuid.to_string(),
+                                                                                    collection_uuid: collection_uuid.to_string(),
+                                                                                    relative_path: path_str,
+                                                                                });
+
+                                                                                if needs_profile_photo && !profile_photo_set {
+                                                                                    // Update SpacetimeDB
+                                                                                    set_quail_photo_gallery_fn(
+                                                                                        quail_uuid.to_string(),
+                                                                                        Some(photo_uuid.to_string()),
+                                                                                    );
+                                                                                    // Update local DB for UI compatibility
+                                                                                    if let Err(e) = crate::services::photo_service::set_profile_photo(&conn, &quail_uuid, &photo_uuid).await {
+                                                                                        log::warn!("Failed to update local profile photo: {}", e);
+                                                                                    }
+                                                                                    profile_photo_set = true;
+                                                                                }
+                                                                            }
                                                                             Err(e) => {
                                                                                 upload_error.set(format!("Fehler beim Speichern: {}", e));
                                                                                 break;
                                                                             }
                                                                         }
                                                                     }
-                                                                    if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
-                                                                        &conn,
-                                                                        &collection_id,
-                                                                    ) {
-                                                                        quail_photo_collection_uuid.set(Some(preview_opt));
+                                                                    // Update preview collection UUID from Spacetime table
+                                                                    if let Some(preview_uuid) = photo_collections.read().iter().find(|c| c.uuid == collection_uuid.to_string()).and_then(|c| c.preview_photo_uuid.clone()) {
+                                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&preview_uuid) {
+                                                                            quail_photo_collection_uuid.set(Some(uuid));
+                                                                        }
                                                                     }
                                                                 }
                                                                 Err(e) => {
@@ -257,6 +350,18 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     upload_error.set(String::new());
                                     #[cfg(target_os = "android")]
                                     let quail_id_clone = quail_id_for_camera.clone();
+                                    #[cfg(target_os = "android")]
+                                    let needs_profile_photo = profile()
+                                        .as_ref()
+                                        .and_then(|p| p.profile_photo.as_ref())
+                                        .is_none();
+                                    #[cfg(target_os = "android")]
+                                    let create_photo_collection_camera_fn =
+                                        create_photo_collection_camera.clone();
+                                    #[cfg(target_os = "android")]
+                                    let create_photo_camera_fn = create_photo_camera.clone();
+                                    #[cfg(target_os = "android")]
+                                    let set_quail_photo_camera_fn = set_quail_photo_camera.clone();
                                     spawn(async move {
                                         #[cfg(target_os = "android")]
                                         {
@@ -264,25 +369,54 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                                 Ok(path) => {
                                                     if let Ok(conn) = database::init_database() {
                                                         let path_str = path.to_string_lossy().to_string();
-                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
+                                                            // Create or get PhotoCollection for this quail
+                                                            let collection_uuid = quail_uuid;
                                                             match crate::services::photo_service::get_or_create_quail_collection(
                                                                 &conn,
-                                                                &uuid,
+                                                                &quail_uuid,
                                                             ) {
                                                                 Ok(collection_id) => {
+                                                                    // Ensure collection exists in Spacetime
+                                                                    create_photo_collection_camera_fn(spacetime::CreatePhotoCollectionArgs {
+                                                                        uuid: collection_uuid.to_string(),
+                                                                        quail_uuid: Some(quail_uuid.to_string()),
+                                                                        event_uuid: None,
+                                                                        name: format!("Quail-{}", quail_uuid.to_string().chars().take(8).collect::<String>()),
+                                                                    });
+
                                                                     match crate::services::photo_service::add_photo_to_collection(
                                                                             &conn,
                                                                             &collection_id,
-                                                                            path_str,
+                                                                            path_str.clone(),
                                                                         )
                                                                         .await
                                                                     {
-                                                                        Ok(_) => {
-                                                                            if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
-                                                                                &conn,
-                                                                                &collection_id,
-                                                                            ) {
-                                                                                quail_photo_collection_uuid.set(Some(preview_opt));
+                                                                        Ok(photo_uuid) => {
+                                                                            // Register photo in Spacetime
+                                                                            create_photo_camera_fn(spacetime::CreatePhotoArgs {
+                                                                                uuid: photo_uuid.to_string(),
+                                                                                collection_uuid: collection_uuid.to_string(),
+                                                                                relative_path: path_str,
+                                                                            });
+
+                                                                            if needs_profile_photo {
+                                                                                // Update SpacetimeDB
+                                                                                set_quail_photo_camera_fn(
+                                                                                    quail_uuid.to_string(),
+                                                                                    Some(photo_uuid.to_string()),
+                                                                                );
+                                                                                // Update local DB for UI compatibility
+                                                                                if let Err(e) = crate::services::photo_service::set_profile_photo(&conn, &quail_uuid, &photo_uuid).await {
+                                                                                    log::warn!("Failed to update local profile photo: {}", e);
+                                                                                }
+                                                                            }
+
+                                                                            // Update preview collection UUID from Spacetime table
+                                                                            if let Some(preview_uuid) = photo_collections.read().iter().find(|c| c.uuid == collection_uuid.to_string()).and_then(|c| c.preview_photo_uuid.clone()) {
+                                                                                if let Ok(uuid) = uuid::Uuid::parse_str(&preview_uuid) {
+                                                                                    quail_photo_collection_uuid.set(Some(uuid));
+                                                                                }
                                                                             }
                                                                         }
                                                                         Err(e) => {
@@ -511,7 +645,6 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         }
     }
 }
-
 fn format_event_date(value: &str) -> String {
     chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
         .map(|date| date.format("%d.%m.%Y").to_string())

@@ -19,14 +19,15 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut saving = use_signal(|| false);
     let create_quail = spacetime::use_reducer_create_quail();
     let set_quail_photo = spacetime::use_reducer_set_quail_photo();
+    let create_photo_collection = spacetime::use_reducer_create_photo_collection();
+    let create_photo = spacetime::use_reducer_create_photo();
     let connection = spacetime::use_connection();
 
     let mut handle_submit = move || {
         error.set(None);
         success.set(false);
 
-        let name_value = name();
-        let name_trimmed = name_value.trim();
+        let name_trimmed = name().trim().to_string();
         if name_trimmed.is_empty() {
             error.set(Some(t!("error-name-required"))); // Name cannot be empty
             return;
@@ -63,54 +64,55 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
 
         let on_navigate_submit = on_navigate.clone();
         let set_quail_photo_reducer = set_quail_photo.clone();
+        let create_photo_collection_reducer = create_photo_collection.clone();
+        let create_photo_reducer = create_photo.clone();
 
         spawn(async move {
             if let Some(path) = photo_path() {
                 match database::init_database() {
-                    Ok(conn) => match uuid::Uuid::parse_str(&quail_uuid) {
-                        Ok(quail_id) => {
-                            let path_str = path.to_string_lossy().to_string();
-                            match crate::services::photo_service::get_or_create_quail_collection(
-                                &conn, &quail_id,
-                            ) {
-                                Ok(collection_id) => {
-                                    match crate::services::photo_service::add_photo_to_collection(
-                                        &conn,
-                                        &collection_id,
-                                        path_str,
-                                    )
-                                    .await
-                                    {
-                                        Ok(photo_uuid) => {
-                                            let _ =
-                                                crate::services::photo_service::set_profile_photo(
-                                                    &conn,
-                                                    &quail_id,
-                                                    &photo_uuid,
-                                                )
-                                                .await;
-                                            set_quail_photo_reducer(
-                                                quail_uuid.clone(),
-                                                Some(photo_uuid.to_string()),
-                                            );
-                                        }
-                                        Err(e) => {
-                                            log::error!(
-                                                "Fehler beim Hinzufügen des Profilfotos: {}",
-                                                e
-                                            );
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    log::error!("Fehler beim Erstellen der Foto-Sammlung: {}", e);
-                                }
+                    Ok(conn) => {
+                        let path_str = path.to_string_lossy().to_string();
+
+                        // Use photo_service to handle the actual file operations
+                        match crate::services::photo_service::add_photo_to_collection(
+                            &conn,
+                            &uuid::Uuid::parse_str(&quail_uuid)
+                                .unwrap_or_else(|_| uuid::Uuid::new_v4()),
+                            path_str.clone(),
+                        )
+                        .await
+                        {
+                            Ok(photo_uuid) => {
+                                // Create photo collection in Spacetime
+                                let collection_uuid = quail_uuid.clone();
+                                create_photo_collection_reducer(
+                                    spacetime::CreatePhotoCollectionArgs {
+                                        uuid: collection_uuid.clone(),
+                                        quail_uuid: Some(quail_uuid.clone()),
+                                        event_uuid: None,
+                                        name: format!("Fotos für {}", name_trimmed),
+                                    },
+                                );
+
+                                // Register the photo in Spacetime
+                                let relative_path = format!("{}/{}", collection_uuid, photo_uuid);
+                                create_photo_reducer(spacetime::CreatePhotoArgs {
+                                    uuid: photo_uuid.to_string(),
+                                    collection_uuid: collection_uuid.clone(),
+                                    relative_path,
+                                });
+
+                                // Set as profile photo in Spacetime
+                                set_quail_photo_reducer(
+                                    quail_uuid.clone(),
+                                    Some(photo_uuid.to_string()),
+                                );
+                            }
+                            Err(e) => {
+                                log::error!("Fehler beim Hinzufügen des Profilfotos: {}", e);
                             }
                         }
-                        Err(e) => {
-                            log::error!("Ungültige Quail UUID: {}", e);
-                        }
-                    },
+                    }
                     Err(e) => {
                         log::error!("Fehler beim Öffnen der lokalen DB für Fotos: {}", e);
                     }

@@ -1,4 +1,3 @@
-use crate::database;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
 use crate::Screen;
@@ -14,9 +13,10 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut show_dead = use_signal(|| false);
     let quails = spacetime::use_table_quails();
     let events = spacetime::use_table_quail_events();
+    let _photos = spacetime::use_table_photos();
     let connection = spacetime::use_connection();
 
-    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events"]);
+    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events", "SELECT * FROM photos"]);
 
     let filtered_profiles = use_memo(move || {
         let owner = connection
@@ -138,29 +138,7 @@ pub fn ProfileCard(
     status: Option<EventType>,
     on_click: EventHandler<()>,
 ) -> Element {
-    let profile_uuid = profile.uuid;
-
-    // image state / loading handled by ThumbnailImage component and resource
-
-    // Load profile photo UUID and trigger background download; UI uses `ThumbnailImage`
-    let profile_photo_uuid = use_resource(move || async move {
-        log::debug!("##### Lade Profilbild UUID für {:?}", profile_uuid);
-        if let Ok(conn) = database::init_database() {
-            match crate::services::photo_service::get_profile_photo(&conn, &profile_uuid) {
-                Ok(Some(photo)) => Some(photo.uuid),
-                Ok(None) => {
-                    log::debug!("Kein Profilbild in DB gefunden für UUID: {}", profile_uuid);
-                    None
-                }
-                Err(e) => {
-                    log::error!("Fehler beim Laden des Profilbilds: {}", e);
-                    None
-                }
-            }
-        } else {
-            None
-        }
-    });
+    let profile_photo_uuid = profile.profile_photo;
 
     // Convert ring color to light version for overlay background
     let overlay_bg = if let Some(ring_color) = &profile.ring_color {
@@ -176,20 +154,18 @@ pub fn ProfileCard(
         div { class: "profile-card", onclick: move |_| on_click.call(()),
             // Square Image Container
             div { class: "profile-image",
-                match profile_photo_uuid() {
-                    None => rsx! {
-                        div {
-                            class: "profile-image-placeholder",
-                            style: "display: flex; align-items: center; justify-content: center; font-size: 24px;",
-                            "⏳"
+                if let Some(uuid) = profile_photo_uuid {
+                    {rsx! {
+                        ThumbnailImage {
+                            key: "{uuid}",
+                            photo_uuid: Some(uuid),
+                            alt: profile.name.clone(),
                         }
-                    },
-                    Some(Some(uuid)) => rsx! {
-                        ThumbnailImage { photo_uuid: Some(uuid.clone()), alt: profile.name.clone() }
-                    },
-                    Some(None) => rsx! {
+                    }}
+                } else {
+                    {rsx! {
                         div { class: "profile-image-placeholder", "🐦" }
-                    },
+                    }}
                 }
 
                 // Overlay with name and gender

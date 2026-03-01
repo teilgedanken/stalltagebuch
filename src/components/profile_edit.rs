@@ -15,9 +15,14 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let connection = spacetime::use_connection();
     let update_quail_reducer = spacetime::use_reducer_update_quail();
     let delete_quail_reducer = spacetime::use_reducer_delete_quail();
+    let delete_photo = spacetime::use_reducer_delete_photo();
 
-    // Subscribe to quails table
-    spacetime::use_subscription(&["SELECT * FROM quails"]);
+    // Subscribe to quails and photos tables
+    spacetime::use_subscription(&[
+        "SELECT * FROM quails",
+        "SELECT * FROM photo_collections",
+        "SELECT * FROM photos",
+    ]);
 
     // Local state signals
     let mut profile = use_signal(|| None::<Quail>);
@@ -62,34 +67,28 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 if let Some(rc) = &local_quail.ring_color {
                     ring_color.set(rc.as_str().to_string());
                 }
+                if let Some(profile_uuid) = local_quail.profile_photo {
+                    selected_profile_photo_id.set(Some(profile_uuid.to_string()));
+                }
                 profile.set(Some(local_quail));
             }
         }
 
-        // Load photos (still from local service)
+        // Load photos from local gallery storage using quail UUID as collection id
         if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_load) {
             if let Ok(conn) = database::init_database() {
-                match crate::services::photo_service::get_quail_collection(&conn, &uuid) {
-                    Ok(Some(collection_id)) => {
-                        let photo_list = crate::services::photo_service::list_collection_photos(
+                match crate::services::photo_service::get_or_create_quail_collection(&conn, &uuid) {
+                    Ok(collection_id) => {
+                        match crate::services::photo_service::list_collection_photos(
                             &conn,
                             &collection_id,
-                        )
-                        .ok();
-                        if let Some(list) = photo_list {
-                            // Find current profile photo
-                            if let Ok(Some(profile_photo)) =
-                                crate::services::photo_service::get_profile_photo(&conn, &uuid)
-                            {
-                                selected_profile_photo_id.set(Some(profile_photo.uuid.to_string()));
-                            }
-                            photos.set(list);
-                        } else {
-                            log::error!("{}", t!("error-load-photos-failed"));
+                        ) {
+                            Ok(list) => photos.set(list),
+                            Err(e) => log::error!("{}: {}", t!("error-load-photos-failed"), e),
                         }
                     }
-                    _ => {
-                        // No photos, that's ok
+                    Err(e) => {
+                        log::error!("{}: {}", t!("error-load-photos-failed"), e);
                     }
                 }
             }
@@ -303,6 +302,16 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                 }
                             })
                             .collect();
+                        let gallery_key = format!(
+                            "{}:{}:{}",
+                            quail_id,
+                            selected_profile_photo_id().as_deref().unwrap_or("none"),
+                            gallery_items
+                                .iter()
+                                .map(|item| item.id.as_str())
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        );
                         let gallery_config = GalleryConfig {
                             allow_delete: true,
                             allow_select: true,
@@ -310,51 +319,52 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         };
                         rsx! {
                             Gallery {
+                                key: "{gallery_key}",
                                 items: gallery_items,
                                 config: gallery_config,
                                 on_delete: move |photo_id: String| {
                                     let qid = quail_id_for_photo_delete.clone();
+                                    let delete_photo_fn = delete_photo.clone();
                                     spawn(async move {
+                                        // Delete photo from Spacetime
+                                        delete_photo_fn(photo_id.clone());
+
+                                        // Also delete from local SQLite for cleanup
                                         if let Ok(conn) = database::init_database() {
                                             if let Ok(photo_uuid) = uuid::Uuid::parse_str(&photo_id) {
-                                                match crate::services::photo_service::delete_photo(
+                                                let _ = crate::services::photo_service::delete_photo(
                                                         &conn,
                                                         &photo_uuid,
                                                     )
-                                                    .await
-                                                {
-                                                    Ok(_) => {
-                                                        if let Ok(q_uuid) =
-                                                            uuid::Uuid::parse_str(&qid)
-                                                        {
-                                                            let photo_list = match crate::services::photo_service::get_quail_collection(
+                                                    .await;
+                                            }
+                                        }
+
+                                        // Refresh photo list from local database
+                                        if let Ok(q_uuid) = uuid::Uuid::parse_str(&qid) {
+                                            if let Ok(conn) = database::init_database() {
+                                                let photo_list = match crate::services::photo_service::get_quail_collection(
+                                                    &conn,
+                                                    &q_uuid,
+                                                ) {
+                                                    Ok(Some(collection_id)) => {
+                                                        crate::services::photo_service::list_collection_photos(
                                                                 &conn,
-                                                                &q_uuid,
-                                                            ) {
-                                                                Ok(Some(collection_id)) => {
-                                                                    crate::services::photo_service::list_collection_photos(
-                                                                            &conn,
-                                                                            &collection_id,
-                                                                        )
-                                                                        .ok()
-                                                                }
-                                                                _ => None,
-                                                            };
-                                                            if let Some(list) = photo_list {
-                                                                photos.set(list);
-                                                                if selected_profile_photo_id()
-                                                                    .as_ref()
-                                                                    .map(|s| s.as_str())
-                                                                    == Some(&photo_id)
-                                                                {
-                                                                    selected_profile_photo_id
-                                                                        .set(None);
-                                                                }
-                                                            }
-                                                        }
+                                                                &collection_id,
+                                                            )
+                                                            .ok()
                                                     }
-                                                    Err(e) => {
-                                                        error.set(format!("{}: {}", t!("error-delete-failed"), e))
+                                                    _ => None,
+                                                };
+                                                if let Some(list) = photo_list {
+                                                    photos.set(list);
+                                                    if selected_profile_photo_id()
+                                                        .as_ref()
+                                                        .map(|s| s.as_str())
+                                                        == Some(&photo_id)
+                                                    {
+                                                        selected_profile_photo_id
+                                                            .set(None);
                                                     }
                                                 }
                                             }
