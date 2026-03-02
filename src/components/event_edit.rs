@@ -1,8 +1,8 @@
 use crate::{
-    database,
+    Screen, database,
     models::{EventType, QuailEvent},
     services::photo_service,
-    spacetime, Screen,
+    spacetime,
 };
 use base64::Engine;
 use chrono::NaiveDate;

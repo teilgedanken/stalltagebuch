@@ -1,4 +1,4 @@
-use crate::{models::quail_event::EventType, spacetime, Screen};
+use crate::{Screen, models::quail_event::EventType, spacetime};
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use dioxus_i18n::t;

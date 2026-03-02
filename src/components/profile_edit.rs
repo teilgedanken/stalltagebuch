@@ -1,7 +1,7 @@
 use crate::{
-    database,
+    Screen, database,
     models::{Gender, Quail, RingColor},
-    spacetime, Screen,
+    spacetime,
 };
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};

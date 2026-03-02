@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use photo_gallery::{
-    create_thumbnails, Photo, PhotoGalleryConfig, PhotoGalleryService, PhotoResult, PhotoSize,
-    PhotoSyncConfig, PhotoSyncService,
+    Photo, PhotoGalleryConfig, PhotoGalleryService, PhotoResult, PhotoSize, PhotoSyncConfig,
+    PhotoSyncService, create_thumbnails,
 };
 use rusqlite::{Connection, OptionalExtension};
 use std::sync::OnceLock;
@@ -67,7 +67,7 @@ pub async fn set_profile_photo(
     quail_uuid: &Uuid,
     photo_uuid: &Uuid,
 ) -> Result<(), AppError> {
-    use rusqlite::{params, OptionalExtension};
+    use rusqlite::{OptionalExtension, params};
 
     // Verify photo belongs to quail
     let photo_quail: Option<String> = conn

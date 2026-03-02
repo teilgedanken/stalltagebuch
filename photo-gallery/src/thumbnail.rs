@@ -1,4 +1,4 @@
-use image::{imageops::FilterType, ImageFormat};
+use image::{ImageFormat, imageops::FilterType};
 use std::io::Cursor;
 use std::path::Path;
 

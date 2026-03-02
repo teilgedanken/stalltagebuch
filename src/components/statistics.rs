@@ -1,4 +1,4 @@
-use crate::{spacetime, Screen};
+use crate::{Screen, spacetime};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 

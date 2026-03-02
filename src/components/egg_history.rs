@@ -1,4 +1,4 @@
-use crate::{models::EggRecord, spacetime, Screen};
+use crate::{Screen, models::EggRecord, spacetime};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 

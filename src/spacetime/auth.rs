@@ -4,7 +4,7 @@
 //! across app restarts, ensuring users maintain the same SpacetimeDB identity.
 
 use crate::services::spacetime_settings_service;
-use crate::spacetime_module_bindings::dioxus::{use_spacetimedb_context, ConnectionState};
+use crate::spacetime_module_bindings::dioxus::{ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
 
 /// Load the saved SpacetimeDB authentication token from persistent storage.

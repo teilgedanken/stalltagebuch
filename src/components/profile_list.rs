@@ -1,6 +1,6 @@
+use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
-use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 use photo_gallery::ThumbnailImage;

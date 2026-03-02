@@ -304,8 +304,8 @@ pub fn use_table_quails() -> SyncSignal<Vec<Quail>> {
 
 /// Get a callback to invoke the `create_event` reducer.
 #[must_use]
-pub fn use_reducer_create_event(
-) -> impl Fn(create_event_args_type::CreateEventArgs) + Clone + 'static {
+pub fn use_reducer_create_event()
+-> impl Fn(create_event_args_type::CreateEventArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_event_args_type::CreateEventArgs| {
@@ -317,8 +317,8 @@ pub fn use_reducer_create_event(
 
 /// Get a callback to invoke the `create_photo` reducer.
 #[must_use]
-pub fn use_reducer_create_photo(
-) -> impl Fn(create_photo_args_type::CreatePhotoArgs) + Clone + 'static {
+pub fn use_reducer_create_photo()
+-> impl Fn(create_photo_args_type::CreatePhotoArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_photo_args_type::CreatePhotoArgs| {
@@ -330,8 +330,8 @@ pub fn use_reducer_create_photo(
 
 /// Get a callback to invoke the `create_photo_collection` reducer.
 #[must_use]
-pub fn use_reducer_create_photo_collection(
-) -> impl Fn(create_photo_collection_args_type::CreatePhotoCollectionArgs) + Clone + 'static {
+pub fn use_reducer_create_photo_collection()
+-> impl Fn(create_photo_collection_args_type::CreatePhotoCollectionArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_photo_collection_args_type::CreatePhotoCollectionArgs| {
@@ -343,8 +343,8 @@ pub fn use_reducer_create_photo_collection(
 
 /// Get a callback to invoke the `create_quail` reducer.
 #[must_use]
-pub fn use_reducer_create_quail(
-) -> impl Fn(create_quail_args_type::CreateQuailArgs) + Clone + 'static {
+pub fn use_reducer_create_quail()
+-> impl Fn(create_quail_args_type::CreateQuailArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_quail_args_type::CreateQuailArgs| {
@@ -428,8 +428,8 @@ pub fn use_reducer_set_quail_photo() -> impl Fn(String, Option<String>) + Clone 
 
 /// Get a callback to invoke the `update_event` reducer.
 #[must_use]
-pub fn use_reducer_update_event(
-) -> impl Fn(update_event_args_type::UpdateEventArgs) + Clone + 'static {
+pub fn use_reducer_update_event()
+-> impl Fn(update_event_args_type::UpdateEventArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_event_args_type::UpdateEventArgs| {
@@ -441,8 +441,8 @@ pub fn use_reducer_update_event(
 
 /// Get a callback to invoke the `update_photo_collection` reducer.
 #[must_use]
-pub fn use_reducer_update_photo_collection(
-) -> impl Fn(update_photo_collection_args_type::UpdatePhotoCollectionArgs) + Clone + 'static {
+pub fn use_reducer_update_photo_collection()
+-> impl Fn(update_photo_collection_args_type::UpdatePhotoCollectionArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_photo_collection_args_type::UpdatePhotoCollectionArgs| {
@@ -454,8 +454,8 @@ pub fn use_reducer_update_photo_collection(
 
 /// Get a callback to invoke the `update_photo_sync_status` reducer.
 #[must_use]
-pub fn use_reducer_update_photo_sync_status(
-) -> impl Fn(update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs) + Clone + 'static {
+pub fn use_reducer_update_photo_sync_status()
+-> impl Fn(update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs| {
@@ -467,8 +467,8 @@ pub fn use_reducer_update_photo_sync_status(
 
 /// Get a callback to invoke the `update_quail` reducer.
 #[must_use]
-pub fn use_reducer_update_quail(
-) -> impl Fn(update_quail_args_type::UpdateQuailArgs) + Clone + 'static {
+pub fn use_reducer_update_quail()
+-> impl Fn(update_quail_args_type::UpdateQuailArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_quail_args_type::UpdateQuailArgs| {
@@ -480,8 +480,8 @@ pub fn use_reducer_update_quail(
 
 /// Get a callback to invoke the `upsert_egg_record` reducer.
 #[must_use]
-pub fn use_reducer_upsert_egg_record(
-) -> impl Fn(upsert_egg_record_args_type::UpsertEggRecordArgs) + Clone + 'static {
+pub fn use_reducer_upsert_egg_record()
+-> impl Fn(upsert_egg_record_args_type::UpsertEggRecordArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: upsert_egg_record_args_type::UpsertEggRecordArgs| {

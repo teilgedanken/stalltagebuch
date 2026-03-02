@@ -56,7 +56,7 @@ pub mod picker;
 pub use models::{Photo, PhotoCollection, PhotoGalleryConfig, PhotoResult, PhotoSize};
 pub use schema::{init_photo_schema, migrate_existing_photos_to_collections};
 pub use service::{PhotoGalleryError, PhotoGalleryService};
-pub use thumbnail::{create_thumbnails, rename_photo_with_uuid, ThumbnailError};
+pub use thumbnail::{ThumbnailError, create_thumbnails, rename_photo_with_uuid};
 
 #[cfg(feature = "sync")]
 pub use sync::{PhotoSyncConfig, PhotoSyncService};
@@ -69,11 +69,11 @@ pub use download::{DownloadError, DownloadResult, PhotoDownloadConfig, PhotoDown
 
 #[cfg(feature = "components")]
 pub use components::{
-    get_collection_photos, get_collection_preview_path, get_collection_preview_uuid,
-    get_photo_path, CollectionFullscreen, FullscreenImage, PhotoGalleryContext, PreviewCollection,
-    PreviewImage, ThumbnailCollection, ThumbnailImage,
+    CollectionFullscreen, FullscreenImage, PhotoGalleryContext, PreviewCollection, PreviewImage,
+    ThumbnailCollection, ThumbnailImage, get_collection_photos, get_collection_preview_path,
+    get_collection_preview_uuid, get_photo_path,
 };
 
 pub use picker::{
-    capture_photo, has_camera_permission, pick_image, pick_images, AndroidPickerConfig, PickerError,
+    AndroidPickerConfig, PickerError, capture_photo, has_camera_permission, pick_image, pick_images,
 };

@@ -8,9 +8,9 @@ use rusqlite::Connection;
 use std::path::PathBuf;
 
 #[cfg(target_os = "android")]
-use jni::objects::JObject;
-#[cfg(target_os = "android")]
 use jni::JNIEnv;
+#[cfg(target_os = "android")]
+use jni::objects::JObject;
 #[cfg(target_os = "android")]
 use ndk_context::android_context;
 

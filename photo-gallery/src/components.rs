@@ -30,7 +30,7 @@ impl PhotoGalleryContext {
 
     /// Load photo data from storage and convert to data URL
     fn load_photo_data(&self, relative_path: &str, size: PhotoSize) -> Option<String> {
-        use base64::{engine::general_purpose, Engine as _};
+        use base64::{Engine as _, engine::general_purpose};
 
         let abs_path = if relative_path.starts_with('/') {
             PathBuf::from(relative_path)
@@ -200,7 +200,7 @@ fn load_or_download_photo(
                             }
                         }
                     }; // end fut
-                       // spawn download task (errors are logged by the inner code)
+                    // spawn download task (errors are logged by the inner code)
                     spawn(fut);
                 }
             }

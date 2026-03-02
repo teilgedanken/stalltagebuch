@@ -1,6 +1,6 @@
 use crate::models::{Photo, PhotoGalleryConfig, PhotoResult, PhotoSize};
-use crate::thumbnail::{rename_photo_with_uuid, ThumbnailError};
-use rusqlite::{params, Connection, OptionalExtension};
+use crate::thumbnail::{ThumbnailError, rename_photo_with_uuid};
+use rusqlite::{Connection, OptionalExtension, params};
 use uuid::Uuid;
 
 /// Error type for photo gallery operations

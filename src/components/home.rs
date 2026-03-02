@@ -1,6 +1,6 @@
-use crate::database;
-use crate::spacetime::{self, use_spacetimedb_context, ConnectionState};
 use crate::Screen;
+use crate::database;
+use crate::spacetime::{self, ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 

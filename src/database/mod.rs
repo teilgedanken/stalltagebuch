@@ -9,7 +9,7 @@ pub mod schema;
 // Re-export from the database crate (except init_database which we override)
 #[allow(unused_imports)]
 pub use stalltagebuch_database::{
-    get_app_directory, get_database_path, test_connection, Connection, DatabaseError,
+    Connection, DatabaseError, get_app_directory, get_database_path, test_connection,
 };
 
 // Convert DatabaseError to AppError for compatibility

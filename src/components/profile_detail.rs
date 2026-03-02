@@ -1,8 +1,8 @@
 use super::profile_photo_card::ProfilePhotoCard;
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
+use crate::Screen;
 use crate::models::{EventType, Gender};
 use crate::spacetime;
-use crate::Screen;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 use spacetimedb_sdk::DbContext;

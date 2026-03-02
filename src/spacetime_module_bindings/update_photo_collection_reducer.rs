@@ -49,9 +49,11 @@ pub trait update_photo_collection {
     fn update_photo_collection_then(
         &self,
         args: UpdatePhotoCollectionArgsType,
-        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
-            + Send
-            + 'static,
+        callback: impl FnOnce(
+            &super::ReducerEventContext,
+            Result<Result<(), String>, __sdk::InternalError>,
+        ) + Send
+        + 'static,
     ) -> __sdk::Result<()>;
 }
 
@@ -59,9 +61,11 @@ impl update_photo_collection for super::RemoteReducers {
     fn update_photo_collection_then(
         &self,
         args: UpdatePhotoCollectionArgsType,
-        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
-            + Send
-            + 'static,
+        callback: impl FnOnce(
+            &super::ReducerEventContext,
+            Result<Result<(), String>, __sdk::InternalError>,
+        ) + Send
+        + 'static,
     ) -> __sdk::Result<()> {
         self.imp
             .invoke_reducer_with_callback(UpdatePhotoCollectionArgs { args }, callback)

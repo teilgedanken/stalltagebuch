@@ -1,7 +1,7 @@
 use crate::{
-    database,
+    Screen, database,
     models::{Gender, RingColor},
-    spacetime, Screen,
+    spacetime,
 };
 use dioxus::prelude::*;
 use dioxus_i18n::t;

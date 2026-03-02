@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
-use rusqlite::types::Type;
 use rusqlite::Row;
+use rusqlite::types::Type;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

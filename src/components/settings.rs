@@ -1,11 +1,11 @@
+use crate::Screen;
 use crate::database;
 use crate::models::SpacetimeSettings;
 use crate::models::SyncSettings;
 use crate::services::export_import_service::ImportMode;
 use crate::services::spacetime_settings_service;
 use crate::services::sync_service;
-use crate::spacetime::{use_spacetimedb_context, ConnectionState};
-use crate::Screen;
+use crate::spacetime::{ConnectionState, use_spacetimedb_context};
 use chrono::{Local, TimeZone};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -505,7 +505,10 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     {
                                         Ok(client) => client,
                                         Err(e) => {
-                                            log::error!("LoginFlow: HTTP-Client für Polling konnte nicht erstellt werden: {:?}", e);
+                                            log::error!(
+                                                "LoginFlow: HTTP-Client für Polling konnte nicht erstellt werden: {:?}",
+                                                e
+                                            );
                                             login_state.set(LoginState::Error(format!(
                                                 "{}: {:?}",
                                                 t!("error-client"),
@@ -549,7 +552,9 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                         {
                                             Ok(response) => {
                                                 if response.status().as_u16() == 200 {
-                                                    log::info!("LoginFlow: Polling erfolgreich (200). Verarbeite Zugangsdaten…");
+                                                    log::info!(
+                                                        "LoginFlow: Polling erfolgreich (200). Verarbeite Zugangsdaten…"
+                                                    );
                                                     match response.json::<LoginFlowResult>().await {
                                                         Ok(result) => {
                                                             // Create WebDAV client and folder
@@ -574,16 +579,25 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                                         .await
                                                                     {
                                                                         Ok(_) => {
-                                                                            log::info!("LoginFlow: Remote-Ordner erstellt: {}", remote_path_value);
+                                                                            log::info!(
+                                                                                "LoginFlow: Remote-Ordner erstellt: {}",
+                                                                                remote_path_value
+                                                                            );
                                                                         }
                                                                         Err(e) => {
                                                                             // Folder might already exist (405)
-                                                                            log::debug!("LoginFlow: Ordner-Erstellung Hinweis (evtl. bereits vorhanden): {}", e);
+                                                                            log::debug!(
+                                                                                "LoginFlow: Ordner-Erstellung Hinweis (evtl. bereits vorhanden): {}",
+                                                                                e
+                                                                            );
                                                                         }
                                                                     }
                                                                 }
                                                                 Err(e) => {
-                                                                    log::error!("LoginFlow: WebDAV-Client Fehler: {:?}", e);
+                                                                    log::error!(
+                                                                        "LoginFlow: WebDAV-Client Fehler: {:?}",
+                                                                        e
+                                                                    );
                                                                     login_state.set(LoginState::Error(
                                                                         format!("{}: {:?}", t!("error-webdav-client"), e),
                                                                     ));
@@ -637,7 +651,10 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                             }
                                                         }
                                                         Err(e) => {
-                                                            log::error!("LoginFlow: JSON-Parse der Poll-Antwort fehlgeschlagen: {}", e);
+                                                            log::error!(
+                                                                "LoginFlow: JSON-Parse der Poll-Antwort fehlgeschlagen: {}",
+                                                                e
+                                                            );
                                                             login_state.set(LoginState::Error(
                                                                 format!(
                                                                     "{}: {}",
@@ -661,7 +678,9 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                     return;
                                                 }
                                                 // 404 means waiting, continue polling
-                                                log::debug!("LoginFlow: Polling noch nicht bestätigt (404). Weiter warten…");
+                                                log::debug!(
+                                                    "LoginFlow: Polling noch nicht bestätigt (404). Weiter warten…"
+                                                );
                                                 consecutive_errors = 0; // reset on valid response
                                                 wait_after_secs = 5;
                                             }
@@ -721,7 +740,10 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 });
                             }
                             Err(e) => {
-                                log::error!("LoginFlow: JSON-Parse der Flow-Initialisierung fehlgeschlagen: {}", e);
+                                log::error!(
+                                    "LoginFlow: JSON-Parse der Flow-Initialisierung fehlgeschlagen: {}",
+                                    e
+                                );
                                 login_state.set(LoginState::Error(format!(
                                     "{}: {}",
                                     t!("error-json"),
