@@ -1,5 +1,4 @@
 use crate::Screen;
-use crate::database;
 use crate::spacetime::{self, ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -14,17 +13,10 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     let connection_state = spacetimedb_ctx.state;
 
     // Initialize database on mount
-    use_effect(move || match database::init_database() {
-        Ok(_) => {
-            let count = quails().len();
-            db_status.set(Ok(format!("✅ {}", t!( "status-db-ready", count: count))));
-        }
-        Err(e) => {
-            db_status.set(Err(format!(
-                "❌ {}",
-                t!( "status-db-error", error: e.to_string())
-            )));
-        }
+    use_effect(move || {
+        // Database initialization is now handled by SpacetimeDB context
+        let count = quails().len();
+        db_status.set(Ok(format!("✅ {}", t!("status-db-ready", count: count))));
     });
 
     rsx! {

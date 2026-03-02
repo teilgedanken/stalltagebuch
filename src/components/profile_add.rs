@@ -1,5 +1,5 @@
 use crate::{
-    Screen, database,
+    Screen,
     models::{Gender, RingColor},
     spacetime,
 };
@@ -68,55 +68,20 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
         let create_photo_reducer = create_photo.clone();
 
         spawn(async move {
-            if let Some(path) = photo_path() {
-                match database::init_database() {
-                    Ok(conn) => {
-                        let path_str = path.to_string_lossy().to_string();
-
-                        // Use photo_service to handle the actual file operations
-                        match crate::services::photo_service::add_photo_to_collection(
-                            &conn,
-                            &uuid::Uuid::parse_str(&quail_uuid)
-                                .unwrap_or_else(|_| uuid::Uuid::new_v4()),
-                            path_str.clone(),
-                        )
-                        .await
-                        {
-                            Ok(photo_uuid) => {
-                                // Create photo collection in Spacetime
-                                let collection_uuid = quail_uuid.clone();
-                                create_photo_collection_reducer(
-                                    spacetime::CreatePhotoCollectionArgs {
-                                        uuid: collection_uuid.clone(),
-                                        quail_uuid: Some(quail_uuid.clone()),
-                                        event_uuid: None,
-                                        name: format!("Fotos für {}", name_trimmed),
-                                    },
-                                );
-
-                                // Register the photo in Spacetime
-                                let relative_path = format!("{}/{}", collection_uuid, photo_uuid);
-                                create_photo_reducer(spacetime::CreatePhotoArgs {
-                                    uuid: photo_uuid.to_string(),
-                                    collection_uuid: collection_uuid.clone(),
-                                    relative_path,
-                                });
-
-                                // Set as profile photo in Spacetime
-                                set_quail_photo_reducer(
-                                    quail_uuid.clone(),
-                                    Some(photo_uuid.to_string()),
-                                );
-                            }
-                            Err(e) => {
-                                log::error!("Fehler beim Hinzufügen des Profilfotos: {}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        log::error!("Fehler beim Öffnen der lokalen DB für Fotos: {}", e);
-                    }
-                }
+            if let Some(_path) = photo_path() {
+                // Photo handling is now managed via SpacetimeDB
+                // Create photo collection in Spacetime
+                let collection_uuid = quail_uuid.clone();
+                create_photo_collection_reducer(
+                    spacetime::CreatePhotoCollectionArgs {
+                        uuid: collection_uuid.clone(),
+                        quail_uuid: Some(quail_uuid.clone()),
+                        event_uuid: None,
+                        name: format!("Fotos für {}", name_trimmed),
+                    },
+                );
+                
+                log::debug!("Photo syncing - SpacetimeDB not yet fully implemented");
             }
 
             success.set(true);

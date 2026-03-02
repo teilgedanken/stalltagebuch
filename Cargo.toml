@@ -4,7 +4,6 @@ members = [
     "dioxus-gallery-components",
     "nextcloud-auth",
     "photo-gallery",
-    "stalltagebuch-database",
     # stalltagebuch-server is intentionally excluded: it compiles to
     # wasm32-unknown-unknown for SpacetimeDB and is built separately via
     # `spacetime publish stalltagebuch-server --project-path stalltagebuch-server`.
@@ -22,7 +21,6 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-stalltagebuch-database = { path = "stalltagebuch-database" }
 dioxus-gallery-components = { path = "dioxus-gallery-components" }
 photo-gallery = { path = "photo-gallery", features = ["sync", "components"] }
 nextcloud-auth = { path = "nextcloud-auth" }

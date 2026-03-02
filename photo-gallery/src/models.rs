@@ -1,40 +1,45 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-/// Represents a collection of photos
+/// Represents a collection of photos in SpacetimeDB
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PhotoCollection {
-    pub uuid: Uuid,
-    pub preview_photo_uuid: Option<Uuid>,
-    pub name: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
+    /// Unique identifier (UUID string)
+    pub uuid: String,
+    /// ID assigned by SpacetimeDB
+    pub id: u64,
+    /// UUID of the quail this collection belongs to (if any)
+    pub quail_uuid: Option<String>,
+    /// UUID of the event this collection belongs to (if any)
+    pub event_uuid: Option<String>,
+    /// UUID of the preview photo for this collection
+    pub preview_photo_uuid: Option<String>,
+    /// Name of the collection
+    pub name: String,
+    /// Owner identifier
+    pub owner: String,
 }
 
-/// Represents a photo with metadata
-/// Supports both old schema (quail_id/event_id) and new schema (collection_id)
+/// Represents a photo in SpacetimeDB with metadata
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Photo {
-    pub uuid: Uuid,
-    // Old schema (deprecated, for backward compatibility)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quail_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub event_id: Option<Uuid>,
-    // New schema
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub collection_id: Option<Uuid>,
-    pub path: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub relative_path: Option<String>,
-    pub thumbnail_path: Option<String>,
-    pub thumbnail_small_path: Option<String>,
-    pub thumbnail_medium_path: Option<String>,
-    pub sync_status: Option<String>,
+    /// Unique identifier (UUID string)
+    pub uuid: String,
+    /// ID assigned by SpacetimeDB
+    pub id: u64,
+    /// Collection UUID this photo belongs to
+    pub collection_uuid: String,
+    /// Relative path to the photo file
+    pub relative_path: String,
+    /// Sync status: 'local_only', 'uploading', 'synced', 'download_pending', etc.
+    pub sync_status: String,
+    /// Error message if sync failed
     pub sync_error: Option<String>,
-    pub retry_count: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    /// Timestamp of last sync attempt
+    pub last_sync_attempt: Option<i64>,
+    /// Retry count for failed operations
+    pub retry_count: i32,
+    /// Owner identifier
+    pub owner: String,
 }
 
 /// Size variants for photo retrieval

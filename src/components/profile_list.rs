@@ -142,9 +142,9 @@ pub fn ProfileCard(
     status: Option<EventType>,
     on_click: EventHandler<()>,
 ) -> Element {
-    let profile_photo_uuid = profile.profile_photo;
-
-    // Convert ring color to light version for overlay background
+    // TODO: Query photo relative_path from SpacetimeDB if profile.profile_photo is set
+    let profile_photo_path: Option<String> = None;
+    
     let overlay_bg = if let Some(ring_color) = &profile.ring_color {
         get_light_color_for(ring_color)
     } else {
@@ -158,10 +158,10 @@ pub fn ProfileCard(
         div { class: "profile-card", onclick: move |_| on_click.call(()),
             // Square Image Container
             div { class: "profile-image",
-                if let Some(uuid) = profile_photo_uuid {
+                if let Some(photo_path) = profile_photo_path {
                     {
                         rsx! {
-                            ThumbnailImage { key: "{uuid}", photo_uuid: Some(uuid), alt: profile.name.clone() }
+                            ThumbnailImage { key: "{photo_path}", relative_path: photo_path, alt: profile.name.clone() }
                         }
                     }
                 } else {

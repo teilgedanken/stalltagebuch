@@ -1,6 +1,7 @@
 use crate::error::AppError;
 use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
 use std::sync::OnceLock;
+use uuid::Uuid;
 
 // Global photo gallery service
 static PHOTO_SERVICE: OnceLock<PhotoGalleryService> = OnceLock::new();

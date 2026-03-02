@@ -1,16 +1,11 @@
 //! Dioxus UI components for photo gallery
 //!
 //! This module provides reusable photo display components.
-//! Components can either accept pre-loaded data URLs or load their own data
-//! from the database using photo UUIDs.
+//! Components accept pre-loaded data URLs or relative paths to load their own data
+//! from the file system. Database interaction is handled by the parent app.
 
 #[cfg(feature = "components")]
 use dioxus::prelude::*;
-
-#[cfg(feature = "components")]
-use rusqlite::Connection;
-#[cfg(feature = "components")]
-use uuid::Uuid;
 
 #[cfg(feature = "components")]
 use std::path::PathBuf;
@@ -104,246 +99,36 @@ enum ImageLoadState {
 }
 
 #[cfg(feature = "components")]
-/// Helper function to query photo path from database
-/// This is meant to be called by the parent component before rendering
-pub fn get_photo_path(conn: &Connection, photo_uuid: &Uuid) -> Result<String, String> {
-    conn.query_row(
-        "SELECT COALESCE(relative_path, path) FROM photos WHERE uuid = ?1 AND deleted = 0",
-        [photo_uuid.to_string()],
-        |row| row.get(0),
-    )
-    .map_err(|e| format!("Failed to load photo {}: {}", photo_uuid, e))
-}
-
-#[cfg(feature = "components")]
-// Internal helper: try to load a photo data-url for `photo_uuid` and `size`.
-// If the thumbnail (or requested size) isn't available locally and sync is enabled
-// this will spawn a background download attempt and — after a successful download
-// — set the provided `state` to Loaded so the component updates.
-fn load_or_download_photo(
+// Internal helper: try to load a photo data-url for relative_path and size.
+fn load_photo(
     ctx: PhotoGalleryContext,
-    photo_uuid: uuid::Uuid,
+    relative_path: String,
     size: PhotoSize,
-    state: Option<Signal<ImageLoadState>>,
 ) -> Option<String> {
-    use stalltagebuch_database::connection;
-
-    if let Ok(conn) = connection::init_database() {
-        if let Ok(path) = get_photo_path(&conn, &photo_uuid) {
-            // path is the DB value (usually a relative filename). Also compute the
-            // absolute path we will try to read so we can debug missing-file issues.
-            let computed_abs = if path.starts_with('/') {
-                std::path::PathBuf::from(&path)
-            } else {
-                std::path::PathBuf::from(ctx.storage_path.clone()).join(&path)
-            };
-
-            log::debug!(
-                "load_or_download_photo: db_path={} exists_rel? {} abs_path={} exists_abs? {}",
-                path,
-                std::path::Path::new(&path).exists(),
-                computed_abs.display(),
-                computed_abs.exists(),
-            );
-            if let Some(data) = ctx.load_photo_data(&path, size) {
-                return Some(data);
-            }
-
-            // Not found locally — schedule a per-photo download (feature gated)
-            #[cfg(feature = "sync")]
-            {
-                use crate::{PhotoSyncConfig, PhotoSyncService};
-
-                let rel = path.clone();
-                let storage = ctx.storage_path.clone();
-
-                if let Some(mut state_sig) = state.clone() {
-                    // Spawn async background download and try to set state when done.
-                    // Wrap the async future in a panic-catcher so panics are logged instead
-                    // of bringing down the UI thread.
-                    let fut = async move {
-                        if let Ok(conn2) = connection::init_database() {
-                            // Read sync_settings row (simple 1-row table)
-                            let settings_row: Result<(String, String, String, String, i64), _> = conn2.query_row(
-                                "SELECT server_url, username, app_password, remote_path, enabled FROM sync_settings LIMIT 1",
-                                [],
-                                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
-                            );
-
-                            if let Ok((server_url, username, app_password, remote_path, enabled)) =
-                                settings_row
-                            {
-                                if enabled == 1 {
-                                    let cfg = PhotoSyncConfig {
-                                        server_url,
-                                        username,
-                                        app_password,
-                                        remote_path,
-                                    };
-                                    let sync_svc = PhotoSyncService::new(cfg);
-
-                                    let local_path = if rel.starts_with('/') {
-                                        rel.clone()
-                                    } else {
-                                        format!("{}/{}", storage.trim_end_matches('/'), rel)
-                                    };
-
-                                    // Download (with retries) and then try to load the requested size
-                                    let _ = sync_svc
-                                        .download_photo_with_retry(&rel, &local_path, 3)
-                                        .await;
-
-                                    if let Some(data) = ctx.load_photo_data(&rel, size) {
-                                        state_sig.set(ImageLoadState::Loaded(data));
-                                    }
-                                }
-                            }
-                        }
-                    }; // end fut
-                    // spawn download task (errors are logged by the inner code)
-                    spawn(fut);
-                }
-            }
-        }
-    }
-
-    None
-}
-
-#[cfg(feature = "components")]
-/// Helper function to get preview photo path for a collection
-pub fn get_collection_preview_path(
-    conn: &Connection,
-    collection_id: &Uuid,
-) -> Result<Option<String>, String> {
-    // Get preview photo UUID from collection
-
-    use std::str::FromStr as _;
-
-    let preview_uuid: Option<String> = conn
-        .query_row(
-            "SELECT preview_photo_uuid FROM photo_collections WHERE uuid = ?1",
-            [collection_id.to_string()],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to load collection {}: {}", collection_id, e))?;
-    let preview_uuid = preview_uuid
-        .as_deref()
-        .map(uuid::Uuid::from_str)
-        .expect("Parsing UUID failed");
-
-    if let Some(uuid) = preview_uuid.ok() {
-        get_photo_path(conn, &uuid).map(Some)
-    } else {
-        // No preview set, try to get first photo in collection
-        let first_photo: Option<String> = conn
-            .query_row(
-                "SELECT COALESCE(relative_path, path) FROM photos 
-                 WHERE collection_id = ?1 AND deleted = 0 
-                 ORDER BY created_at ASC LIMIT 1",
-                [collection_id.to_string()],
-                |row| row.get(0),
-            )
-            .ok();
-        Ok(first_photo)
-    }
-}
-
-#[cfg(feature = "components")]
-/// Helper function to get preview photo UUID for a collection.
-/// Returns the `preview_photo_uuid` if set, otherwise the first photo UUID in the collection.
-pub fn get_collection_preview_uuid(
-    conn: &Connection,
-    collection_id: &uuid::Uuid,
-) -> Result<uuid::Uuid, String> {
-    // Try explicit preview_uuid
-
-    use std::str::FromStr;
-    let preview_uuid: Option<String> = conn
-        .query_row(
-            "SELECT preview_photo_uuid FROM photo_collections WHERE uuid = ?1",
-            [collection_id.to_string()],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to load collection {}: {}", collection_id, e))?;
-    let preview_uuid = preview_uuid
-        .as_deref()
-        .map(uuid::Uuid::from_str)
-        .expect("Parsing UUID failed");
-
-    if let Ok(uuid) = preview_uuid {
-        Ok(uuid)
-    } else {
-        // No preview set, try to get first photo UUID in collection
-        let first_uuid: Option<String> = conn
-            .query_row(
-                "SELECT uuid FROM photos WHERE collection_id = ?1 AND deleted = 0 ORDER BY created_at ASC LIMIT 1",
-                [collection_id.to_string()],
-                |row| row.get(0),
-            )
-            .ok();
-        let first_uuid = first_uuid
-            .as_deref()
-            .map(uuid::Uuid::from_str)
-            .expect("Parsing UUID failed");
-        first_uuid.map_err(|e| e.to_string())
-    }
-}
-
-#[cfg(feature = "components")]
-/// Helper function to get all photo paths in a collection
-pub fn get_collection_photos(
-    conn: &Connection,
-    collection_id: &str,
-) -> Result<Vec<String>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT COALESCE(relative_path, path) FROM photos 
-             WHERE collection_id = ?1 AND deleted = 0 
-             ORDER BY created_at ASC",
-        )
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-
-    let paths = stmt
-        .query_map([collection_id], |row| row.get(0))
-        .map_err(|e| format!("Failed to query photos: {}", e))?
-        .collect::<Result<Vec<String>, _>>()
-        .map_err(|e| format!("Failed to collect photos: {}", e))?;
-
-    Ok(paths)
+    ctx.load_photo_data(&relative_path, size)
 }
 
 #[cfg(feature = "components")]
 /// Thumbnail image component - displays a small photo
 ///
-/// Can be used in two ways:
-/// 1. With pre-loaded data_url (backward compatible)
-/// 2. With relative_path (loads from storage)
+/// Accepts a relative path to the photo and loads from storage
 #[component]
 pub fn ThumbnailImage(
-    #[props(default = None)] photo_uuid: Option<Uuid>,
+    relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
 ) -> Element {
     let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
-    // Load photo data: only supported input is photo_uuid now
+    // Load photo data from relative path
     use_effect(move || {
-        if let Some(uuid) = photo_uuid.clone() {
-            // If photo_uuid is provided, attempt to load (or schedule download)
-            if let Some(data) = load_or_download_photo(
-                context.clone(),
-                uuid.clone(),
-                PhotoSize::Small,
-                Some(image_state.clone()),
-            ) {
-                image_state.set(ImageLoadState::Loaded(data));
-                return;
-            }
-            image_state.set(ImageLoadState::Failed);
-            return;
+        if let Some(data) = load_photo(
+            context.clone(),
+            relative_path.clone(),
+            PhotoSize::Small,
+        ) {
+            image_state.set(ImageLoadState::Loaded(data));
         } else {
-            // no uuid provided -> fail (no longer supports direct paths/data urls)
             image_state.set(ImageLoadState::Failed);
         }
     });
@@ -376,30 +161,25 @@ pub fn ThumbnailImage(
 #[cfg(feature = "components")]
 /// Preview image component - displays a medium-sized photo
 ///
-/// Can be used with data_url or relative_path.
-/// Note: If you have a photo_uuid, resolve it to a relative_path before passing to this component.
+/// Accepts a relative path to the photo and loads from storage
 #[component]
 pub fn PreviewImage(
-    #[props(default = None)] photo_uuid: Option<uuid::Uuid>,
+    relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
 ) -> Element {
     let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
     use_effect(move || {
-        if let Some(uuid) = photo_uuid.clone() {
-            if let Some(data) = load_or_download_photo(
-                context.clone(),
-                uuid.clone(),
-                PhotoSize::Medium,
-                Some(image_state.clone()),
-            ) {
-                image_state.set(ImageLoadState::Loaded(data));
-                return;
-            }
+        if let Some(data) = load_photo(
+            context.clone(),
+            relative_path.clone(),
+            PhotoSize::Medium,
+        ) {
+            image_state.set(ImageLoadState::Loaded(data));
+        } else {
+            image_state.set(ImageLoadState::Failed);
         }
-        // No uuid or failed to load -> mark failed
-        image_state.set(ImageLoadState::Failed);
     });
 
     rsx! {
@@ -430,28 +210,25 @@ pub fn PreviewImage(
 #[cfg(feature = "components")]
 /// Fullscreen image component - displays a single photo in fullscreen with close button
 ///
-/// Can be used with data_url or relative_path
+/// Accepts a relative path to the photo and loads from storage
 #[component]
 pub fn FullscreenImage(
-    #[props(default = None)] photo_uuid: Option<Uuid>,
+    relative_path: String,
     on_close: EventHandler<()>,
 ) -> Element {
     let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
     use_effect(move || {
-        if let Some(uuid) = photo_uuid.clone() {
-            if let Some(data) = load_or_download_photo(
-                context.clone(),
-                uuid.clone(),
-                PhotoSize::Original,
-                Some(image_state.clone()),
-            ) {
-                image_state.set(ImageLoadState::Loaded(data));
-                return;
-            }
+        if let Some(data) = load_photo(
+            context.clone(),
+            relative_path.clone(),
+            PhotoSize::Original,
+        ) {
+            image_state.set(ImageLoadState::Loaded(data));
+        } else {
+            image_state.set(ImageLoadState::Failed);
         }
-        image_state.set(ImageLoadState::Failed);
     });
 
     rsx! {
@@ -486,10 +263,10 @@ pub fn FullscreenImage(
 #[cfg(feature = "components")]
 /// Thumbnail collection component
 ///
-/// Can be used with preview_data_url, preview_relative_path, or neither (shows placeholder)
+/// Accepts a relative path to the preview photo
 #[component]
 pub fn ThumbnailCollection(
-    #[props(default = None)] preview_photo_uuid: Option<Uuid>,
+    #[props(default = None)] preview_path: Option<String>,
     #[props(default = None)] on_click: Option<EventHandler<()>>,
 ) -> Element {
     rsx! {
@@ -500,9 +277,9 @@ pub fn ThumbnailCollection(
                     handler.call(());
                 }
             },
-            if preview_photo_uuid.is_some() {
+            if let Some(path) = preview_path {
                 ThumbnailImage {
-                    photo_uuid: preview_photo_uuid.clone(),
+                    relative_path: path,
                     alt: "Collection preview".to_string(),
                 }
             } else {
@@ -517,22 +294,12 @@ pub fn ThumbnailCollection(
 #[cfg(feature = "components")]
 /// Preview collection component
 ///
-/// Can be used with preview_data_url, preview_relative_path, or neither (shows placeholder)
+/// Accepts a relative path to the preview photo
 #[component]
 pub fn PreviewCollection(
-    #[props(default = None)] preview_collection_uuid: Option<uuid::Uuid>,
+    #[props(default = None)] preview_path: Option<String>,
     #[props(default = None)] on_click: Option<EventHandler<()>>,
 ) -> Element {
-    let preview_photo_uuid = if let Some(collection_uuid) = preview_collection_uuid {
-        // Try to get preview photo UUID from collection
-        if let Ok(conn) = stalltagebuch_database::connection::init_database() {
-            get_collection_preview_uuid(&conn, &collection_uuid).ok()
-        } else {
-            None
-        }
-    } else {
-        None
-    };
     rsx! {
         div {
             style: "max-width: 512px; cursor: pointer;",
@@ -541,9 +308,9 @@ pub fn PreviewCollection(
                     handler.call(());
                 }
             },
-            if preview_photo_uuid.is_some() {
+            if let Some(path) = preview_path {
                 PreviewImage {
-                    photo_uuid: preview_photo_uuid.clone(),
+                    relative_path: path,
                     alt: "Collection preview".to_string(),
                 }
             } else {
@@ -556,37 +323,33 @@ pub fn PreviewCollection(
 }
 
 #[cfg(feature = "components")]
-/// Fullscreen collection viewer
+/// Fullscreen collection viewer for displaying multiple photos
 ///
-/// Can be used with photo_data_urls or photo_relative_paths
+/// Accepts a list of relative paths to photos and displays them in fullscreen
 #[component]
 pub fn CollectionFullscreen(
-    #[props(default = vec![])] photo_uuids: Vec<Uuid>,
+    #[props(default = vec![])] photo_paths: Vec<String>,
     #[props(default = 0)] initial_index: usize,
     on_close: EventHandler<()>,
 ) -> Element {
     let mut current_index = use_signal(|| initial_index);
-    let mut loaded_urls = use_signal(|| vec![]);
     let context = use_context::<PhotoGalleryContext>();
 
-    // Load photos from UUIDs by resolving them through the DB and reading files
-    use_effect(move || {
-        if !photo_uuids.is_empty() {
-            let mut urls = Vec::new();
-            for uuid in photo_uuids.iter() {
-                if let Some(data) =
-                    load_or_download_photo(context.clone(), uuid.clone(), PhotoSize::Original, None)
-                {
-                    urls.push(data);
-                }
-            }
-            loaded_urls.set(urls);
-        }
-    });
-
-    let photo_count = loaded_urls.read().len();
+    let photo_count = photo_paths.len();
     let has_prev = current_index() > 0;
     let has_next = current_index() < photo_count.saturating_sub(1);
+
+    let current_photo_data = {
+        if current_index() < photo_paths.len() {
+            load_photo(
+                context.clone(),
+                photo_paths[current_index()].clone(),
+                PhotoSize::Original,
+            )
+        } else {
+            None
+        }
+    };
 
     rsx! {
         div { style: "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); z-index: 1000; display: flex; flex-direction: column;",
@@ -612,9 +375,13 @@ pub fn CollectionFullscreen(
                     }
                 }
                 if photo_count > 0 {
-                    img {
-                        src: "{loaded_urls.read()[current_index()]}",
-                        style: "max-width: 100%; max-height: 100%; object-fit: contain;",
+                    if let Some(data) = current_photo_data {
+                        img {
+                            src: "{data}",
+                            style: "max-width: 100%; max-height: 100%; object-fit: contain;",
+                        }
+                    } else {
+                        div { style: "color: white; font-size: 24px;", "Loading..." }
                     }
                 } else {
                     div { style: "color: white; font-size: 24px;", "No photos in collection" }

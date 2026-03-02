@@ -4,7 +4,6 @@ use photo_gallery::PhotoGalleryContext;
 
 mod camera;
 mod components;
-mod database;
 mod error;
 mod i18n;
 mod image_processing;
@@ -110,16 +109,6 @@ fn App() -> Element {
 
     // Watch for successful connections and persist the authentication token
     let _token_persist = spacetime::use_persist_spacetime_token();
-
-    // Legacy: also initialise the local SQLite DB so that the photo
-    // gallery and other local services that still depend on it work
-    // correctly during the transition period.
-    let db_init = use_effect(move || {
-        if let Err(e) = database::init_database() {
-            log::error!("Local database init failed: {e}");
-        }
-    });
-    let _ = db_init;
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }

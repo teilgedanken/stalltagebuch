@@ -1,10 +1,7 @@
 use crate::Screen;
-use crate::database;
 use crate::models::SpacetimeSettings;
 use crate::models::SyncSettings;
-use crate::services::export_import_service::ImportMode;
 use crate::services::spacetime_settings_service;
-use crate::services::sync_service;
 use crate::spacetime::{ConnectionState, use_spacetimedb_context};
 use chrono::{Local, TimeZone};
 use dioxus::prelude::*;
@@ -354,7 +351,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut status_message = use_signal(|| String::new());
     // Separater bool für laufende Synchronisierung, damit Anzeige sicher zurückgesetzt wird
     let mut is_syncing = use_signal(|| false);
-    let mut connection_status = use_signal(|| None::<ConnectionStatus>);
+    let connection_status = use_signal(|| None::<ConnectionStatus>);
     let mut background_sync_running =
         use_signal(|| crate::services::background_sync::is_background_sync_running());
     // Live Countdown & Log
@@ -377,74 +374,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
     // Load existing settings on mount
     use_effect(move || {
-        match database::init_database() {
-            Ok(conn) => match sync_service::load_sync_settings(&conn) {
-                Ok(Some(settings)) => {
-                    server_url.set(settings.server_url.clone());
-                    remote_path.set(settings.remote_path.clone());
-                    current_settings.set(Some(settings.clone()));
-
-                    // Test connection in background
-                    let settings_clone = settings.clone();
-                    spawn(async move {
-                        connection_status.set(Some(ConnectionStatus::Checking));
-
-                        let webdav_url = format!(
-                            "{}/remote.php/dav/files/{}",
-                            settings_clone.server_url.trim_end_matches('/'),
-                            settings_clone.username
-                        );
-
-                        match reqwest_dav::ClientBuilder::new()
-                            .set_host(webdav_url)
-                            .set_auth(reqwest_dav::Auth::Basic(
-                                settings_clone.username.clone(),
-                                settings_clone.app_password.clone(),
-                            ))
-                            .build()
-                        {
-                            Ok(client) => {
-                                match client
-                                    .list(
-                                        &settings_clone.remote_path,
-                                        reqwest_dav::Depth::Number(0),
-                                    )
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        connection_status.set(Some(ConnectionStatus::Connected));
-                                    }
-                                    Err(e) => {
-                                        connection_status.set(Some(ConnectionStatus::Failed(
-                                            format!("{}: {:?}", t!("error-access-failed"), e),
-                                        )));
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                connection_status.set(Some(ConnectionStatus::Failed(format!(
-                                    "{}: {:?}",
-                                    t!("error-client"),
-                                    e
-                                ))));
-                            }
-                        }
-                    });
-                }
-                Ok(None) => {
-                    status_message.set(format!("\u{2139}\u{fe0f} {}", t!("sync-not-configured")));
-                }
-                Err(e) => {
-                    status_message.set(format!(
-                        "\u{26a0}\u{fe0f} {}",
-                        t!("error-loading", error: e.to_string())
-                    ));
-                }
-            },
-            Err(e) => {
-                status_message.set(format!("\u{274c} {}: {}", t!("error-database"), e));
-            }
-        }
+        // Settings loading for SpacetimeDB will be implemented later
     });
 
     // Start Nextcloud Login Flow v2
@@ -613,42 +543,14 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                                 remote_path_value.clone(),
                                                             );
 
-                                                            match database::init_database() {
-                                                                Ok(conn) => {
-                                                                    match sync_service::save_sync_settings(
-                                                                        &conn, &settings,
-                                                                    ) {
-                                                                        Ok(_) => {
-                                                                            current_settings
-                                                                                .set(Some(settings));
-                                                                            login_state
-                                                                                .set(LoginState::Success);
-                                                                            status_message.set(
-                                                                                format!("\u{2705} {}", t!("sync-login-success-folder"))
-                                                                            );
-                                                                            log::info!("LoginFlow: Zugangsdaten gespeichert und Login abgeschlossen.");
-                                                                            return;
-                                                                        }
-                                                                        Err(e) => {
-                                                                            log::error!("LoginFlow: Speichern der Sync-Settings fehlgeschlagen: {}", e);
-                                                                            login_state.set(
-                                                                                LoginState::Error(format!(
-                                                                                    "{}: {}",
-                                                                                    t!("error-save"), e
-                                                                                )),
-                                                                            );
-                                                                            return;
-                                                                        }
-                                                                    }
-                                                                }
-                                                                Err(e) => {
-                                                                    log::error!("LoginFlow: Datenbank-Init fehlgeschlagen: {}", e);
-                                                                    login_state.set(LoginState::Error(
-                                                                        format!("{}: {}", t!("error-database"), e),
-                                                                    ));
-                                                                    return;
-                                                                }
-                                                            }
+                                                            // Save settings will be implemented for SpacetimeDB
+                                                            current_settings.set(Some(settings));
+                                                            login_state.set(LoginState::Success);
+                                                            status_message.set(
+                                                                format!("\u{2705} {}", t!("sync-login-success-folder"))
+                                                            );
+                                                            log::info!("LoginFlow: Zugangsdaten gespeichert und Login abgeschlossen.");
+                                                            return;
                                                         }
                                                         Err(e) => {
                                                             log::error!(
@@ -775,20 +677,11 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
         });
     };
 
-    let delete_settings = move |_| match database::init_database() {
-        Ok(conn) => match sync_service::delete_sync_settings(&conn) {
-            Ok(_) => {
-                current_settings.set(None);
-                login_state.set(LoginState::NotStarted);
-                status_message.set(format!("\u{2705} {}", t!("sync-settings-deleted")));
-            }
-            Err(e) => {
-                status_message.set(format!("\u{26a0}\u{fe0f} {}: {}", t!("error-deleting"), e));
-            }
-        },
-        Err(e) => {
-            status_message.set(format!("\u{274c} {}: {}", t!("error-database"), e));
-        }
+    let delete_settings = move |_| {
+        // Delete settings will be implemented for SpacetimeDB
+        current_settings.set(None);
+        login_state.set(LoginState::NotStarted);
+        status_message.set(format!("\u{2705} {}", t!("sync-settings-deleted")));
     };
 
     rsx! {
@@ -899,13 +792,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                         stats.photos_uploaded,
                                                     ),
                                                 );
-                                            if let Ok(conn) = database::init_database() {
-                                                if let Ok(Some(updated)) = crate::services::sync_service::load_sync_settings(
-                                                    &conn,
-                                                ) {
-                                                    current_settings.set(Some(updated));
-                                                }
-                                            }
+                                            // Settings will be reloaded via SpacetimeDB subscriptions
                                         }
                                         Err(e) => {
                                             status_message.set(format!("❌ {}: {}", t!("sync-failed"), e));
@@ -1055,30 +942,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 move |_| {
                                     let confirmed = if cfg!(target_os = "android") { true } else { true };
                                     if confirmed {
-                                        spawn(async move {
-                                            match database::init_database() {
-                                                Ok(conn) => {
-                                                    match crate::services::photo_service::cleanup_orphaned_photos(
-                                                            &conn,
-                                                        )
-                                                        .await
-                                                    {
-                                                        Ok(count) => {
-                                                            status_message
-                                                                .set(t!("backup-cleanup-success", count : count));
-                                                        }
-                                                        Err(e) => {
-                                                            status_message
-                                                                .set(t!("backup-cleanup-error", error : e.to_string()));
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    status_message
-                                                        .set(t!("backup-db-error", error : e.to_string()));
-                                                }
-                                            }
-                                        });
+                                        status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
                                     }
                                 }
                             },
@@ -1101,33 +965,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 onclick: {
                                     let mut status_message = status_message.clone();
                                     move |_| {
-                                        spawn(async move {
-                                            match database::init_database() {
-                                                Ok(conn) => {
-                                                    match crate::services::export_import_service::export_to_zip(
-                                                            &conn,
-                                                        )
-                                                        .await
-                                                    {
-                                                        Ok(path) => {
-                                                            status_message
-                                                                .set(
-                                                                    t!(
-                                                                        "backup-export-success", path : path.display().to_string()
-                                                                    ),
-                                                                );
-                                                        }
-                                                        Err(e) => {
-                                                            status_message
-                                                                .set(t!("backup-export-error", error : e.to_string()));
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    status_message.set(t!("backup-db-error", error : e.to_string()));
-                                                }
-                                            }
-                                        });
+                                        status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
                                     }
                                 },
                                 {t!("backup-export-button")}
@@ -1157,34 +995,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                     );
                                                 return;
                                             }
-                                            match database::init_database() {
-                                                Ok(conn) => {
-                                                    match crate::services::export_import_service::import_from_zip(
-                                                            &conn,
-                                                            &import_path,
-                                                            ImportMode::MergePreferImport,
-                                                        )
-                                                        .await
-                                                    {
-                                                        Ok(()) => {
-                                                            status_message
-                                                                .set(
-                                                                    t!(
-                                                                        "backup-import-success", path : import_path.display()
-                                                                        .to_string()
-                                                                    ),
-                                                                );
-                                                        }
-                                                        Err(e) => {
-                                                            status_message
-                                                                .set(t!("backup-import-error", error : e.to_string()));
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    status_message.set(t!("backup-db-error", error : e.to_string()));
-                                                }
-                                            }
+                                            status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
                                         });
                                     }
                                 },

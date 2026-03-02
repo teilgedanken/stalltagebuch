@@ -1,17 +1,19 @@
 use crate::{
-    Screen, database,
+    Screen,
     models::{Gender, Quail, RingColor},
     spacetime,
 };
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
 use dioxus_i18n::t;
-use photo_gallery::Photo;
+use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService};
+use spacetime::Photo;
 
 #[component]
 pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
     // Spacetime subscriptions and data
     let quails = spacetime::use_table_quails();
+    let photos_table = spacetime::use_table_photos();
     let connection = spacetime::use_connection();
     let update_quail_reducer = spacetime::use_reducer_update_quail();
     let delete_quail_reducer = spacetime::use_reducer_delete_quail();
@@ -71,28 +73,20 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     selected_profile_photo_id.set(Some(profile_uuid.to_string()));
                 }
                 profile.set(Some(local_quail));
+
+                // Load photos for this quail from SpacetimeDB
+                let quail_uuid_str = quail.uuid.clone();
+                let photo_list: Vec<Photo> = photos_table
+                    .read()
+                    .iter()
+                    .filter(|p| p.collection_uuid.contains(&quail_uuid_str) || p.owner == quail.owner)
+                    .cloned()
+                    .collect();
+                photos.set(photo_list);
             }
         }
 
-        // Load photos from local gallery storage using quail UUID as collection id
-        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_load) {
-            if let Ok(conn) = database::init_database() {
-                match crate::services::photo_service::get_or_create_quail_collection(&conn, &uuid) {
-                    Ok(collection_id) => {
-                        match crate::services::photo_service::list_collection_photos(
-                            &conn,
-                            &collection_id,
-                        ) {
-                            Ok(list) => photos.set(list),
-                            Err(e) => log::error!("{}: {}", t!("error-load-photos-failed"), e),
-                        }
-                    }
-                    Err(e) => {
-                        log::error!("{}: {}", t!("error-load-photos-failed"), e);
-                    }
-                }
-            }
-        }
+
     });
 
     let quail_id_for_submit = quail_id.clone();
@@ -283,17 +277,21 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     }
 
                     {
+                        let photo_config = PhotoGalleryConfig {
+                            storage_path: crate::services::photo_service::get_storage_path(),
+                            enable_thumbnails: true,
+                            thumbnail_small_size: 256,
+                            thumbnail_medium_size: 512,
+                        };
+                        let photo_service = PhotoGalleryService::new(photo_config);
                         let gallery_items: Vec<GalleryItem> = photos()
                             .iter()
                             .filter_map(|photo| {
-                                let thumb_path = photo
-                                    .thumbnail_path
-                                    .clone()
-                                    .unwrap_or(photo.path.clone());
-                                match crate::image_processing::image_path_to_data_url(&thumb_path) {
+                                let abs_path = photo_service.get_absolute_photo_path(&photo.relative_path);
+                                match crate::image_processing::image_path_to_data_url(&abs_path) {
                                     Ok(data_url) => {
                                         Some(GalleryItem {
-                                            id: photo.uuid.to_string(),
+                                            id: photo.uuid.clone(),
                                             data_url,
                                             caption: None,
                                         })
@@ -323,53 +321,10 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                 items: gallery_items,
                                 config: gallery_config,
                                 on_delete: move |photo_id: String| {
-                                    let qid = quail_id_for_photo_delete.clone();
                                     let delete_photo_fn = delete_photo.clone();
-                                    spawn(async move {
-                                        // Delete photo from Spacetime
-                                        delete_photo_fn(photo_id.clone());
-
-                                        // Also delete from local SQLite for cleanup
-                                        if let Ok(conn) = database::init_database() {
-                                            if let Ok(photo_uuid) = uuid::Uuid::parse_str(&photo_id) {
-                                                let _ = crate::services::photo_service::delete_photo(
-                                                        &conn,
-                                                        &photo_uuid,
-                                                    )
-                                                    .await;
-                                            }
-                                        }
-
-                                        // Refresh photo list from local database
-                                        if let Ok(q_uuid) = uuid::Uuid::parse_str(&qid) {
-                                            if let Ok(conn) = database::init_database() {
-                                                let photo_list = match crate::services::photo_service::get_quail_collection(
-                                                    &conn,
-                                                    &q_uuid,
-                                                ) {
-                                                    Ok(Some(collection_id)) => {
-                                                        crate::services::photo_service::list_collection_photos(
-                                                                &conn,
-                                                                &collection_id,
-                                                            )
-                                                            .ok()
-                                                    }
-                                                    _ => None,
-                                                };
-                                                if let Some(list) = photo_list {
-                                                    photos.set(list);
-                                                    if selected_profile_photo_id()
-                                                        .as_ref()
-                                                        .map(|s| s.as_str())
-                                                        == Some(&photo_id)
-                                                    {
-                                                        selected_profile_photo_id
-                                                            .set(None);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    });
+                                    // Delete photo via SpacetimeDB reducer
+                                    delete_photo_fn(photo_id);
+                                    // Photo list will auto-update via subscriptions
                                 },
                                 on_select: move |photo_id: String| {
                                     selected_profile_photo_id.set(Some(photo_id));

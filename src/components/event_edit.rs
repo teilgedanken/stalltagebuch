@@ -1,5 +1,5 @@
 use crate::{
-    Screen, database,
+    Screen,
     models::{EventType, QuailEvent},
     services::photo_service,
     spacetime,
@@ -27,41 +27,9 @@ fn EventPhotoGallery(
         let photo_list = photos();
         spawn(async move {
             let mut loaded = Vec::new();
+            // TODO: Load photos from SpacetimeDB instead of database
             for photo in photo_list {
-                let photo_uuid = photo.uuid.to_string();
-                if let Ok(conn) = database::init_database() {
-                    if let Ok(uuid) = uuid::Uuid::parse_str(&photo_uuid) {
-                        match photo_service::get_photo_with_download(&conn, &uuid, PhotoSize::Small)
-                            .await
-                        {
-                            Ok(PhotoResult::Available(bytes)) => {
-                                let data_url = format!(
-                                    "data:image/webp;base64,{}",
-                                    base64::engine::general_purpose::STANDARD.encode(&bytes)
-                                );
-                                loaded.push((photo_uuid, data_url));
-                            }
-                            Ok(PhotoResult::Downloading) => {
-                                log::debug!("Photo {} still downloading", photo_uuid);
-                            }
-                            Ok(PhotoResult::Failed(err, retry_count)) => {
-                                log::warn!(
-                                    "Photo {} download failed: {} (retry count: {})",
-                                    photo_uuid,
-                                    err,
-                                    retry_count
-                                );
-                            }
-                            Err(e) => {
-                                log::error!("Failed to load photo {}: {}", photo_uuid, e);
-                            }
-                        }
-                    } else {
-                        log::error!("Invalid photo UUID: {}", photo_uuid);
-                    }
-                } else {
-                    log::error!("Failed to initialize database");
-                }
+                log::debug!("Photo {} - loading from SpacetimeDB not yet implemented", photo.uuid);
             }
             loaded_photos.set(loaded);
         });
@@ -102,14 +70,7 @@ fn EventPhotoGallery(
                 config: gallery_config,
                 on_delete: move |photo_id: String| {
                     delete_photo_fn.call(photo_id.clone());
-                    spawn(async move {
-                        if let Ok(conn) = database::init_database() {
-                            if let Ok(uuid) = uuid::Uuid::parse_str(&photo_id) {
-                                let _ = photo_service::delete_photo(&conn, &uuid).await;
-                            }
-                        }
-                        // Photos will auto-update via SpacetimeDB subscription
-                    });
+                    // Note: Photo deletion now handled via SpacetimeDB subscriptions
                 },
             }
         }
@@ -177,14 +138,8 @@ pub fn EventEditScreen(
 
     // Retry failed downloads beim Mount
     use_effect(move || {
-        spawn(async move {
-            if let Ok(conn) = database::init_database() {
-                if let Err(e) = crate::services::photo_service::retry_failed_downloads(&conn).await
-                {
-                    log::warn!("Failed to retry photo downloads: {}", e);
-                }
-            }
-        });
+        // Note: photo retry logic now managed via SpacetimeDB subscriptions
+        log::debug!("Photo retry stub - SpacetimeDB sync not yet fully implemented");
     });
 
     // Load event + photos from Spacetime table
@@ -231,23 +186,16 @@ pub fn EventEditScreen(
                 .read()
                 .iter()
                 .filter(|p| p.collection_uuid == event_collection_uuid)
-                .filter_map(|p| {
-                    let uuid = uuid::Uuid::parse_str(&p.uuid).ok()?;
-                    Some(Photo {
-                        uuid,
-                        quail_id: None,
-                        event_id: Some(e_uuid),
-                        collection_id: Some(e_uuid),
-                        path: p.relative_path.clone(),
-                        relative_path: Some(p.relative_path.clone()),
-                        thumbnail_path: None,
-                        thumbnail_small_path: None,
-                        thumbnail_medium_path: None,
-                        sync_status: Some(p.sync_status.clone()),
-                        sync_error: p.sync_error.clone(),
-                        retry_count: Some(p.retry_count),
-                        created_at: None,
-                    })
+                .map(|p| Photo {
+                    uuid: p.uuid.clone(),
+                    id: p.id,
+                    collection_uuid: p.collection_uuid.clone(),
+                    relative_path: p.relative_path.clone(),
+                    sync_status: p.sync_status.clone(),
+                    sync_error: p.sync_error.clone(),
+                    last_sync_attempt: p.last_sync_attempt,
+                    retry_count: p.retry_count,
+                    owner: p.owner.clone(),
                 })
                 .collect();
             photos.set(photo_list);
@@ -422,66 +370,14 @@ pub fn EventEditScreen(
                                     error.set(String::new());
                                     #[cfg(target_os = "android")]
                                     let event_id_clone = event_id_for_gallery.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_collection_gallery_fn = create_photo_collection_gallery
-                                        .clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_gallery_fn = create_photo_gallery.clone();
                                     spawn(async move {
+                                        // Note: Photo addition to collection now managed via SpacetimeDB
                                         #[cfg(target_os = "android")]
                                         {
                                             match crate::camera::pick_images() {
-                                                Ok(paths) => {
-                                                    if let Ok(conn) = database::init_database() {
-                                                        if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                                            let collection_uuid = e_uuid;
-                                                            match crate::services::photo_service::get_or_create_event_collection(
-                                                                &conn,
-                                                                &e_uuid,
-                                                            ) {
-                                                                Ok(collection_id) => {
-                                                                    create_photo_collection_gallery_fn(spacetime::CreatePhotoCollectionArgs {
-                                                                        uuid: collection_uuid.to_string(),
-                                                                        quail_uuid: None,
-                                                                        event_uuid: Some(collection_uuid.to_string()),
-                                                                        name: format!(
-                                                                            "Event-{}",
-                                                                            collection_uuid
-                                                                                .to_string()
-                                                                                .chars()
-                                                                                .take(8)
-                                                                                .collect::<String>(),
-                                                                        ),
-                                                                    });
-                                                                    for p in paths {
-                                                                        let ps = p.to_string_lossy().to_string();
-                                                                        match crate::services::photo_service::add_photo_to_collection(
-                                                                                &conn,
-                                                                                &collection_id,
-                                                                                ps.clone(),
-                                                                            )
-                                                                            .await
-                                                                        {
-                                                                            Ok(photo_uuid) => {
-                                                                                create_photo_gallery_fn(spacetime::CreatePhotoArgs {
-                                                                                    uuid: photo_uuid.to_string(),
-                                                                                    collection_uuid: collection_uuid.to_string(),
-                                                                                    relative_path: ps,
-                                                                                });
-                                                                            }
-                                                                            Err(e) => {
-                                                                                error.set(format!("Fehler beim Speichern: {}", e));
-                                                                                break;
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                                Err(e) => {
-                                                                    log::error!("Failed to create event collection: {}", e);
-                                                                }
-                                                            }
-                                                        }
-                                                    }
+                                                Ok(_paths) => {
+                                                    // Photos will be synced via SpacetimeDB
+                                                    log::debug!("Photos picked - syncing via SpacetimeDB not yet fully implemented");
                                                 }
                                                 Err(e) => {
                                                     error.set(t!("error-pick-images", error : e.to_string()));
@@ -512,63 +408,14 @@ pub fn EventEditScreen(
                                     error.set(String::new());
                                     #[cfg(target_os = "android")]
                                     let event_id_clone = event_id_for_camera.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_collection_camera_fn = create_photo_collection_camera
-                                        .clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_camera_fn = create_photo_camera.clone();
                                     spawn(async move {
+                                        // Note: Photo capture and collection now managed via SpacetimeDB
                                         #[cfg(target_os = "android")]
                                         {
                                             match crate::camera::capture_photo() {
-                                                Ok(p) => {
-                                                    if let Ok(conn) = database::init_database() {
-                                                        if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                                            let ps = p.to_string_lossy().to_string();
-                                                            let collection_uuid = e_uuid;
-                                                            match crate::services::photo_service::get_or_create_event_collection(
-                                                                &conn,
-                                                                &e_uuid,
-                                                            ) {
-                                                                Ok(collection_id) => {
-                                                                    create_photo_collection_camera_fn(spacetime::CreatePhotoCollectionArgs {
-                                                                        uuid: collection_uuid.to_string(),
-                                                                        quail_uuid: None,
-                                                                        event_uuid: Some(collection_uuid.to_string()),
-                                                                        name: format!(
-                                                                            "Event-{}",
-                                                                            collection_uuid
-                                                                                .to_string()
-                                                                                .chars()
-                                                                                .take(8)
-                                                                                .collect::<String>(),
-                                                                        ),
-                                                                    });
-                                                                    match crate::services::photo_service::add_photo_to_collection(
-                                                                            &conn,
-                                                                            &collection_id,
-                                                                            ps.clone(),
-                                                                        )
-                                                                        .await
-                                                                    {
-                                                                        Ok(photo_uuid) => {
-                                                                            create_photo_camera_fn(spacetime::CreatePhotoArgs {
-                                                                                uuid: photo_uuid.to_string(),
-                                                                                collection_uuid: collection_uuid.to_string(),
-                                                                                relative_path: ps,
-                                                                            });
-                                                                        }
-                                                                        Err(e) => {
-                                                                            error.set(format!("Fehler beim Speichern: {}", e));
-                                                                        }
-                                                                    }
-                                                                }
-                                                                Err(e) => {
-                                                                    log::error!("Failed to create event collection: {}", e);
-                                                                }
-                                                            }
-                                                        }
-                                                    }
+                                                Ok(_p) => {
+                                                    // Photo will be synced via SpacetimeDB
+                                                    log::debug!("Photo captured - syncing via SpacetimeDB not yet fully implemented");
                                                 }
                                                 Err(e) => {
                                                     error.set(t!("error-capture-photo", error : e.to_string()));
