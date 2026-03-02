@@ -1,6 +1,6 @@
 
 use crate::error::AppError;
-use crate::services::{download_service, sync_service, upload_service};
+use crate::services::{download_service,  upload_service};
 use chrono::Utc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};

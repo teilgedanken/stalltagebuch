@@ -1,6 +1,6 @@
 # Copilot Projekt-Instruktionen (stalltagebuch)
 
-Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, Ereignissen & Eierproduktion mit lokaler SQLite + optionaler Nextcloud Sync.
+Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, Ereignissen & Eierproduktion in spacetimedb + Nextcloud webdav Sync für Fotos und Datenbank-Backups. Fokus auf klare Architektur und Wartbarkeit
 
 ## Architektur & Muster
 - Navigation: Enum `Screen` in `src/main.rs`, Wechsel über `Signal<Screen>` und Props `on_navigate: Fn(Screen)` in Komponenten.

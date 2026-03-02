@@ -1,4 +1,3 @@
-use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -126,29 +125,7 @@ impl Gender {
     }
 }
 
-impl<'r> TryFrom<&Row<'r>> for Quail {
-    type Error = rusqlite::Error;
 
-    fn try_from(row: &Row<'r>) -> Result<Self, Self::Error> {
-        let uuid_str: String = row.get(0)?;
-        let uuid = Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?;
-        let name: String = row.get(1)?;
-        let gender_str: String = row.get(2)?;
-        let ring_color_opt: Option<String> = row.get(3)?;
-        let profile_photo_str: Option<String> = row.get(4)?;
-        let profile_photo = profile_photo_str
-            .map(|s| Uuid::parse_str(&s).ok())
-            .flatten();
-
-        Ok(Quail {
-            uuid,
-            name,
-            gender: Gender::from_str(&gender_str),
-            ring_color: ring_color_opt.map(|s| RingColor::from_str(&s)),
-            profile_photo,
-        })
-    }
-}
 
 #[cfg(test)]
 mod tests {

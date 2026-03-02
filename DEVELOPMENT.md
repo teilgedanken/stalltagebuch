@@ -132,14 +132,6 @@ adb logcat | grep -i stalltagebuch
 adb logcat *:E | grep -i stalltagebuch  # Nur Errors
 ```
 
-### Datenbank inspizieren
-
-```bash
-adb shell run-as de.teilgedanken.stalltagebuch cp /data/data/de.teilgedanken.stalltagebuch/files/stalltagebuch.db /sdcard/
-adb pull /sdcard/stalltagebuch.db .
-sqlite3 stalltagebuch.db
-```
-
 ## Troubleshooting
 
 ### Camera/Gallery crashed
@@ -223,19 +215,6 @@ Until then, the hand-written types in `src/spacetime/types.rs` and the context i
 1. Open Settings in the app.
 2. Fill in **SpacetimeDB server URL**, **database name**, and **auth token**.
 3. Tap **Save & Connect** – the app will load all quails, events and egg records from the server.
-
-### Transition period
-
-The local SQLite database is still initialised at startup for the photo-gallery crate.
-The old sync services (`sync_service`, `crdt_service`, `background_sync`, etc.) remain in the
-codebase but are no longer started automatically; they will be removed in a follow-up once the
-SpacetimeDB integration is fully validated.
-
----
-
-## Experimental Sync Integration Plan (Nextcloud/WebDAV – superseded)
-
-Ziel: Multi‑Master, Offline‑First Sync ohne Konflikte. Umsetzung stufenweise hinter Feature‑Flag `experimental_sync`.
 
 ### Code‑Integrationspunkte
 - Services

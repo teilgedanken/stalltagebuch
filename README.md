@@ -9,7 +9,6 @@ Native Android-App zur Verwaltung von Wachteln und Eierproduktion, entwickelt mi
 - **Foto-Verwaltung:** Mehrere Fotos pro Wachtel und Ereignis mit Galerie und Kamera-Integration
 - **Eier-Tracking:** Tägliche Erfassung der Eierproduktion mit Historie
 - **Statistiken:** Dashboard mit Durchschnittswerten und Zeitraum-Filtern
-- **SQLite-Datenbank:** Vollständige lokale Datenpersistenz
 - **Native Android:** JNI-Integration für Kamera, Galerie und FileProvider
 
 ## 🏗️ Projektstruktur
@@ -24,7 +23,6 @@ stalltagebuch/
 │   ├── image_processing.rs          # Bild-Resize & Thumbnails (Placeholder)
 │   ├── models/                      # Domain-Modelle (Wachtel, EggRecord)
 │   ├── services/                    # Business Logic (Profile, Egg, Analytics)
-│   ├── database/                    # SQLite-Schema & Migrations
 │   └── components/                  # UI-Komponenten (Home, Profile, Tracking, Stats)
 ├── android/
 │   ├── MainActivity.kt              # Custom Activity mit Camera/Gallery Intents

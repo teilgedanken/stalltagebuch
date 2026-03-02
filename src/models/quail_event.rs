@@ -1,6 +1,4 @@
 use chrono::NaiveDate;
-use rusqlite::Row;
-use rusqlite::types::Type;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -75,32 +73,5 @@ impl EventType {
     #[allow(dead_code)]
     pub fn is_health_status(&self) -> bool {
         matches!(self, EventType::Sick | EventType::Healthy)
-    }
-}
-
-impl<'r> TryFrom<&Row<'r>> for QuailEvent {
-    type Error = rusqlite::Error;
-
-    fn try_from(row: &Row<'r>) -> Result<Self, Self::Error> {
-        let uuid_str: String = row.get(0)?;
-        let uuid = Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?;
-        let quail_id_str: String = row.get(1)?;
-        let quail_id = Uuid::parse_str(&quail_id_str).map_err(|_| rusqlite::Error::InvalidQuery)?;
-        let event_type_str: String = row.get(2)?;
-        let event_date_str: String = row.get(3)?;
-        let notes: Option<String> = row.get(4)?;
-        let photos_string: Option<String> = row.get(5)?;
-
-        let event_date = NaiveDate::parse_from_str(&event_date_str, "%Y-%m-%d")
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(3, Type::Text, Box::new(e)))?;
-        let photos: Option<Uuid> = photos_string.map(|s| Uuid::parse_str(&s).ok()).flatten();
-        Ok(QuailEvent {
-            uuid,
-            quail_id,
-            event_type: EventType::from_str(&event_type_str),
-            event_date,
-            notes,
-            photos,
-        })
     }
 }
