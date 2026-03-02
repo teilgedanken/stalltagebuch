@@ -406,7 +406,11 @@ pub fn EventEditScreen(
                     label { style: "display:block; font-weight:600; margin-bottom:6px;",
                         {t!("photos-count", count : photos().len())}
                     }
-                    EventPhotoGallery { event_id: event_id.clone(), photos: photos.clone(), delete_photo_fn: delete_photo_reducer.clone() }
+                    EventPhotoGallery {
+                        event_id: event_id.clone(),
+                        photos: photos.clone(),
+                        delete_photo_fn: delete_photo_reducer.clone(),
+                    }
                     // Add buttons (always visible)
                     div { style: "display:flex; gap:12px;",
                         button {
@@ -419,8 +423,8 @@ pub fn EventEditScreen(
                                     #[cfg(target_os = "android")]
                                     let event_id_clone = event_id_for_gallery.clone();
                                     #[cfg(target_os = "android")]
-                                    let create_photo_collection_gallery_fn =
-                                        create_photo_collection_gallery.clone();
+                                    let create_photo_collection_gallery_fn = create_photo_collection_gallery
+                                        .clone();
                                     #[cfg(target_os = "android")]
                                     let create_photo_gallery_fn = create_photo_gallery.clone();
                                     spawn(async move {
@@ -436,14 +440,19 @@ pub fn EventEditScreen(
                                                                 &e_uuid,
                                                             ) {
                                                                 Ok(collection_id) => {
-                                                                    // Ensure collection exists in Spacetime
                                                                     create_photo_collection_gallery_fn(spacetime::CreatePhotoCollectionArgs {
                                                                         uuid: collection_uuid.to_string(),
                                                                         quail_uuid: None,
                                                                         event_uuid: Some(collection_uuid.to_string()),
-                                                                        name: format!("Event-{}", collection_uuid.to_string().chars().take(8).collect::<String>()),
+                                                                        name: format!(
+                                                                            "Event-{}",
+                                                                            collection_uuid
+                                                                                .to_string()
+                                                                                .chars()
+                                                                                .take(8)
+                                                                                .collect::<String>(),
+                                                                        ),
                                                                     });
-
                                                                     for p in paths {
                                                                         let ps = p.to_string_lossy().to_string();
                                                                         match crate::services::photo_service::add_photo_to_collection(
@@ -454,7 +463,6 @@ pub fn EventEditScreen(
                                                                             .await
                                                                         {
                                                                             Ok(photo_uuid) => {
-                                                                                // Register photo in Spacetime
                                                                                 create_photo_gallery_fn(spacetime::CreatePhotoArgs {
                                                                                     uuid: photo_uuid.to_string(),
                                                                                     collection_uuid: collection_uuid.to_string(),
@@ -467,7 +475,6 @@ pub fn EventEditScreen(
                                                                             }
                                                                         }
                                                                     }
-                                                                    // Photos will auto-update via SpacetimeDB subscription
                                                                 }
                                                                 Err(e) => {
                                                                     log::error!("Failed to create event collection: {}", e);
@@ -477,7 +484,7 @@ pub fn EventEditScreen(
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    error.set(t!("error-pick-images", error : e.to_string()))
+                                                    error.set(t!("error-pick-images", error : e.to_string()));
                                                 }
                                             }
                                         }
@@ -506,8 +513,8 @@ pub fn EventEditScreen(
                                     #[cfg(target_os = "android")]
                                     let event_id_clone = event_id_for_camera.clone();
                                     #[cfg(target_os = "android")]
-                                    let create_photo_collection_camera_fn =
-                                        create_photo_collection_camera.clone();
+                                    let create_photo_collection_camera_fn = create_photo_collection_camera
+                                        .clone();
                                     #[cfg(target_os = "android")]
                                     let create_photo_camera_fn = create_photo_camera.clone();
                                     spawn(async move {
@@ -524,14 +531,19 @@ pub fn EventEditScreen(
                                                                 &e_uuid,
                                                             ) {
                                                                 Ok(collection_id) => {
-                                                                    // Ensure collection exists in Spacetime
                                                                     create_photo_collection_camera_fn(spacetime::CreatePhotoCollectionArgs {
                                                                         uuid: collection_uuid.to_string(),
                                                                         quail_uuid: None,
                                                                         event_uuid: Some(collection_uuid.to_string()),
-                                                                        name: format!("Event-{}", collection_uuid.to_string().chars().take(8).collect::<String>()),
+                                                                        name: format!(
+                                                                            "Event-{}",
+                                                                            collection_uuid
+                                                                                .to_string()
+                                                                                .chars()
+                                                                                .take(8)
+                                                                                .collect::<String>(),
+                                                                        ),
                                                                     });
-
                                                                     match crate::services::photo_service::add_photo_to_collection(
                                                                             &conn,
                                                                             &collection_id,
@@ -540,13 +552,11 @@ pub fn EventEditScreen(
                                                                         .await
                                                                     {
                                                                         Ok(photo_uuid) => {
-                                                                            // Register photo in Spacetime
                                                                             create_photo_camera_fn(spacetime::CreatePhotoArgs {
                                                                                 uuid: photo_uuid.to_string(),
                                                                                 collection_uuid: collection_uuid.to_string(),
                                                                                 relative_path: ps,
                                                                             });
-                                                                            // Photos will auto-update via SpacetimeDB subscription
                                                                         }
                                                                         Err(e) => {
                                                                             error.set(format!("Fehler beim Speichern: {}", e));
@@ -561,7 +571,7 @@ pub fn EventEditScreen(
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    error.set(t!("error-capture-photo", error : e.to_string()))
+                                                    error.set(t!("error-capture-photo", error : e.to_string()));
                                                 }
                                             }
                                         }

@@ -16,7 +16,11 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let _photos = spacetime::use_table_photos();
     let connection = spacetime::use_connection();
 
-    spacetime::use_subscription(&["SELECT * FROM quails", "SELECT * FROM quail_events", "SELECT * FROM photos"]);
+    spacetime::use_subscription(&[
+        "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
+        "SELECT * FROM photos",
+    ]);
 
     let filtered_profiles = use_memo(move || {
         let owner = connection
@@ -155,17 +159,17 @@ pub fn ProfileCard(
             // Square Image Container
             div { class: "profile-image",
                 if let Some(uuid) = profile_photo_uuid {
-                    {rsx! {
-                        ThumbnailImage {
-                            key: "{uuid}",
-                            photo_uuid: Some(uuid),
-                            alt: profile.name.clone(),
+                    {
+                        rsx! {
+                            ThumbnailImage { key: "{uuid}", photo_uuid: Some(uuid), alt: profile.name.clone() }
                         }
-                    }}
+                    }
                 } else {
-                    {rsx! {
-                        div { class: "profile-image-placeholder", "🐦" }
-                    }}
+                    {
+                        rsx! {
+                            div { class: "profile-image-placeholder", "🐦" }
+                        }
+                    }
                 }
 
                 // Overlay with name and gender

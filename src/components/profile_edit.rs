@@ -310,7 +310,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                 .iter()
                                 .map(|item| item.id.as_str())
                                 .collect::<Vec<_>>()
-                                .join(",")
+                                .join(","),
                         );
                         let gallery_config = GalleryConfig {
                             allow_delete: true,
