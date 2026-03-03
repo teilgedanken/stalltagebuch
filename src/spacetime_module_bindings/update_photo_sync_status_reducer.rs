@@ -49,9 +49,11 @@ pub trait update_photo_sync_status {
     fn update_photo_sync_status_then(
         &self,
         args: UpdatePhotoSyncStatusArgsType,
-        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
-            + Send
-            + 'static,
+        callback: impl FnOnce(
+            &super::ReducerEventContext,
+            Result<Result<(), String>, __sdk::InternalError>,
+        ) + Send
+        + 'static,
     ) -> __sdk::Result<()>;
 }
 
@@ -59,9 +61,11 @@ impl update_photo_sync_status for super::RemoteReducers {
     fn update_photo_sync_status_then(
         &self,
         args: UpdatePhotoSyncStatusArgsType,
-        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
-            + Send
-            + 'static,
+        callback: impl FnOnce(
+            &super::ReducerEventContext,
+            Result<Result<(), String>, __sdk::InternalError>,
+        ) + Send
+        + 'static,
     ) -> __sdk::Result<()> {
         self.imp
             .invoke_reducer_with_callback(UpdatePhotoSyncStatusArgs { args }, callback)
