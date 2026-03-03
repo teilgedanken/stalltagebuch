@@ -1,6 +1,5 @@
-
 use crate::error::AppError;
-use crate::services::{download_service,  upload_service};
+use crate::services::{download_service, upload_service};
 use chrono::Utc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -178,7 +177,7 @@ pub struct SyncStats {
 /// reducing conflicts and ensuring we're working with up-to-date data.
 async fn perform_sync_cycle() -> Result<SyncStats, AppError> {
     // TODO: Check if sync is configured and enabled via SpacetimeDB settings table
-    
+
     // Phase 1: Download remote changes first (new multi-master sync)
     let ops_downloaded = download_service::download_and_merge_ops().await?;
 

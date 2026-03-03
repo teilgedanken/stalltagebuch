@@ -41,7 +41,6 @@ struct ExportPhotos {
     photos: Vec<serde_json::Value>,
 }
 
-
 fn ensure_parent_dir(path: &Path) -> Result<(), AppError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| {

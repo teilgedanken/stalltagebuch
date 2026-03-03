@@ -144,11 +144,7 @@ impl PhotoGalleryService {
     /// Get photo file for display
     ///
     /// Returns the path to the photo file that exists locally.
-    pub fn get_photo_file_path(
-        &self,
-        relative_path: &str,
-        size: PhotoSize,
-    ) -> Option<String> {
+    pub fn get_photo_file_path(&self, relative_path: &str, size: PhotoSize) -> Option<String> {
         // Determine which file to check based on size
         let file_path = match size {
             PhotoSize::Small => {

@@ -15,6 +15,7 @@ pub struct Photo {
     pub sync_error: Option<String>,
     pub last_sync_attempt: Option<i64>,
     pub retry_count: i32,
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -34,6 +35,7 @@ pub struct PhotoCols {
     pub sync_error: __sdk::__query_builder::Col<Photo, Option<String>>,
     pub last_sync_attempt: __sdk::__query_builder::Col<Photo, Option<i64>>,
     pub retry_count: __sdk::__query_builder::Col<Photo, i32>,
+    pub device_id: __sdk::__query_builder::Col<Photo, String>,
     pub owner: __sdk::__query_builder::Col<Photo, String>,
 }
 
@@ -49,6 +51,7 @@ impl __sdk::__query_builder::HasCols for Photo {
             sync_error: __sdk::__query_builder::Col::new(table_name, "sync_error"),
             last_sync_attempt: __sdk::__query_builder::Col::new(table_name, "last_sync_attempt"),
             retry_count: __sdk::__query_builder::Col::new(table_name, "retry_count"),
+            device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
         }
     }

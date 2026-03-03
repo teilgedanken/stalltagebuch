@@ -14,6 +14,7 @@ pub struct QuailEvent {
     pub event_date: String,
     pub notes: Option<String>,
     pub photos: Option<String>,
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -32,6 +33,7 @@ pub struct QuailEventCols {
     pub event_date: __sdk::__query_builder::Col<QuailEvent, String>,
     pub notes: __sdk::__query_builder::Col<QuailEvent, Option<String>>,
     pub photos: __sdk::__query_builder::Col<QuailEvent, Option<String>>,
+    pub device_id: __sdk::__query_builder::Col<QuailEvent, String>,
     pub owner: __sdk::__query_builder::Col<QuailEvent, String>,
 }
 
@@ -46,6 +48,7 @@ impl __sdk::__query_builder::HasCols for QuailEvent {
             event_date: __sdk::__query_builder::Col::new(table_name, "event_date"),
             notes: __sdk::__query_builder::Col::new(table_name, "notes"),
             photos: __sdk::__query_builder::Col::new(table_name, "photos"),
+            device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
         }
     }

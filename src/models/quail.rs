@@ -125,8 +125,6 @@ impl Gender {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -11,6 +11,7 @@ pub struct CreatePhotoCollectionArgs {
     pub quail_uuid: Option<String>,
     pub event_uuid: Option<String>,
     pub name: String,
+    pub device_id: String,
 }
 
 impl __sdk::InModule for CreatePhotoCollectionArgs {

@@ -100,11 +100,7 @@ enum ImageLoadState {
 
 #[cfg(feature = "components")]
 // Internal helper: try to load a photo data-url for relative_path and size.
-fn load_photo(
-    ctx: PhotoGalleryContext,
-    relative_path: String,
-    size: PhotoSize,
-) -> Option<String> {
+fn load_photo(ctx: PhotoGalleryContext, relative_path: String, size: PhotoSize) -> Option<String> {
     ctx.load_photo_data(&relative_path, size)
 }
 
@@ -122,11 +118,7 @@ pub fn ThumbnailImage(
 
     // Load photo data from relative path
     use_effect(move || {
-        if let Some(data) = load_photo(
-            context.clone(),
-            relative_path.clone(),
-            PhotoSize::Small,
-        ) {
+        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Small) {
             image_state.set(ImageLoadState::Loaded(data));
         } else {
             image_state.set(ImageLoadState::Failed);
@@ -171,11 +163,7 @@ pub fn PreviewImage(
     let context = use_context::<PhotoGalleryContext>();
 
     use_effect(move || {
-        if let Some(data) = load_photo(
-            context.clone(),
-            relative_path.clone(),
-            PhotoSize::Medium,
-        ) {
+        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Medium) {
             image_state.set(ImageLoadState::Loaded(data));
         } else {
             image_state.set(ImageLoadState::Failed);
@@ -212,19 +200,13 @@ pub fn PreviewImage(
 ///
 /// Accepts a relative path to the photo and loads from storage
 #[component]
-pub fn FullscreenImage(
-    relative_path: String,
-    on_close: EventHandler<()>,
-) -> Element {
+pub fn FullscreenImage(relative_path: String, on_close: EventHandler<()>) -> Element {
     let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
     use_effect(move || {
-        if let Some(data) = load_photo(
-            context.clone(),
-            relative_path.clone(),
-            PhotoSize::Original,
-        ) {
+        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Original)
+        {
             image_state.set(ImageLoadState::Loaded(data));
         } else {
             image_state.set(ImageLoadState::Failed);

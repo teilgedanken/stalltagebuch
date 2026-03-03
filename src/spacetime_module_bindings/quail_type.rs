@@ -13,6 +13,7 @@ pub struct Quail {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -30,6 +31,7 @@ pub struct QuailCols {
     pub gender: __sdk::__query_builder::Col<Quail, String>,
     pub ring_color: __sdk::__query_builder::Col<Quail, Option<String>>,
     pub profile_photo: __sdk::__query_builder::Col<Quail, Option<String>>,
+    pub device_id: __sdk::__query_builder::Col<Quail, String>,
     pub owner: __sdk::__query_builder::Col<Quail, String>,
 }
 
@@ -43,6 +45,7 @@ impl __sdk::__query_builder::HasCols for Quail {
             gender: __sdk::__query_builder::Col::new(table_name, "gender"),
             ring_color: __sdk::__query_builder::Col::new(table_name, "ring_color"),
             profile_photo: __sdk::__query_builder::Col::new(table_name, "profile_photo"),
+            device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
         }
     }

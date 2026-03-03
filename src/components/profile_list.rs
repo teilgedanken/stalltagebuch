@@ -144,7 +144,7 @@ pub fn ProfileCard(
 ) -> Element {
     // TODO: Query photo relative_path from SpacetimeDB if profile.profile_photo is set
     let profile_photo_path: Option<String> = None;
-    
+
     let overlay_bg = if let Some(ring_color) = &profile.ring_color {
         get_light_color_for(ring_color)
     } else {

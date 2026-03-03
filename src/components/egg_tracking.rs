@@ -93,6 +93,8 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         let upsert_reducer = upsert_egg_record.clone();
         let delete_reducer = delete_egg_record.clone();
         let on_navigate_submit = on_navigate.clone();
+        let device_id = crate::services::device_id_service::get_device_id()
+            .unwrap_or_else(|_| "unknown-device".to_string());
 
         let record_uuid = current_uuid.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
@@ -107,6 +109,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                     record_date: record_date.format("%Y-%m-%d").to_string(),
                     total_eggs: eggs_count,
                     notes: notes_opt,
+                    device_id,
                 });
             }
 

@@ -18,6 +18,62 @@ pub enum AppError {
     Other(String),
 }
 
+/// Extended error types including platform-specific errors
+#[derive(Debug)]
+pub enum StalltagebuchError {
+    /// JNI/Android error
+    JniError(String),
+    /// Filesystem error
+    Filesystem(std::io::Error),
+    /// Validation error
+    Validation(String),
+    /// Resource not found
+    NotFound(String),
+    /// Permission denied
+    PermissionDenied(String),
+    /// Image processing error
+    ImageProcessing(String),
+    /// General error
+    Other(String),
+}
+
+impl fmt::Display for StalltagebuchError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StalltagebuchError::JniError(msg) => write!(f, "JNI error: {}", msg),
+            StalltagebuchError::Filesystem(e) => write!(f, "Filesystem error: {}", e),
+            StalltagebuchError::Validation(msg) => write!(f, "Validation error: {}", msg),
+            StalltagebuchError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            StalltagebuchError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
+            StalltagebuchError::ImageProcessing(msg) => {
+                write!(f, "Image processing error: {}", msg)
+            }
+            StalltagebuchError::Other(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for StalltagebuchError {}
+
+impl From<std::io::Error> for StalltagebuchError {
+    fn from(e: std::io::Error) -> Self {
+        StalltagebuchError::Filesystem(e)
+    }
+}
+
+impl From<AppError> for StalltagebuchError {
+    fn from(e: AppError) -> Self {
+        match e {
+            AppError::Filesystem(io) => StalltagebuchError::Filesystem(io),
+            AppError::Validation(msg) => StalltagebuchError::Validation(msg),
+            AppError::NotFound(msg) => StalltagebuchError::NotFound(msg),
+            AppError::PermissionDenied(msg) => StalltagebuchError::PermissionDenied(msg),
+            AppError::ImageProcessing(msg) => StalltagebuchError::ImageProcessing(msg),
+            AppError::Other(msg) => StalltagebuchError::Other(msg),
+        }
+    }
+}
+
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

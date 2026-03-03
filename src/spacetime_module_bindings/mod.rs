@@ -16,11 +16,14 @@ pub mod create_photo_collection_reducer;
 pub mod create_photo_reducer;
 pub mod create_quail_args_type;
 pub mod create_quail_reducer;
+pub mod delete_device_reducer;
 pub mod delete_egg_record_reducer;
 pub mod delete_event_reducer;
 pub mod delete_photo_collection_reducer;
 pub mod delete_photo_reducer;
 pub mod delete_quail_reducer;
+pub mod device_type;
+pub mod devices_table;
 pub mod egg_record_type;
 pub mod egg_records_table;
 pub mod photo_collection_type;
@@ -31,7 +34,11 @@ pub mod quail_event_type;
 pub mod quail_events_table;
 pub mod quail_type;
 pub mod quails_table;
+pub mod register_device_args_type;
+pub mod register_device_reducer;
 pub mod set_quail_photo_reducer;
+pub mod update_device_args_type;
+pub mod update_device_reducer;
 pub mod update_event_args_type;
 pub mod update_event_reducer;
 pub mod update_photo_collection_args_type;
@@ -51,11 +58,14 @@ pub use create_photo_collection_reducer::create_photo_collection;
 pub use create_photo_reducer::create_photo;
 pub use create_quail_args_type::CreateQuailArgs;
 pub use create_quail_reducer::create_quail;
+pub use delete_device_reducer::delete_device;
 pub use delete_egg_record_reducer::delete_egg_record;
 pub use delete_event_reducer::delete_event;
 pub use delete_photo_collection_reducer::delete_photo_collection;
 pub use delete_photo_reducer::delete_photo;
 pub use delete_quail_reducer::delete_quail;
+pub use device_type::Device;
+pub use devices_table::*;
 pub use egg_record_type::EggRecord;
 pub use egg_records_table::*;
 pub use photo_collection_type::PhotoCollection;
@@ -66,7 +76,11 @@ pub use quail_event_type::QuailEvent;
 pub use quail_events_table::*;
 pub use quail_type::Quail;
 pub use quails_table::*;
+pub use register_device_args_type::RegisterDeviceArgs;
+pub use register_device_reducer::register_device;
 pub use set_quail_photo_reducer::set_quail_photo;
+pub use update_device_args_type::UpdateDeviceArgs;
+pub use update_device_reducer::update_device;
 pub use update_event_args_type::UpdateEventArgs;
 pub use update_event_reducer::update_event;
 pub use update_photo_collection_args_type::UpdatePhotoCollectionArgs;
@@ -98,6 +112,9 @@ pub enum Reducer {
     CreateQuail {
         args: CreateQuailArgs,
     },
+    DeleteDevice {
+        device_id: String,
+    },
     DeleteEggRecord {
         uuid: String,
     },
@@ -113,9 +130,15 @@ pub enum Reducer {
     DeleteQuail {
         uuid: String,
     },
+    RegisterDevice {
+        args: RegisterDeviceArgs,
+    },
     SetQuailPhoto {
         quail_uuid: String,
         photo_uuid: Option<String>,
+    },
+    UpdateDevice {
+        args: UpdateDeviceArgs,
     },
     UpdateEvent {
         args: UpdateEventArgs,
@@ -145,12 +168,15 @@ impl __sdk::Reducer for Reducer {
             Reducer::CreatePhoto { .. } => "create_photo",
             Reducer::CreatePhotoCollection { .. } => "create_photo_collection",
             Reducer::CreateQuail { .. } => "create_quail",
+            Reducer::DeleteDevice { .. } => "delete_device",
             Reducer::DeleteEggRecord { .. } => "delete_egg_record",
             Reducer::DeleteEvent { .. } => "delete_event",
             Reducer::DeletePhoto { .. } => "delete_photo",
             Reducer::DeletePhotoCollection { .. } => "delete_photo_collection",
             Reducer::DeleteQuail { .. } => "delete_quail",
+            Reducer::RegisterDevice { .. } => "register_device",
             Reducer::SetQuailPhoto { .. } => "set_quail_photo",
+            Reducer::UpdateDevice { .. } => "update_device",
             Reducer::UpdateEvent { .. } => "update_event",
             Reducer::UpdatePhotoCollection { .. } => "update_photo_collection",
             Reducer::UpdatePhotoSyncStatus { .. } => "update_photo_sync_status",
@@ -174,6 +200,11 @@ impl __sdk::Reducer for Reducer {
             Reducer::CreateQuail { args } => {
                 __sats::bsatn::to_vec(&create_quail_reducer::CreateQuailArgs { args: args.clone() })
             }
+            Reducer::DeleteDevice { device_id } => {
+                __sats::bsatn::to_vec(&delete_device_reducer::DeleteDeviceArgs {
+                    device_id: device_id.clone(),
+                })
+            }
             Reducer::DeleteEggRecord { uuid } => {
                 __sats::bsatn::to_vec(&delete_egg_record_reducer::DeleteEggRecordArgs {
                     uuid: uuid.clone(),
@@ -191,6 +222,11 @@ impl __sdk::Reducer for Reducer {
             Reducer::DeleteQuail { uuid } => {
                 __sats::bsatn::to_vec(&delete_quail_reducer::DeleteQuailArgs { uuid: uuid.clone() })
             }
+            Reducer::RegisterDevice { args } => {
+                __sats::bsatn::to_vec(&register_device_reducer::RegisterDeviceArgs {
+                    args: args.clone(),
+                })
+            }
             Reducer::SetQuailPhoto {
                 quail_uuid,
                 photo_uuid,
@@ -198,6 +234,11 @@ impl __sdk::Reducer for Reducer {
                 quail_uuid: quail_uuid.clone(),
                 photo_uuid: photo_uuid.clone(),
             }),
+            Reducer::UpdateDevice { args } => {
+                __sats::bsatn::to_vec(&update_device_reducer::UpdateDeviceArgs {
+                    args: args.clone(),
+                })
+            }
             Reducer::UpdateEvent { args } => {
                 __sats::bsatn::to_vec(&update_event_reducer::UpdateEventArgs { args: args.clone() })
             }
@@ -224,6 +265,7 @@ impl __sdk::Reducer for Reducer {
 #[allow(non_snake_case)]
 #[doc(hidden)]
 pub struct DbUpdate {
+    devices: __sdk::TableUpdate<Device>,
     egg_records: __sdk::TableUpdate<EggRecord>,
     photo_collections: __sdk::TableUpdate<PhotoCollection>,
     photos: __sdk::TableUpdate<Photo>,
@@ -237,6 +279,9 @@ impl TryFrom<__ws::v2::TransactionUpdate> for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_update in __sdk::transaction_update_iter_table_updates(raw) {
             match &table_update.table_name[..] {
+                "devices" => db_update
+                    .devices
+                    .append(devices_table::parse_table_update(table_update)?),
                 "egg_records" => db_update
                     .egg_records
                     .append(egg_records_table::parse_table_update(table_update)?),
@@ -278,6 +323,9 @@ impl __sdk::DbUpdate for DbUpdate {
     ) -> AppliedDiff<'_> {
         let mut diff = AppliedDiff::default();
 
+        diff.devices = cache
+            .apply_diff_to_table::<Device>("devices", &self.devices)
+            .with_updates_by_pk(|row| &row.device_id);
         diff.egg_records = cache
             .apply_diff_to_table::<EggRecord>("egg_records", &self.egg_records)
             .with_updates_by_pk(|row| &row.uuid);
@@ -300,6 +348,9 @@ impl __sdk::DbUpdate for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_rows in raw.tables {
             match &table_rows.table[..] {
+                "devices" => db_update
+                    .devices
+                    .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
                 "egg_records" => db_update
                     .egg_records
                     .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
@@ -328,6 +379,9 @@ impl __sdk::DbUpdate for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_rows in raw.tables {
             match &table_rows.table[..] {
+                "devices" => db_update
+                    .devices
+                    .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
                 "egg_records" => db_update
                     .egg_records
                     .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
@@ -358,6 +412,7 @@ impl __sdk::DbUpdate for DbUpdate {
 #[allow(non_snake_case)]
 #[doc(hidden)]
 pub struct AppliedDiff<'r> {
+    devices: __sdk::TableAppliedDiff<'r, Device>,
     egg_records: __sdk::TableAppliedDiff<'r, EggRecord>,
     photo_collections: __sdk::TableAppliedDiff<'r, PhotoCollection>,
     photos: __sdk::TableAppliedDiff<'r, Photo>,
@@ -376,6 +431,7 @@ impl<'r> __sdk::AppliedDiff<'r> for AppliedDiff<'r> {
         event: &EventContext,
         callbacks: &mut __sdk::DbCallbacks<RemoteModule>,
     ) {
+        callbacks.invoke_table_row_callbacks::<Device>("devices", &self.devices, event);
         callbacks.invoke_table_row_callbacks::<EggRecord>("egg_records", &self.egg_records, event);
         callbacks.invoke_table_row_callbacks::<PhotoCollection>(
             "photo_collections",
@@ -628,19 +684,19 @@ impl __sdk::SubscriptionHandle for SubscriptionHandle {
 /// either a [`DbConnection`] or an [`EventContext`] and operate on either.
 pub trait RemoteDbContext:
     __sdk::DbContext<
-        DbView = RemoteTables,
-        Reducers = RemoteReducers,
-        SubscriptionBuilder = __sdk::SubscriptionBuilder<RemoteModule>,
-    >
+    DbView = RemoteTables,
+    Reducers = RemoteReducers,
+    SubscriptionBuilder = __sdk::SubscriptionBuilder<RemoteModule>,
+>
 {
 }
 impl<
-    Ctx: __sdk::DbContext<
+        Ctx: __sdk::DbContext<
             DbView = RemoteTables,
             Reducers = RemoteReducers,
             SubscriptionBuilder = __sdk::SubscriptionBuilder<RemoteModule>,
         >,
-> RemoteDbContext for Ctx
+    > RemoteDbContext for Ctx
 {
 }
 
@@ -1033,6 +1089,7 @@ impl __sdk::SpacetimeModule for RemoteModule {
     type QueryBuilder = __sdk::QueryBuilder;
 
     fn register_tables(client_cache: &mut __sdk::ClientCache<Self>) {
+        devices_table::register_table(client_cache);
         egg_records_table::register_table(client_cache);
         photo_collections_table::register_table(client_cache);
         photos_table::register_table(client_cache);
@@ -1040,6 +1097,7 @@ impl __sdk::SpacetimeModule for RemoteModule {
         quails_table::register_table(client_cache);
     }
     const ALL_TABLE_NAMES: &'static [&'static str] = &[
+        "devices",
         "egg_records",
         "photo_collections",
         "photos",

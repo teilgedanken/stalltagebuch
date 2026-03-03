@@ -12,6 +12,7 @@ pub struct EggRecord {
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -28,6 +29,7 @@ pub struct EggRecordCols {
     pub record_date: __sdk::__query_builder::Col<EggRecord, String>,
     pub total_eggs: __sdk::__query_builder::Col<EggRecord, i32>,
     pub notes: __sdk::__query_builder::Col<EggRecord, Option<String>>,
+    pub device_id: __sdk::__query_builder::Col<EggRecord, String>,
     pub owner: __sdk::__query_builder::Col<EggRecord, String>,
 }
 
@@ -40,6 +42,7 @@ impl __sdk::__query_builder::HasCols for EggRecord {
             record_date: __sdk::__query_builder::Col::new(table_name, "record_date"),
             total_eggs: __sdk::__query_builder::Col::new(table_name, "total_eggs"),
             notes: __sdk::__query_builder::Col::new(table_name, "notes"),
+            device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
         }
     }

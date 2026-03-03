@@ -110,6 +110,9 @@ fn App() -> Element {
     // Watch for successful connections and persist the authentication token
     let _token_persist = spacetime::use_persist_spacetime_token();
 
+    // Automatically register this device when connected to SpacetimeDB
+    let _device_registration = spacetime::use_register_device();
+
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }

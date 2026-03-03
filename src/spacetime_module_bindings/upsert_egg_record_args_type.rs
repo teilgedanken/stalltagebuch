@@ -11,6 +11,7 @@ pub struct UpsertEggRecordArgs {
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
+    pub device_id: String,
 }
 
 impl __sdk::InModule for UpsertEggRecordArgs {

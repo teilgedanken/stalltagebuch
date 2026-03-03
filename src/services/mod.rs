@@ -1,4 +1,5 @@
 pub mod background_sync;
+pub mod device_id_service;
 pub mod download_service;
 pub mod export_import_service;
 pub mod photo_service;

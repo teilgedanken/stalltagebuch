@@ -54,6 +54,8 @@ pub fn EventAdd(
         let quail_id_clone = quail_id_for_save.clone();
         let on_navigate_save = on_navigate.clone();
         let event_type_value = event_type();
+        let device_id = crate::services::device_id_service::get_device_id()
+            .unwrap_or_else(|_| "unknown-device".to_string());
 
         spawn(async move {
             create_reducer(spacetime::CreateEventArgs {
@@ -63,6 +65,7 @@ pub fn EventAdd(
                 event_date: parsed_date.format("%Y-%m-%d").to_string(),
                 notes: notes_value,
                 photos: None,
+                device_id,
             });
 
             saving.set(false);

@@ -10,6 +10,7 @@ pub struct CreatePhotoArgs {
     pub uuid: String,
     pub collection_uuid: String,
     pub relative_path: String,
+    pub device_id: String,
 }
 
 impl __sdk::InModule for CreatePhotoArgs {

@@ -5,9 +5,28 @@
 //! Generate client bindings: `spacetime generate --lang rust --out-dir ../src/spacetime/module_bindings`
 //! (or `--lang dioxus` when the Dioxus binding generator is available)
 
-use spacetimedb::{reducer, ReducerContext, SpacetimeType, Table};
+use spacetimedb::{reducer, ReducerContext, SpacetimeType, Table, Timestamp};
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
+
+/// A registered device that has connected to the database.
+#[spacetimedb::table(accessor = devices, public)]
+pub struct Device {
+    /// Unique device identifier (e.g., ANDROID_ID on Android).
+    #[primary_key]
+    pub device_id: String,
+    pub id: u64,
+    /// User-friendly device name (e.g., "Mein Handy", "Tablet").
+    pub name: Option<String>,
+    /// Optional comment/description for this device.
+    pub comment: Option<String>,
+    /// Unix timestamp (seconds) when device first connected.
+    pub first_seen: i64,
+    /// Unix timestamp (seconds) when device last connected.
+    pub last_seen: i64,
+    /// The SpacetimeDB identity of the user who owns this device.
+    pub owner: String,
+}
 
 /// A quail in the flock.
 #[spacetimedb::table(accessor = quails, public)]
@@ -23,6 +42,8 @@ pub struct Quail {
     pub ring_color: Option<String>,
     /// UUID of the profile photo stored in the photo-gallery / Nextcloud.
     pub profile_photo: Option<String>,
+    /// ID of the device that created this quail.
+    pub device_id: String,
     /// The SpacetimeDB identity of the user who owns this quail.
     pub owner: String,
 }
@@ -42,6 +63,8 @@ pub struct QuailEvent {
     pub notes: Option<String>,
     /// UUID of an attached photo stored on Nextcloud.
     pub photos: Option<String>,
+    /// ID of the device that created this event.
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -56,6 +79,8 @@ pub struct EggRecord {
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
+    /// ID of the device that created this record.
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -74,6 +99,8 @@ pub struct PhotoCollection {
     pub preview_photo_uuid: Option<String>,
     /// Name/description of the collection.
     pub name: String,
+    /// ID of the device that created this collection.
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -96,6 +123,8 @@ pub struct Photo {
     pub last_sync_attempt: Option<i64>,
     /// Number of failed retry attempts.
     pub retry_count: i32,
+    /// ID of the device that created this photo.
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -108,6 +137,7 @@ pub struct CreateQuailArgs {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub device_id: String,
 }
 
 #[derive(SpacetimeType)]
@@ -127,6 +157,7 @@ pub struct CreateEventArgs {
     pub event_date: String,
     pub notes: Option<String>,
     pub photos: Option<String>,
+    pub device_id: String,
 }
 
 #[derive(SpacetimeType)]
@@ -144,6 +175,7 @@ pub struct UpsertEggRecordArgs {
     pub record_date: String,
     pub total_eggs: i32,
     pub notes: Option<String>,
+    pub device_id: String,
 }
 
 #[derive(SpacetimeType)]
@@ -152,6 +184,7 @@ pub struct CreatePhotoCollectionArgs {
     pub quail_uuid: Option<String>,
     pub event_uuid: Option<String>,
     pub name: String,
+    pub device_id: String,
 }
 
 #[derive(SpacetimeType)]
@@ -165,6 +198,7 @@ pub struct CreatePhotoArgs {
     pub uuid: String,
     pub collection_uuid: String,
     pub relative_path: String,
+    pub device_id: String,
 }
 
 #[derive(SpacetimeType)]
@@ -188,6 +222,7 @@ pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
         gender: args.gender,
         ring_color: args.ring_color,
         profile_photo: args.profile_photo,
+        device_id: args.device_id,
         owner: ctx.sender().to_string(),
     });
 }
@@ -254,6 +289,7 @@ pub fn create_event(ctx: &ReducerContext, args: CreateEventArgs) {
         event_date: args.event_date,
         notes: args.notes,
         photos: args.photos,
+        device_id: args.device_id,
         owner: ctx.sender().to_string(),
     });
 }
@@ -306,6 +342,7 @@ pub fn upsert_egg_record(ctx: &ReducerContext, args: UpsertEggRecordArgs) {
             record_date: args.record_date,
             total_eggs: args.total_eggs,
             notes: args.notes,
+            device_id: args.device_id,
             owner: sender_str,
         });
     }
@@ -332,6 +369,7 @@ pub fn create_photo_collection(ctx: &ReducerContext, args: CreatePhotoCollection
         event_uuid: args.event_uuid,
         preview_photo_uuid: None,
         name: args.name,
+        device_id: args.device_id,
         owner: ctx.sender().to_string(),
     });
 }
@@ -387,6 +425,7 @@ pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
         sync_error: None,
         last_sync_attempt: None,
         retry_count: 0,
+        device_id: args.device_id,
         owner: ctx.sender().to_string(),
     });
 }
@@ -414,5 +453,100 @@ pub fn delete_photo(ctx: &ReducerContext, uuid: String) {
             return;
         }
         ctx.db.photos().uuid().delete(&uuid);
+    }
+}
+
+// ─── Device Management ────────────────────────────────────────────────────────
+
+#[derive(SpacetimeType)]
+pub struct RegisterDeviceArgs {
+    pub device_id: String,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+}
+
+#[derive(SpacetimeType)]
+pub struct UpdateDeviceArgs {
+    pub device_id: String,
+    pub name: Option<String>,
+    pub comment: Option<String>,
+}
+
+/// Register or update a device. Creates a new device if it doesn't exist,
+/// or updates the last_seen timestamp if it does.
+#[reducer]
+pub fn register_device(ctx: &ReducerContext, args: RegisterDeviceArgs) {
+    let sender_str = ctx.sender().to_string();
+    // Use ctx.timestamp to get the current time in a WASM-compatible way
+    let now = ctx.timestamp
+        .duration_since(Timestamp::UNIX_EPOCH)
+        .expect("timestamp should be after UNIX_EPOCH")
+        .as_secs() as i64;
+
+    log::info!(
+        "register_device called: device_id={}, sender={}", 
+        args.device_id, 
+        sender_str
+    );
+
+    if let Some(mut existing) = ctx.db.devices().iter().find(|d| d.device_id == args.device_id) {
+        // Update existing device
+        log::info!(
+            "register_device: found existing device, owner={}, current_sender={}",
+            existing.owner,
+            sender_str
+        );
+        if existing.owner != sender_str {
+            log::warn!("register_device: device owned by different user");
+            return;
+        }
+        existing.last_seen = now;
+        if let Some(name) = args.name {
+            existing.name = Some(name);
+        }
+        if let Some(comment) = args.comment {
+            existing.comment = Some(comment);
+        }
+        ctx.db.devices().device_id().update(existing);
+        log::info!("register_device: updated existing device {}", args.device_id);
+    } else {
+        // Create new device
+        log::info!("register_device: creating new device {}", args.device_id);
+        ctx.db.devices().insert(Device {
+            device_id: args.device_id.clone(),
+            id: 0,
+            name: args.name,
+            comment: args.comment,
+            first_seen: now,
+            last_seen: now,
+            owner: sender_str,
+        });
+        log::info!("register_device: created new device {}", args.device_id);
+    }
+}
+
+/// Update device information (owner-only).
+#[reducer]
+pub fn update_device(ctx: &ReducerContext, args: UpdateDeviceArgs) {
+    if let Some(mut existing) = ctx.db.devices().iter().find(|d| d.device_id == args.device_id) {
+        if existing.owner != ctx.sender().to_string() {
+            log::warn!("update_device: caller is not the owner");
+            return;
+        }
+        existing.name = args.name;
+        existing.comment = args.comment;
+        ctx.db.devices().device_id().update(existing);
+    }
+}
+
+/// Delete a device (owner-only).
+#[reducer]
+pub fn delete_device(ctx: &ReducerContext, device_id: String) {
+    if let Some(existing) = ctx.db.devices().iter().find(|d| d.device_id == device_id) {
+        if existing.owner != ctx.sender().to_string() {
+            log::warn!("delete_device: caller is not the owner");
+            return;
+        }
+        ctx.db.devices().device_id().delete(&device_id);
     }
 }

@@ -3,6 +3,7 @@
 //! This module handles saving and restoring the client identity token
 //! across app restarts, ensuring users maintain the same SpacetimeDB identity.
 
+use crate::services::device_id_service;
 use crate::services::spacetime_settings_service;
 use crate::spacetime_module_bindings::dioxus::{ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
@@ -44,6 +45,61 @@ pub fn use_persist_spacetime_token() {
                     log::info!("SpacetimeDB token persisted successfully");
                 }
             }
+        }
+    });
+}
+
+/// A hook that automatically registers the device with SpacetimeDB when connected.
+///
+/// This should be called once in the root App component. It will:
+/// 1. Get the device ID (ANDROID_ID on Android)
+/// 2. Call the register_device reducer when connected
+/// 3. Update the device's last_seen timestamp on each connection
+///
+/// The device registration happens every time the app connects, ensuring the
+/// last_seen timestamp is kept up to date.
+#[must_use = "this hook must be called in a component to enable device registration"]
+pub fn use_register_device() {
+    let ctx = use_spacetimedb_context();
+    let connection_state = ctx.state.clone();
+    let register_device = crate::spacetime_module_bindings::dioxus::use_reducer_register_device();
+
+    use_effect(move || {
+        // Read the connection state to make this effect reactive
+        let state = connection_state.read().clone();
+        log::info!("Device registration: connection state changed to {:?}", state);
+        
+        // When the connection state changes to Connected, register the device
+        if let ConnectionState::Connected(_identity, _token) = state {
+            log::info!("Device registration: connected, starting registration");
+            let register_device_fn = register_device.clone();
+            spawn(async move {
+                // Get the device ID
+                log::info!("Device registration: getting device ID");
+                let device_id = match device_id_service::get_device_id() {
+                    Ok(id) => {
+                        log::info!("Device registration: got device ID: {}", id);
+                        id
+                    },
+                    Err(e) => {
+                        log::error!("Device registration: failed to get device ID: {}", e);
+                        return;
+                    }
+                };
+
+                // Register the device (creates or updates last_seen on reconnect).
+                log::info!("Device registration: calling register_device reducer for device {}", device_id);
+                register_device_fn(
+                    crate::spacetime_module_bindings::register_device_args_type::RegisterDeviceArgs {
+                        device_id: device_id.clone(),
+                        name: None,
+                        comment: None,
+                    },
+                );
+                log::info!("Device registration: register_device reducer called for device {}", device_id);
+            });
+        } else {
+            log::info!("Device registration: not connected, skipping registration");
         }
     });
 }

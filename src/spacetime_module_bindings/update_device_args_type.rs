@@ -6,16 +6,12 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 
 #[derive(__lib::ser::Serialize, __lib::de::Deserialize, Clone, PartialEq, Debug)]
 #[sats(crate = __lib)]
-pub struct CreateEventArgs {
-    pub uuid: String,
-    pub quail_uuid: String,
-    pub event_type: String,
-    pub event_date: String,
-    pub notes: Option<String>,
-    pub photos: Option<String>,
+pub struct UpdateDeviceArgs {
     pub device_id: String,
+    pub name: Option<String>,
+    pub comment: Option<String>,
 }
 
-impl __sdk::InModule for CreateEventArgs {
+impl __sdk::InModule for UpdateDeviceArgs {
     type Module = super::RemoteModule;
 }

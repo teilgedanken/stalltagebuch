@@ -79,14 +79,14 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 let photo_list: Vec<Photo> = photos_table
                     .read()
                     .iter()
-                    .filter(|p| p.collection_uuid.contains(&quail_uuid_str) || p.owner == quail.owner)
+                    .filter(|p| {
+                        p.collection_uuid.contains(&quail_uuid_str) || p.owner == quail.owner
+                    })
                     .cloned()
                     .collect();
                 photos.set(photo_list);
             }
         }
-
-
     });
 
     let quail_id_for_submit = quail_id.clone();

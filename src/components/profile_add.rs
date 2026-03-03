@@ -18,9 +18,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
     let create_quail = spacetime::use_reducer_create_quail();
-    let set_quail_photo = spacetime::use_reducer_set_quail_photo();
     let create_photo_collection = spacetime::use_reducer_create_photo_collection();
-    let create_photo = spacetime::use_reducer_create_photo();
     let connection = spacetime::use_connection();
 
     let mut handle_submit = move || {
@@ -54,33 +52,34 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             Some(RingColor::from_str(ring_color_trimmed).as_str().to_string())
         };
 
+        let device_id = crate::services::device_id_service::get_device_id()
+            .unwrap_or_else(|_| "unknown-device".to_string());
+
         create_quail(spacetime::CreateQuailArgs {
             uuid: quail_uuid.clone(),
             name: name_trimmed.to_string(),
             gender: gender_value.as_str().to_string(),
             ring_color: ring_color_value,
             profile_photo: None,
+            device_id: device_id.clone(),
         });
 
         let on_navigate_submit = on_navigate.clone();
-        let set_quail_photo_reducer = set_quail_photo.clone();
         let create_photo_collection_reducer = create_photo_collection.clone();
-        let create_photo_reducer = create_photo.clone();
 
         spawn(async move {
             if let Some(_path) = photo_path() {
                 // Photo handling is now managed via SpacetimeDB
                 // Create photo collection in Spacetime
                 let collection_uuid = quail_uuid.clone();
-                create_photo_collection_reducer(
-                    spacetime::CreatePhotoCollectionArgs {
-                        uuid: collection_uuid.clone(),
-                        quail_uuid: Some(quail_uuid.clone()),
-                        event_uuid: None,
-                        name: format!("Fotos für {}", name_trimmed),
-                    },
-                );
-                
+                create_photo_collection_reducer(spacetime::CreatePhotoCollectionArgs {
+                    uuid: collection_uuid.clone(),
+                    quail_uuid: Some(quail_uuid.clone()),
+                    event_uuid: None,
+                    name: format!("Fotos für {}", name_trimmed),
+                    device_id,
+                });
+
                 log::debug!("Photo syncing - SpacetimeDB not yet fully implemented");
             }
 

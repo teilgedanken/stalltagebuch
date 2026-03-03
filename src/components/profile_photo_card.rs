@@ -16,7 +16,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
     let mut show_fullscreen = use_signal(|| false);
     let mut uploading = use_signal(|| false);
     let mut upload_error = use_signal(|| String::new());
-    let has_profile_photo = profile_photo.is_some();
+    let _has_profile_photo = profile_photo.is_some();
     let quail_id_open = quail_id.clone();
     let photos = photos_table.read().clone();
 
@@ -79,24 +79,31 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                 style: "position:absolute; bottom:12px; left:12px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
                 disabled: uploading(),
                 onclick: {
-                    let quail_id_for_gallery = quail_id.clone();
-                    let create_photo_collection_gallery = create_photo_collection.clone();
-                    let create_photo_gallery = create_photo.clone();
-                    let set_quail_photo_gallery = set_quail_photo.clone();
-                    let needs_profile_photo = !has_profile_photo;
+                    let _quail_id_for_gallery = quail_id.clone();
+                    let _create_photo_collection_gallery = create_photo_collection.clone();
+                    let _create_photo_gallery = create_photo.clone();
+                    let _set_quail_photo_gallery = set_quail_photo.clone();
                     move |e| {
                         e.stop_propagation();
                         uploading.set(true);
                         upload_error.set(String::new());
 
-                        let quail_id_clone = quail_id_for_gallery.clone();
-                        let create_photo_collection_gallery_fn = create_photo_collection_gallery
-                            .clone();
-                        let create_photo_gallery_fn = create_photo_gallery.clone();
-                        let set_quail_photo_gallery_fn = set_quail_photo_gallery.clone();
+                        let quail_id_for_gallery = _quail_id_for_gallery.clone();
+                        let create_photo_collection_gallery = _create_photo_collection_gallery.clone();
+                        let create_photo_gallery = _create_photo_gallery.clone();
+                        let set_quail_photo_gallery = _set_quail_photo_gallery.clone();
+                        let has_profile_photo = _has_profile_photo;
+
                         spawn(async move {
                             #[cfg(target_os = "android")]
                             {
+                                let quail_id_clone = quail_id_for_gallery;
+                                let create_photo_collection_gallery_fn = create_photo_collection_gallery;
+                                let create_photo_gallery_fn = create_photo_gallery;
+                                let set_quail_photo_gallery_fn = set_quail_photo_gallery;
+                                let device_id = crate::services::device_id_service::get_device_id()
+                                    .unwrap_or_else(|_| "unknown-device".to_string());
+                                let needs_profile_photo = !has_profile_photo;
                                 match crate::camera::pick_images() {
                                     Ok(paths) => {
                                         if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
@@ -114,6 +121,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                             .take(8)
                                                             .collect::<String>(),
                                                     ),
+                                                    device_id: device_id.clone(),
                                                 },
                                             );
                                             let mut profile_photo_set = false;
@@ -124,6 +132,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                     uuid: photo_uuid.to_string(),
                                                     collection_uuid: collection_uuid.to_string(),
                                                     relative_path: path_str,
+                                                    device_id: device_id.clone(),
                                                 });
                                                 if needs_profile_photo && !profile_photo_set {
                                                     set_quail_photo_gallery_fn(
@@ -165,24 +174,31 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                 style: "position:absolute; bottom:12px; right:12px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
                 disabled: uploading(),
                 onclick: {
-                    let quail_id_for_camera = quail_id.clone();
-                    let create_photo_collection_camera = create_photo_collection.clone();
-                    let create_photo_camera = create_photo.clone();
-                    let set_quail_photo_camera = set_quail_photo.clone();
-                    let needs_profile_photo = !has_profile_photo;
+                    let _quail_id_for_camera = quail_id.clone();
+                    let _create_photo_collection_camera = create_photo_collection.clone();
+                    let _create_photo_camera = create_photo.clone();
+                    let _set_quail_photo_camera = set_quail_photo.clone();
                     move |e| {
                         e.stop_propagation();
                         uploading.set(true);
                         upload_error.set(String::new());
 
-                        let quail_id_clone = quail_id_for_camera.clone();
-                        let create_photo_collection_camera_fn = create_photo_collection_camera
-                            .clone();
-                        let create_photo_camera_fn = create_photo_camera.clone();
-                        let set_quail_photo_camera_fn = set_quail_photo_camera.clone();
+                        let quail_id_for_camera = _quail_id_for_camera.clone();
+                        let create_photo_collection_camera = _create_photo_collection_camera.clone();
+                        let create_photo_camera = _create_photo_camera.clone();
+                        let set_quail_photo_camera = _set_quail_photo_camera.clone();
+                        let has_profile_photo = _has_profile_photo;
+
                         spawn(async move {
                             #[cfg(target_os = "android")]
                             {
+                                let quail_id_clone = quail_id_for_camera;
+                                let create_photo_collection_camera_fn = create_photo_collection_camera;
+                                let create_photo_camera_fn = create_photo_camera;
+                                let set_quail_photo_camera_fn = set_quail_photo_camera;
+                                let device_id = crate::services::device_id_service::get_device_id()
+                                    .unwrap_or_else(|_| "unknown-device".to_string());
+                                let needs_profile_photo = !has_profile_photo;
                                 match crate::camera::capture_photo() {
                                     Ok(path) => {
                                         let path_str = path.to_string_lossy().to_string();
@@ -201,6 +217,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                             .take(8)
                                                             .collect::<String>(),
                                                     ),
+                                                    device_id: device_id.clone(),
                                                 },
                                             );
                                             let photo_uuid = uuid::Uuid::new_v4().to_string();
@@ -208,6 +225,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                 uuid: photo_uuid.to_string(),
                                                 collection_uuid: collection_uuid.to_string(),
                                                 relative_path: path_str,
+                                                device_id,
                                             });
                                             if needs_profile_photo {
                                                 set_quail_photo_camera_fn(

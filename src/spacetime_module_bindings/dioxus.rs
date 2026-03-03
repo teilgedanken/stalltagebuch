@@ -19,6 +19,7 @@ pub type SharedConnection = Arc<DbConnection>;
 /// Container for all table signals, created at root level.
 #[derive(Clone)]
 pub struct TableSignals {
+    pub devices: SyncSignal<Vec<Device>>,
     pub egg_records: SyncSignal<Vec<EggRecord>>,
     pub photo_collections: SyncSignal<Vec<PhotoCollection>>,
     pub photos: SyncSignal<Vec<Photo>>,
@@ -77,6 +78,7 @@ pub fn use_spacetimedb_context_provider(
     let error: SyncSignal<Option<String>> = use_signal_sync(|| None);
 
     let mut table_signals = TableSignals {
+        devices: use_signal_sync(Vec::new),
         egg_records: use_signal_sync(Vec::new),
         photo_collections: use_signal_sync(Vec::new),
         photos: use_signal_sync(Vec::new),
@@ -110,6 +112,23 @@ pub fn use_spacetimedb_context_provider(
                 .with_database_name(&module_name)
                 .with_token(token)
                 .on_connect(move |conn, identity, token| {
+                    // Populate initial rows for devices
+                    let current: Vec<Device> = conn.db.devices().iter().collect();
+                    table_signals.devices.set(current);
+
+                    // Keep signal in sync on changes
+                    conn.db.devices().on_insert(move |ctx, _row| {
+                        let updated: Vec<Device> = ctx.db.devices().iter().collect();
+                        table_signals.devices.set(updated);
+                    });
+                    conn.db.devices().on_update(move |ctx, _old, _new| {
+                        let updated: Vec<Device> = ctx.db.devices().iter().collect();
+                        table_signals.devices.set(updated);
+                    });
+                    conn.db.devices().on_delete(move |ctx, _row| {
+                        let updated: Vec<Device> = ctx.db.devices().iter().collect();
+                        table_signals.devices.set(updated);
+                    });
                     // Populate initial rows for egg_records
                     let current: Vec<EggRecord> = conn.db.egg_records().iter().collect();
                     table_signals.egg_records.set(current);
@@ -265,6 +284,13 @@ pub fn use_subscription(queries: &[&str]) {
 
 // --- Table hooks ---
 
+/// Get a reactive signal containing all rows of the `devices` table.
+#[must_use]
+pub fn use_table_devices() -> SyncSignal<Vec<Device>> {
+    let ctx = use_spacetimedb_context();
+    ctx.tables.devices
+}
+
 /// Get a reactive signal containing all rows of the `egg_records` table.
 #[must_use]
 pub fn use_table_egg_records() -> SyncSignal<Vec<EggRecord>> {
@@ -304,8 +330,8 @@ pub fn use_table_quails() -> SyncSignal<Vec<Quail>> {
 
 /// Get a callback to invoke the `create_event` reducer.
 #[must_use]
-pub fn use_reducer_create_event()
--> impl Fn(create_event_args_type::CreateEventArgs) + Clone + 'static {
+pub fn use_reducer_create_event(
+) -> impl Fn(create_event_args_type::CreateEventArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_event_args_type::CreateEventArgs| {
@@ -317,8 +343,8 @@ pub fn use_reducer_create_event()
 
 /// Get a callback to invoke the `create_photo` reducer.
 #[must_use]
-pub fn use_reducer_create_photo()
--> impl Fn(create_photo_args_type::CreatePhotoArgs) + Clone + 'static {
+pub fn use_reducer_create_photo(
+) -> impl Fn(create_photo_args_type::CreatePhotoArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_photo_args_type::CreatePhotoArgs| {
@@ -330,8 +356,8 @@ pub fn use_reducer_create_photo()
 
 /// Get a callback to invoke the `create_photo_collection` reducer.
 #[must_use]
-pub fn use_reducer_create_photo_collection()
--> impl Fn(create_photo_collection_args_type::CreatePhotoCollectionArgs) + Clone + 'static {
+pub fn use_reducer_create_photo_collection(
+) -> impl Fn(create_photo_collection_args_type::CreatePhotoCollectionArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_photo_collection_args_type::CreatePhotoCollectionArgs| {
@@ -343,13 +369,25 @@ pub fn use_reducer_create_photo_collection()
 
 /// Get a callback to invoke the `create_quail` reducer.
 #[must_use]
-pub fn use_reducer_create_quail()
--> impl Fn(create_quail_args_type::CreateQuailArgs) + Clone + 'static {
+pub fn use_reducer_create_quail(
+) -> impl Fn(create_quail_args_type::CreateQuailArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: create_quail_args_type::CreateQuailArgs| {
         if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_quail(args);
+        }
+    }
+}
+
+/// Get a callback to invoke the `delete_device` reducer.
+#[must_use]
+pub fn use_reducer_delete_device() -> impl Fn(String) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |device_id: String| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.delete_device(device_id);
         }
     }
 }
@@ -414,6 +452,19 @@ pub fn use_reducer_delete_quail() -> impl Fn(String) + Clone + 'static {
     }
 }
 
+/// Get a callback to invoke the `register_device` reducer.
+#[must_use]
+pub fn use_reducer_register_device(
+) -> impl Fn(register_device_args_type::RegisterDeviceArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: register_device_args_type::RegisterDeviceArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.register_device(args);
+        }
+    }
+}
+
 /// Get a callback to invoke the `set_quail_photo` reducer.
 #[must_use]
 pub fn use_reducer_set_quail_photo() -> impl Fn(String, Option<String>) + Clone + 'static {
@@ -426,10 +477,23 @@ pub fn use_reducer_set_quail_photo() -> impl Fn(String, Option<String>) + Clone 
     }
 }
 
+/// Get a callback to invoke the `update_device` reducer.
+#[must_use]
+pub fn use_reducer_update_device(
+) -> impl Fn(update_device_args_type::UpdateDeviceArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: update_device_args_type::UpdateDeviceArgs| {
+        if let Some(conn) = conn_signal.read().as_ref() {
+            let _ = conn.reducers.update_device(args);
+        }
+    }
+}
+
 /// Get a callback to invoke the `update_event` reducer.
 #[must_use]
-pub fn use_reducer_update_event()
--> impl Fn(update_event_args_type::UpdateEventArgs) + Clone + 'static {
+pub fn use_reducer_update_event(
+) -> impl Fn(update_event_args_type::UpdateEventArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_event_args_type::UpdateEventArgs| {
@@ -441,8 +505,8 @@ pub fn use_reducer_update_event()
 
 /// Get a callback to invoke the `update_photo_collection` reducer.
 #[must_use]
-pub fn use_reducer_update_photo_collection()
--> impl Fn(update_photo_collection_args_type::UpdatePhotoCollectionArgs) + Clone + 'static {
+pub fn use_reducer_update_photo_collection(
+) -> impl Fn(update_photo_collection_args_type::UpdatePhotoCollectionArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_photo_collection_args_type::UpdatePhotoCollectionArgs| {
@@ -454,8 +518,8 @@ pub fn use_reducer_update_photo_collection()
 
 /// Get a callback to invoke the `update_photo_sync_status` reducer.
 #[must_use]
-pub fn use_reducer_update_photo_sync_status()
--> impl Fn(update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs) + Clone + 'static {
+pub fn use_reducer_update_photo_sync_status(
+) -> impl Fn(update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs| {
@@ -467,8 +531,8 @@ pub fn use_reducer_update_photo_sync_status()
 
 /// Get a callback to invoke the `update_quail` reducer.
 #[must_use]
-pub fn use_reducer_update_quail()
--> impl Fn(update_quail_args_type::UpdateQuailArgs) + Clone + 'static {
+pub fn use_reducer_update_quail(
+) -> impl Fn(update_quail_args_type::UpdateQuailArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: update_quail_args_type::UpdateQuailArgs| {
@@ -480,8 +544,8 @@ pub fn use_reducer_update_quail()
 
 /// Get a callback to invoke the `upsert_egg_record` reducer.
 #[must_use]
-pub fn use_reducer_upsert_egg_record()
--> impl Fn(upsert_egg_record_args_type::UpsertEggRecordArgs) + Clone + 'static {
+pub fn use_reducer_upsert_egg_record(
+) -> impl Fn(upsert_egg_record_args_type::UpsertEggRecordArgs) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |args: upsert_egg_record_args_type::UpsertEggRecordArgs| {

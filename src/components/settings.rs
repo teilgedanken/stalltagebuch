@@ -546,10 +546,13 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                             // Save settings will be implemented for SpacetimeDB
                                                             current_settings.set(Some(settings));
                                                             login_state.set(LoginState::Success);
-                                                            status_message.set(
-                                                                format!("\u{2705} {}", t!("sync-login-success-folder"))
+                                                            status_message.set(format!(
+                                                                "\u{2705} {}",
+                                                                t!("sync-login-success-folder")
+                                                            ));
+                                                            log::info!(
+                                                                "LoginFlow: Zugangsdaten gespeichert und Login abgeschlossen."
                                                             );
-                                                            log::info!("LoginFlow: Zugangsdaten gespeichert und Login abgeschlossen.");
                                                             return;
                                                         }
                                                         Err(e) => {

@@ -6,64 +6,64 @@
 #![allow(unused, clippy::all)]
 use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 
-use super::upsert_egg_record_args_type::UpsertEggRecordArgs as UpsertEggRecordArgsType;
+use super::update_device_args_type::UpdateDeviceArgs as UpdateDeviceArgsType;
 
 #[derive(__lib::ser::Serialize, __lib::de::Deserialize, Clone, PartialEq, Debug)]
 #[sats(crate = __lib)]
-pub(super) struct UpsertEggRecordArgs {
-    pub args: UpsertEggRecordArgsType,
+pub(super) struct UpdateDeviceArgs {
+    pub args: UpdateDeviceArgsType,
 }
 
-impl From<UpsertEggRecordArgs> for super::Reducer {
-    fn from(args: UpsertEggRecordArgs) -> Self {
-        Self::UpsertEggRecord { args: args.args }
+impl From<UpdateDeviceArgs> for super::Reducer {
+    fn from(args: UpdateDeviceArgs) -> Self {
+        Self::UpdateDevice { args: args.args }
     }
 }
 
-impl __sdk::InModule for UpsertEggRecordArgs {
+impl __sdk::InModule for UpdateDeviceArgs {
     type Module = super::RemoteModule;
 }
 
 #[allow(non_camel_case_types)]
-/// Extension trait for access to the reducer `upsert_egg_record`.
+/// Extension trait for access to the reducer `update_device`.
 ///
 /// Implemented for [`super::RemoteReducers`].
-pub trait upsert_egg_record {
-    /// Request that the remote module invoke the reducer `upsert_egg_record` to run as soon as possible.
+pub trait update_device {
+    /// Request that the remote module invoke the reducer `update_device` to run as soon as possible.
     ///
     /// This method returns immediately, and errors only if we are unable to send the request.
     /// The reducer will run asynchronously in the future,
     ///  and this method provides no way to listen for its completion status.
     ///
-    /// Use [`upsert_egg_record::upsert_egg_record_then`] to run a callback after the reducer completes.
-    fn upsert_egg_record(&self, args: UpsertEggRecordArgsType) -> __sdk::Result<()> {
-        self.upsert_egg_record_then(args, |_, _| {})
+    /// Use [`update_device::update_device_then`] to run a callback after the reducer completes.
+    fn update_device(&self, args: UpdateDeviceArgsType) -> __sdk::Result<()> {
+        self.update_device_then(args, |_, _| {})
     }
 
-    /// Request that the remote module invoke the reducer `upsert_egg_record` to run as soon as possible,
+    /// Request that the remote module invoke the reducer `update_device` to run as soon as possible,
     /// registering `callback` to run when we are notified that the reducer completed.
     ///
     /// This method returns immediately, and errors only if we are unable to send the request.
     /// The reducer will run asynchronously in the future,
     ///  and its status can be observed with the `callback`.
-    fn upsert_egg_record_then(
+    fn update_device_then(
         &self,
-        args: UpsertEggRecordArgsType,
+        args: UpdateDeviceArgsType,
         callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
             + Send
             + 'static,
     ) -> __sdk::Result<()>;
 }
 
-impl upsert_egg_record for super::RemoteReducers {
-    fn upsert_egg_record_then(
+impl update_device for super::RemoteReducers {
+    fn update_device_then(
         &self,
-        args: UpsertEggRecordArgsType,
+        args: UpdateDeviceArgsType,
         callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
             + Send
             + 'static,
     ) -> __sdk::Result<()> {
         self.imp
-            .invoke_reducer_with_callback(UpsertEggRecordArgs { args }, callback)
+            .invoke_reducer_with_callback(UpdateDeviceArgs { args }, callback)
     }
 }

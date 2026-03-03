@@ -29,7 +29,10 @@ fn EventPhotoGallery(
             let mut loaded = Vec::new();
             // TODO: Load photos from SpacetimeDB instead of database
             for photo in photo_list {
-                log::debug!("Photo {} - loading from SpacetimeDB not yet implemented", photo.uuid);
+                log::debug!(
+                    "Photo {} - loading from SpacetimeDB not yet implemented",
+                    photo.uuid
+                );
             }
             loaded_photos.set(loaded);
         });

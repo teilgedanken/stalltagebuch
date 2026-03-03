@@ -47,11 +47,9 @@ pub trait delete_egg_record {
     fn delete_egg_record_then(
         &self,
         uuid: String,
-        callback: impl FnOnce(
-            &super::ReducerEventContext,
-            Result<Result<(), String>, __sdk::InternalError>,
-        ) + Send
-        + 'static,
+        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
+            + Send
+            + 'static,
     ) -> __sdk::Result<()>;
 }
 
@@ -59,11 +57,9 @@ impl delete_egg_record for super::RemoteReducers {
     fn delete_egg_record_then(
         &self,
         uuid: String,
-        callback: impl FnOnce(
-            &super::ReducerEventContext,
-            Result<Result<(), String>, __sdk::InternalError>,
-        ) + Send
-        + 'static,
+        callback: impl FnOnce(&super::ReducerEventContext, Result<Result<(), String>, __sdk::InternalError>)
+            + Send
+            + 'static,
     ) -> __sdk::Result<()> {
         self.imp
             .invoke_reducer_with_callback(DeleteEggRecordArgs { uuid }, callback)

@@ -13,6 +13,7 @@ pub struct PhotoCollection {
     pub event_uuid: Option<String>,
     pub preview_photo_uuid: Option<String>,
     pub name: String,
+    pub device_id: String,
     pub owner: String,
 }
 
@@ -30,6 +31,7 @@ pub struct PhotoCollectionCols {
     pub event_uuid: __sdk::__query_builder::Col<PhotoCollection, Option<String>>,
     pub preview_photo_uuid: __sdk::__query_builder::Col<PhotoCollection, Option<String>>,
     pub name: __sdk::__query_builder::Col<PhotoCollection, String>,
+    pub device_id: __sdk::__query_builder::Col<PhotoCollection, String>,
     pub owner: __sdk::__query_builder::Col<PhotoCollection, String>,
 }
 
@@ -43,6 +45,7 @@ impl __sdk::__query_builder::HasCols for PhotoCollection {
             event_uuid: __sdk::__query_builder::Col::new(table_name, "event_uuid"),
             preview_photo_uuid: __sdk::__query_builder::Col::new(table_name, "preview_photo_uuid"),
             name: __sdk::__query_builder::Col::new(table_name, "name"),
+            device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
         }
     }

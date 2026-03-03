@@ -30,7 +30,7 @@
 //!
 //! let service = PhotoGalleryService::new(config);
 //! // Process photos and thumbnails
-//! let (new_path, small_thumb, medium_thumb) = 
+//! let (new_path, small_thumb, medium_thumb) =
 //!     service.process_photo("/tmp/photo.jpg".to_string()).await?;
 //! ```
 
