@@ -63,40 +63,81 @@ pub fn use_register_device() {
     let ctx = use_spacetimedb_context();
     let connection_state = ctx.state.clone();
     let register_device = crate::spacetime_module_bindings::dioxus::use_reducer_register_device();
+    let devices = crate::spacetime_module_bindings::dioxus::use_table_devices();
 
     use_effect(move || {
         // Read the connection state to make this effect reactive
         let state = connection_state.read().clone();
-        log::info!("Device registration: connection state changed to {:?}", state);
-        
+        log::info!(
+            "Device registration: connection state changed to {:?}",
+            state
+        );
+
         // When the connection state changes to Connected, register the device
         if let ConnectionState::Connected(_identity, _token) = state {
             log::info!("Device registration: connected, starting registration");
             let register_device_fn = register_device.clone();
-            spawn(async move {
-                // Get the device ID
-                log::info!("Device registration: getting device ID");
-                let device_id = match device_id_service::get_device_id() {
-                    Ok(id) => {
-                        log::info!("Device registration: got device ID: {}", id);
-                        id
-                    },
-                    Err(e) => {
-                        log::error!("Device registration: failed to get device ID: {}", e);
-                        return;
-                    }
-                };
 
+            // Get the device ID before spawning async
+            let device_id = match device_id_service::get_device_id() {
+                Ok(id) => {
+                    log::info!("Device registration: got device ID: {}", id);
+                    id
+                }
+                Err(e) => {
+                    log::error!("Device registration: failed to get device ID: {}", e);
+                    return;
+                }
+            };
+
+            // Check if device already has a name in the devices table
+            let devices_vec = devices.read().clone();
+            let existing_device = devices_vec.iter().find(|d| d.device_id == device_id);
+            let has_existing_name = existing_device.and_then(|d| d.name.as_ref()).is_some();
+
+            log::info!(
+                "Device registration: checking existing device - has_name={}",
+                has_existing_name
+            );
+
+            // Get the device model name only if no existing name
+            let device_name = if has_existing_name {
+                log::info!(
+                    "Device registration: device {} already has a name, skipping model name",
+                    device_id
+                );
+                None
+            } else {
+                log::info!("Device registration: getting device model for new device");
+                match device_id_service::get_device_model() {
+                    Ok(model) => {
+                        log::info!("Device registration: got device model: {}", model);
+                        Some(model)
+                    }
+                    Err(e) => {
+                        log::warn!("Device registration: failed to get device model: {}", e);
+                        None
+                    }
+                }
+            };
+
+            spawn(async move {
                 // Register the device (creates or updates last_seen on reconnect).
-                log::info!("Device registration: calling register_device reducer for device {}", device_id);
+                log::info!(
+                    "Device registration: calling register_device reducer for device {}",
+                    device_id
+                );
                 register_device_fn(
                     crate::spacetime_module_bindings::register_device_args_type::RegisterDeviceArgs {
                         device_id: device_id.clone(),
-                        name: None,
+                        name: device_name,
                         comment: None,
                     },
                 );
-                log::info!("Device registration: register_device reducer called for device {}", device_id);
+                log::info!(
+                    "Device registration: register_device reducer called for device {}",
+                    device_id
+                );
             });
         } else {
             log::info!("Device registration: not connected, skipping registration");

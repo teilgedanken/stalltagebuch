@@ -49,9 +49,9 @@ pub fn get_device_id() -> Result<String, StalltagebuchError> {
 
     // Create a local ref from the global context ref; don't drop the global handle.
     let context_global = unsafe { JObject::from_raw(context_ptr) };
-    let context_local = env
-        .new_local_ref(&context_global)
-        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get local context ref: {}", e)))?;
+    let context_local = env.new_local_ref(&context_global).map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to get local context ref: {}", e))
+    })?;
     std::mem::forget(context_global);
 
     let device_id = get_android_id(&mut env, &context_local)?;
@@ -116,6 +116,51 @@ fn get_android_id(env: &mut JNIEnv, context_obj: &JObject) -> Result<String, Sta
         .into();
 
     Ok(device_id)
+}
+
+/// Get the Android device model name (Build.MODEL).
+///
+/// Returns the consumer-visible device model name (e.g., "Pixel 7", "Galaxy S21").
+///
+/// On non-Android platforms, returns a default value for testing.
+#[cfg(target_os = "android")]
+pub fn get_device_model() -> Result<String, StalltagebuchError> {
+    use jni::JavaVM;
+
+    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
+    let vm = unsafe { JavaVM::from_raw(vm_ptr) }
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get JavaVM: {}", e)))?;
+
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to attach thread: {}", e)))?;
+
+    // Get android.os.Build class
+    let build_class = env
+        .find_class("android/os/Build")
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to find Build class: {}", e)))?;
+
+    // Get the MODEL static field
+    let model_field = env
+        .get_static_field(&build_class, "MODEL", "Ljava/lang/String;")
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get MODEL field: {}", e)))?
+        .l()
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast MODEL: {}", e)))?;
+
+    // Convert to Rust string
+    let model_jstring = JString::from(model_field);
+    let model: String = env
+        .get_string(&model_jstring)
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?
+        .into();
+
+    Ok(model)
+}
+
+/// Non-Android implementation for testing/development
+#[cfg(not(target_os = "android"))]
+pub fn get_device_model() -> Result<String, StalltagebuchError> {
+    Ok("Desktop".to_string())
 }
 
 /// Non-Android implementation for testing/development
