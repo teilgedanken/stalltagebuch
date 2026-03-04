@@ -1,4 +1,4 @@
-use crate::models::{Photo, PhotoGalleryConfig, PhotoResult, PhotoSize};
+use crate::models::{PhotoGalleryConfig, PhotoResult, PhotoSize};
 use crate::thumbnail::{ThumbnailError, rename_photo_with_uuid};
 
 /// Error type for photo gallery operations
@@ -108,14 +108,14 @@ impl PhotoGalleryService {
             PhotoSize::Small => {
                 let mut thumb_path = std::path::PathBuf::from(relative_path);
                 if let Some(name) = thumb_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_small.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_128.webp", name.to_string_lossy()));
                 }
                 thumb_path.to_string_lossy().to_string()
             }
             PhotoSize::Medium => {
                 let mut thumb_path = std::path::PathBuf::from(relative_path);
                 if let Some(name) = thumb_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_medium.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_512.webp", name.to_string_lossy()));
                 }
                 thumb_path.to_string_lossy().to_string()
             }
@@ -150,14 +150,14 @@ impl PhotoGalleryService {
             PhotoSize::Small => {
                 let mut thumb_path = std::path::PathBuf::from(relative_path);
                 if let Some(name) = thumb_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_small.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_128.webp", name.to_string_lossy()));
                 }
                 thumb_path.to_string_lossy().to_string()
             }
             PhotoSize::Medium => {
                 let mut thumb_path = std::path::PathBuf::from(relative_path);
                 if let Some(name) = thumb_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_medium.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_512.webp", name.to_string_lossy()));
                 }
                 thumb_path.to_string_lossy().to_string()
             }

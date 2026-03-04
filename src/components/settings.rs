@@ -425,6 +425,19 @@ enum ConnectionStatus {
     Failed(String),
 }
 
+fn to_sync_settings(saved: &SpacetimeSettings) -> Option<SyncSettings> {
+    if !saved.is_nextcloud_configured() || saved.nextcloud_remote_path.trim().is_empty() {
+        return None;
+    }
+
+    Some(SyncSettings::new(
+        saved.nextcloud_url.clone(),
+        saved.nextcloud_username.clone(),
+        saved.nextcloud_app_password.clone(),
+        saved.nextcloud_remote_path.clone(),
+    ))
+}
+
 #[component]
 pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut server_url = use_signal(|| String::from("https://"));
@@ -457,7 +470,14 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
     // Load existing settings on mount
     use_effect(move || {
-        // Settings loading for SpacetimeDB will be implemented later
+        if let Ok(saved) = spacetime_settings_service::load_spacetime_settings() {
+            if let Some(sync_cfg) = to_sync_settings(&saved) {
+                server_url.set(sync_cfg.server_url.clone());
+                remote_path.set(sync_cfg.remote_path.clone());
+                current_settings.set(Some(sync_cfg));
+                login_state.set(LoginState::Success);
+            }
+        }
     });
 
     // Start Nextcloud Login Flow v2
@@ -626,7 +646,17 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                                 remote_path_value.clone(),
                                                             );
 
-                                                            // Save settings will be implemented for SpacetimeDB
+                                                            if let Ok(mut st_settings) = spacetime_settings_service::load_spacetime_settings() {
+                                                                st_settings.nextcloud_url = settings.server_url.clone();
+                                                                st_settings.nextcloud_username = settings.username.clone();
+                                                                st_settings.nextcloud_app_password = settings.app_password.clone();
+                                                                st_settings.nextcloud_remote_path = settings.remote_path.clone();
+
+                                                                if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
+                                                                    log::error!("Failed to persist Nextcloud settings: {}", e);
+                                                                }
+                                                            }
+
                                                             current_settings.set(Some(settings));
                                                             login_state.set(LoginState::Success);
                                                             status_message.set(format!(
@@ -764,7 +794,15 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
     };
 
     let delete_settings = move |_| {
-        // Delete settings will be implemented for SpacetimeDB
+        if let Ok(mut st_settings) = spacetime_settings_service::load_spacetime_settings() {
+            st_settings.nextcloud_url.clear();
+            st_settings.nextcloud_username.clear();
+            st_settings.nextcloud_app_password.clear();
+            st_settings.nextcloud_remote_path.clear();
+            if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
+                log::error!("Failed to remove Nextcloud settings: {}", e);
+            }
+        }
         current_settings.set(None);
         login_state.set(LoginState::NotStarted);
         status_message.set(format!("\u{2705} {}", t!("sync-settings-deleted")));

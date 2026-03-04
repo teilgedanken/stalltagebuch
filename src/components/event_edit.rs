@@ -1,15 +1,13 @@
 use crate::{
     Screen,
     models::{EventType, QuailEvent},
-    services::photo_service,
     spacetime,
 };
-use base64::Engine;
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
 use dioxus_i18n::t;
-use photo_gallery::{Photo, PhotoResult, PhotoSize};
+use photo_gallery::Photo;
 
 /// Helper component to load and display event photos using Gallery
 #[component]
@@ -26,7 +24,7 @@ fn EventPhotoGallery(
     use_effect(move || {
         let photo_list = photos();
         spawn(async move {
-            let mut loaded = Vec::new();
+            let loaded = Vec::new();
             // TODO: Load photos from SpacetimeDB instead of database
             for photo in photo_list {
                 log::debug!(
@@ -191,7 +189,7 @@ pub fn EventEditScreen(
                 .filter(|p| p.collection_uuid == event_collection_uuid)
                 .map(|p| Photo {
                     uuid: p.uuid.clone(),
-                    id: p.id,
+                    id: 0,
                     collection_uuid: p.collection_uuid.clone(),
                     relative_path: p.relative_path.clone(),
                     sync_status: p.sync_status.clone(),

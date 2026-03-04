@@ -8,7 +8,6 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct Device {
     pub device_id: String,
-    pub id: u64,
     pub name: Option<String>,
     pub comment: Option<String>,
     pub first_seen: i64,
@@ -25,7 +24,6 @@ impl __sdk::InModule for Device {
 /// Provides typed access to columns for query building.
 pub struct DeviceCols {
     pub device_id: __sdk::__query_builder::Col<Device, String>,
-    pub id: __sdk::__query_builder::Col<Device, u64>,
     pub name: __sdk::__query_builder::Col<Device, Option<String>>,
     pub comment: __sdk::__query_builder::Col<Device, Option<String>>,
     pub first_seen: __sdk::__query_builder::Col<Device, i64>,
@@ -38,7 +36,6 @@ impl __sdk::__query_builder::HasCols for Device {
     fn cols(table_name: &'static str) -> Self::Cols {
         DeviceCols {
             device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
-            id: __sdk::__query_builder::Col::new(table_name, "id"),
             name: __sdk::__query_builder::Col::new(table_name, "name"),
             comment: __sdk::__query_builder::Col::new(table_name, "comment"),
             first_seen: __sdk::__query_builder::Col::new(table_name, "first_seen"),

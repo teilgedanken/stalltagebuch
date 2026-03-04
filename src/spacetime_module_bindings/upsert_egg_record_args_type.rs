@@ -8,7 +8,7 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct UpsertEggRecordArgs {
     pub uuid: String,
-    pub record_date: String,
+    pub record_date: i64,
     pub total_eggs: i32,
     pub notes: Option<String>,
     pub device_id: String,

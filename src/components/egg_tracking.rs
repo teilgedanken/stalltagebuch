@@ -25,9 +25,13 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
     // Sync form with record for the selected date
     use_effect(move || {
         let selected_date = date_str();
+        let selected_timestamp = chrono::NaiveDate::parse_from_str(&selected_date, "%Y-%m-%d")
+            .ok()
+            .and_then(|d| d.and_hms_opt(0, 0, 0))
+            .map(|dt| dt.and_utc().timestamp());
         let selected_record = egg_records()
             .into_iter()
-            .find(|record| record.record_date == selected_date);
+            .find(|record| Some(record.record_date) == selected_timestamp);
 
         if let Some(record) = selected_record {
             total_eggs.set(record.total_eggs.to_string());
@@ -79,6 +83,16 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                 return;
             }
         };
+        let record_timestamp = match record_date
+            .and_hms_opt(0, 0, 0)
+            .map(|dt| dt.and_utc().timestamp())
+        {
+            Some(ts) => ts,
+            None => {
+                error.set(Some(t!("error-date-format")));
+                return;
+            }
+        };
 
         // Notes
         let notes_value = notes();
@@ -96,17 +110,19 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         let device_id = crate::services::device_id_service::get_device_id()
             .unwrap_or_else(|_| "unknown-device".to_string());
 
-        let record_uuid = current_uuid.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        let record_uuid = current_uuid
+            .clone()
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
         spawn(async move {
             if eggs_count == 0 {
-                if let Some(uuid) = existing_record_uuid() {
+                if let Some(uuid) = current_uuid {
                     delete_reducer(uuid);
                 }
             } else {
                 upsert_reducer(spacetime::UpsertEggRecordArgs {
                     uuid: record_uuid,
-                    record_date: record_date.format("%Y-%m-%d").to_string(),
+                    record_date: record_timestamp,
                     total_eggs: eggs_count,
                     notes: notes_opt,
                     device_id,

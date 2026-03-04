@@ -8,12 +8,11 @@ use spacetimedb_sdk::DbContext;
 
 #[component]
 pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
-    let mut search_filter = use_signal(|| String::new());
-    // Toggle zeigt "nur Tote" an; Standard (false) zeigt Lebende + Markierte
+    let mut search_filter = use_signal(String::new);
     let mut show_dead = use_signal(|| false);
     let quails = spacetime::use_table_quails();
     let events = spacetime::use_table_quail_events();
-    let _photos = spacetime::use_table_photos();
+    let photos = spacetime::use_table_photos();
     let connection = spacetime::use_connection();
 
     spacetime::use_subscription(&[
@@ -29,13 +28,18 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
 
-        let all_events = events.read().clone();
+        let all_events = events().clone();
         let search = search_filter().to_lowercase();
         let dead_only = show_dead();
 
-        let mut rows = Vec::<(Quail, Option<EventType>)>::new();
+        let photo_paths_by_uuid: std::collections::HashMap<String, String> = photos()
+            .iter()
+            .map(|photo| (photo.uuid.clone(), photo.relative_path.clone()))
+            .collect();
 
-        for remote_quail in quails.read().iter() {
+        let mut rows = Vec::<(Quail, Option<EventType>, Option<String>, Option<String>)>::new();
+
+        for remote_quail in quails().iter() {
             if let Some(owner_value) = owner.as_ref() {
                 if &remote_quail.owner != owner_value {
                     continue;
@@ -47,7 +51,6 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             let status = latest_status_for(&remote_quail.uuid, &all_events);
-
             if dead_only {
                 if !matches!(status, Some(EventType::Died | EventType::Slaughtered)) {
                     continue;
@@ -57,7 +60,12 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             if let Some(local_quail) = to_local_quail(remote_quail) {
-                rows.push((local_quail, status));
+                let profile_photo_uuid =
+                    local_quail.profile_photo.as_ref().map(|id| id.to_string());
+                let profile_photo_path = profile_photo_uuid
+                    .as_ref()
+                    .and_then(|uuid| photo_paths_by_uuid.get(uuid).cloned());
+                rows.push((local_quail, status, profile_photo_uuid, profile_photo_path));
             }
         }
 
@@ -67,15 +75,12 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 
     rsx! {
         div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-
-            // Header
             div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 8px;",
                 h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
                     "🐦 "
                     {t!("profile-list-title")}
                 }
                 div { style: "display: flex; gap: 8px; align-items: center;",
-                    // Toggle: nur tote anzeigen
                     button {
                         style: format!(
                             "padding: 8px 10px; font-size: 16px; border-radius: 8px; {}",
@@ -85,10 +90,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 "background:#f0f0f0; color:#666; border:1px solid #ddd;"
                             },
                         ),
-                        onclick: move |_| {
-                            show_dead.set(!show_dead());
-                        },
-                        // Tombstone Emoji
+                        onclick: move |_| show_dead.set(!show_dead()),
                         "🪦"
                     }
                     button {
@@ -96,38 +98,35 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                         style: "padding: 10px 16px; font-size: 16px; font-weight: 500;",
                         onclick: move |_| on_navigate.call(Screen::AddProfile),
                         "+ "
-                        {t!("action-new")} // New
+                        {t!("action-new")}
                     }
                 }
             }
 
-            // Search & Filter
             div { style: "margin: 12px 0 16px;",
                 input {
                     style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 10px; background: white; margin-bottom: 12px;",
                     r#type: "text",
                     placeholder: "🔍 {t!(\"search-placeholder-name\")}",
                     value: "{search_filter}",
-                    oninput: move |e| {
-                        search_filter.set(e.value());
-                    },
-                }
+                    oninput: move |e| search_filter.set(e.value()),
+                },
             }
 
-            // Profile Grid
             if filtered_profiles().is_empty() {
                 div { style: "text-align: center; padding: 40px; color: #999;",
-                    {t!("profile-list-empty")} // No profiles available
+                    {t!("profile-list-empty")}
                 }
             } else {
                 div { class: "profile-grid",
-                    for (profile , status) in filtered_profiles() {
+                    for (profile, status, profile_photo_uuid, profile_photo_path) in filtered_profiles() {
                         ProfileCard {
+                            key: "{profile.uuid}",
                             profile: profile.clone(),
-                            status: status.clone(),
-                            on_click: move |_| {
-                                on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string()));
-                            },
+                            profile_photo_path,
+                            profile_photo_uuid,
+                            status,
+                            on_click: move |_| on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string())),
                         }
                     }
                 }
@@ -139,11 +138,28 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 #[component]
 pub fn ProfileCard(
     profile: Quail,
+    profile_photo_path: Option<String>,
+    profile_photo_uuid: Option<String>,
     status: Option<EventType>,
     on_click: EventHandler<()>,
 ) -> Element {
-    // TODO: Query photo relative_path from SpacetimeDB if profile.profile_photo is set
-    let profile_photo_path: Option<String> = None;
+    // Subscribe to photos table to dynamically find photo path
+    let photos_table = spacetime::use_table_photos();
+
+    // Clone UUID for use in memo
+    let photo_uuid_for_lookup = profile_photo_uuid.clone();
+    let photo_uuid_for_download = profile_photo_uuid.clone();
+
+    // Trigger photo download when UUID is available
+    use_effect(move || {
+        if let Some(uuid) = &photo_uuid_for_download {
+            let uuid_clone = uuid.clone();
+            spawn(async move {
+                let _ =
+                    crate::services::download_service::ensure_photo_downloaded(&uuid_clone).await;
+            });
+        }
+    });
 
     let overlay_bg = if let Some(ring_color) = &profile.ring_color {
         get_light_color_for(ring_color)
@@ -151,28 +167,34 @@ pub fn ProfileCard(
         "rgba(255, 255, 255, 0.9)".to_string()
     };
 
-    // Image Data URL (Base64)
-    // let has_image = image_data().is_some(); // aktuell nicht genutzt
+    // Try to get photo path from the provided path, or dynamically fetch from photos table
+    let effective_photo_path = use_memo(move || {
+        profile_photo_path.clone().or_else(|| {
+            // If no path provided, dynamically look it up from photos table
+            if let Some(uuid) = &photo_uuid_for_lookup {
+                photos_table()
+                    .iter()
+                    .find(|p| p.uuid == *uuid)
+                    .map(|p| p.relative_path.clone())
+            } else {
+                None
+            }
+        })
+    });
 
     rsx! {
         div { class: "profile-card", onclick: move |_| on_click.call(()),
-            // Square Image Container
             div { class: "profile-image",
-                if let Some(photo_path) = profile_photo_path {
-                    {
-                        rsx! {
-                            ThumbnailImage { key: "{photo_path}", relative_path: photo_path, alt: profile.name.clone() }
-                        }
+                if let Some(photo_path) = effective_photo_path() {
+                    ThumbnailImage {
+                        key: "{photo_path}",
+                        relative_path: photo_path,
+                        alt: profile.name.clone(),
                     }
                 } else {
-                    {
-                        rsx! {
-                            div { class: "profile-image-placeholder", "🐦" }
-                        }
-                    }
+                    div { class: "profile-image-placeholder", "🐦" }
                 }
 
-                // Overlay with name and gender
                 div {
                     class: "profile-overlay",
                     style: format!("background: {};", overlay_bg),
@@ -180,34 +202,18 @@ pub fn ProfileCard(
                     div { class: "profile-gender", "{profile.gender.display_name()}" }
                 }
 
-                // Status Overlay Emoji (top right corner)
                 {
                     if let Some(status) = status {
                         match status {
                             EventType::Sick => rsx! {
-                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
-                                    "🤒"
-                                }
+                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🤒" }
                             },
-                            EventType::MarkedForSlaughter => {
-                                rsx! {
-                                    div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
-                                        "🥩"
-                                    }
-                                }
-                            }
+                            EventType::MarkedForSlaughter | EventType::Slaughtered => rsx! {
+                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🥩" }
+                            },
                             EventType::Died => rsx! {
-                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
-                                    "🪦"
-                                }
+                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🪦" }
                             },
-                            EventType::Slaughtered => {
-                                rsx! {
-                                    div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);",
-                                        "🥩"
-                                    }
-                                }
-                            }
                             _ => rsx! {},
                         }
                     } else {
@@ -226,7 +232,7 @@ fn latest_status_for(quail_uuid: &str, events: &[spacetime::QuailEvent]) -> Opti
         .max_by(|a, b| {
             a.event_date
                 .cmp(&b.event_date)
-                .then_with(|| a.id.cmp(&b.id))
+                .then_with(|| a.uuid.cmp(&b.uuid))
         })
         .map(|event| EventType::from_str(&event.event_type))
 }
@@ -250,7 +256,6 @@ fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {
     })
 }
 
-/// Helper function to convert color names to light versions
 fn get_light_color_for(color: &RingColor) -> String {
     match color {
         RingColor::Rot => "rgba(255, 200, 200, 0.9)".to_string(),

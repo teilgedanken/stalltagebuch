@@ -19,6 +19,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut saving = use_signal(|| false);
     let create_quail = spacetime::use_reducer_create_quail();
     let create_photo_collection = spacetime::use_reducer_create_photo_collection();
+    let create_photo = spacetime::use_reducer_create_photo();
+    let set_quail_photo = spacetime::use_reducer_set_quail_photo();
     let connection = spacetime::use_connection();
 
     let mut handle_submit = move || {
@@ -55,32 +57,65 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
         let device_id = crate::services::device_id_service::get_device_id()
             .unwrap_or_else(|_| "unknown-device".to_string());
 
+        // Capture photo_path BEFORE moving into async
+        let selected_photo_path = photo_path();
+        let photo_name_for_display = name_trimmed.clone();
+
         create_quail(spacetime::CreateQuailArgs {
             uuid: quail_uuid.clone(),
             name: name_trimmed.to_string(),
             gender: gender_value.as_str().to_string(),
             ring_color: ring_color_value,
             profile_photo: None,
+            birthday: None,
             device_id: device_id.clone(),
         });
 
         let on_navigate_submit = on_navigate.clone();
         let create_photo_collection_reducer = create_photo_collection.clone();
+        let create_photo_reducer = create_photo.clone();
+        let set_quail_photo_reducer = set_quail_photo.clone();
 
         spawn(async move {
-            if let Some(_path) = photo_path() {
-                // Photo handling is now managed via SpacetimeDB
-                // Create photo collection in Spacetime
+            if let Some(path) = selected_photo_path {
                 let collection_uuid = quail_uuid.clone();
+
+                // Create photo collection in Spacetime
                 create_photo_collection_reducer(spacetime::CreatePhotoCollectionArgs {
                     uuid: collection_uuid.clone(),
                     quail_uuid: Some(quail_uuid.clone()),
                     event_uuid: None,
-                    name: format!("Fotos für {}", name_trimmed),
-                    device_id,
+                    name: format!("Fotos für {}", photo_name_for_display),
+                    device_id: device_id.clone(),
                 });
 
-                log::debug!("Photo syncing - SpacetimeDB not yet fully implemented");
+                // Process the selected photo
+                let source = path.to_string_lossy().to_string();
+                match crate::services::photo_service::process_photo(source).await {
+                    Ok((relative_original, _, _)) => {
+                        if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                        {
+                            // Create photo record in Spacetime
+                            create_photo_reducer(spacetime::CreatePhotoArgs {
+                                uuid: photo_uuid.to_string(),
+                                collection_uuid: collection_uuid.clone(),
+                                relative_path: relative_original.clone(),
+                                device_id: device_id.clone(),
+                            });
+
+                            // Set this photo as the quail's profile photo
+                            set_quail_photo_reducer(
+                                quail_uuid.to_string(),
+                                Some(photo_uuid.to_string()),
+                            );
+                        }
+                    }
+                    Err(err) => {
+                        log::warn!("Failed to process photo in AddProfileScreen: {}", err);
+                    }
+                }
             }
 
             success.set(true);

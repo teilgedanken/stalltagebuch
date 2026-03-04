@@ -12,8 +12,8 @@ pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
             .into_iter()
             .filter_map(|record| {
                 let uuid = uuid::Uuid::parse_str(&record.uuid).ok()?;
-                let record_date =
-                    chrono::NaiveDate::parse_from_str(&record.record_date, "%Y-%m-%d").ok()?;
+                let record_date = chrono::DateTime::from_timestamp(record.record_date, 0)
+                    .map(|dt| dt.date_naive())?;
 
                 Some(EggRecord {
                     uuid,

@@ -5,6 +5,7 @@ use crate::models::{EventType, Gender};
 use crate::spacetime;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
+use photo_gallery::{CollectionFullscreen, ThumbnailImage};
 use spacetimedb_sdk::DbContext;
 
 /// Helper function to resolve photo path to absolute path
@@ -15,6 +16,8 @@ use spacetimedb_sdk::DbContext;
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
     let quails = spacetime::use_table_quails();
     let all_events = spacetime::use_table_quail_events();
+    let photo_collections_table = spacetime::use_table_photo_collections();
+    let photos_table = spacetime::use_table_photos();
 
     let connection = spacetime::use_connection();
 
@@ -39,8 +42,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
 
-        quails
-            .read()
+        quails()
             .iter()
             .find(|quail| {
                 quail.uuid == quail_id_for_profile_memo
@@ -60,8 +62,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
 
-        let mut rows: Vec<spacetime::QuailEvent> = all_events
-            .read()
+        let mut rows: Vec<spacetime::QuailEvent> = all_events()
             .iter()
             .filter(|event| {
                 event.quail_uuid == quail_id_for_events_memo
@@ -76,9 +77,66 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         rows.sort_by(|a, b| {
             b.event_date
                 .cmp(&a.event_date)
-                .then_with(|| b.id.cmp(&a.id))
+                .then_with(|| b.uuid.cmp(&a.uuid))
         });
         rows
+    });
+
+    let quail_id_for_photos_memo = quail_id.clone();
+    let photo_collections = use_memo(move || {
+        let owner = connection
+            .read()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        let mut rows: Vec<spacetime::PhotoCollection> = photo_collections_table()
+            .iter()
+            .filter(|coll| {
+                coll.quail_uuid.as_ref() == Some(&quail_id_for_photos_memo)
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &coll.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| b.uuid.cmp(&a.uuid));
+        rows
+    });
+
+    let photo_uuid_to_path = use_memo(move || {
+        let mut map = std::collections::HashMap::new();
+        for photo in photos_table().iter() {
+            map.insert(photo.uuid.clone(), photo.relative_path.clone());
+        }
+        map
+    });
+
+    let collection_to_photos = use_memo(move || {
+        let mut map = std::collections::HashMap::new();
+        for photo in photos_table().iter() {
+            map.entry(photo.collection_uuid.clone())
+                .or_insert_with(Vec::new)
+                .push(photo.uuid.clone());
+        }
+        map
+    });
+
+    let filtered_thumbnail_collections = use_memo(move || {
+        let collections = photo_collections();
+        let photo_map = photo_uuid_to_path();
+        collections
+            .into_iter()
+            .filter_map(|collection| {
+                collection.preview_photo_uuid.as_ref().and_then(|uuid| {
+                    photo_map
+                        .get(uuid)
+                        .map(|path| (collection.uuid.clone(), uuid.clone(), path.clone()))
+                })
+            })
+            .collect::<Vec<_>>()
     });
 
     // Auto-refresh when quails table changes to pick up edits from profile_edit screen
@@ -189,6 +247,72 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                             }
                             div { style: "font-size:11px; color:#999; word-break:break-all; font-family:monospace;",
                                 "{p.uuid}"
+                            }
+                        }
+                    }
+
+                    // Photo Gallery Grid
+                    {
+                        let thumbnails = filtered_thumbnail_collections();
+                        if !thumbnails.is_empty() {
+                            let mut show_fullscreen = use_signal(|| false);
+                            let mut selected_photos = use_signal(Vec::<String>::new);
+                            let mut selected_index = use_signal(|| 0usize);
+                            let coll_photos = collection_to_photos();
+                            let photo_map = photo_uuid_to_path();
+                            let mut photo_refresh = use_signal(|| 0u32);
+
+                            rsx! {
+                                div { style: "margin-top:24px;",
+                                    div { style: "display:flex; align-items:center; margin-bottom:12px;",
+                                        h3 { style: "margin:0; font-size:18px; color:#333; font-weight:600;",
+                                            "📸 "
+                                            {t!("photos-title")} // Fotos
+                                        }
+                                    }
+
+                                    div { style: "display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:12px;",
+                                        for (collection_uuid, preview_uuid, preview_path) in thumbnails {
+                                            div {
+                                                key: "{preview_uuid}-{photo_refresh()}",
+                                                style: "cursor: pointer; position: relative;",
+                                                onclick: {
+                                                    let coll_photos_click = coll_photos.clone();
+                                                    let photo_map_click = photo_map.clone();
+                                                    let collection_uuid_click = collection_uuid.clone();
+                                                    move |_| {
+                                                        if let Some(photo_uuids) = coll_photos_click.get(&collection_uuid_click) {
+                                                            let paths: Vec<String> = photo_uuids
+                                                                .iter()
+                                                                .filter_map(|uuid| photo_map_click.get(uuid).cloned())
+                                                                .collect();
+                                                            if !paths.is_empty() {
+                                                                selected_photos.set(paths);
+                                                                selected_index.set(0);
+                                                                show_fullscreen.set(true);
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                ThumbnailImage {
+                                                    relative_path: preview_path,
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if show_fullscreen() && !selected_photos().is_empty() {
+                                        CollectionFullscreen {
+                                            photo_paths: selected_photos(),
+                                            initial_index: selected_index(),
+                                            on_close: move |_| show_fullscreen.set(false),
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            rsx! {
+                                div {}
                             }
                         }
                     }

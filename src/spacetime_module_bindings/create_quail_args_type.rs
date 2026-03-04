@@ -12,6 +12,7 @@ pub struct CreateQuailArgs {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub birthday: Option<String>,
     pub device_id: String,
 }
 

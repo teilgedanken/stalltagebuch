@@ -187,12 +187,19 @@ async fn perform_sync_cycle() -> Result<SyncStats, AppError> {
     });
 
     // Phase 3: Upload local photos that are missing remotely
-    let photos_uploaded = upload_service::upload_photos_batch()
-        .await
-        .unwrap_or_else(|e| {
+    let photos_uploaded = upload_service::upload_photos_batch_with_progress(|current, total| {
+        set_upload_progress(current, total);
+    })
+    .await
+    .unwrap_or_else(|e| {
+        if matches!(e, AppError::Validation(_)) {
+            log::debug!("Photo upload skipped: {}", e);
+        } else {
             log::error!("Photo upload failed: {}", e);
-            0
-        });
+        }
+        0
+    });
+    set_upload_progress(0, 0);
 
     let stats = SyncStats {
         operations_downloaded: ops_downloaded,

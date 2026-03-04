@@ -8,7 +8,6 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct Photo {
     pub uuid: String,
-    pub id: u64,
     pub collection_uuid: String,
     pub relative_path: String,
     pub sync_status: String,
@@ -17,6 +16,8 @@ pub struct Photo {
     pub retry_count: i32,
     pub device_id: String,
     pub owner: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 impl __sdk::InModule for Photo {
@@ -28,7 +29,6 @@ impl __sdk::InModule for Photo {
 /// Provides typed access to columns for query building.
 pub struct PhotoCols {
     pub uuid: __sdk::__query_builder::Col<Photo, String>,
-    pub id: __sdk::__query_builder::Col<Photo, u64>,
     pub collection_uuid: __sdk::__query_builder::Col<Photo, String>,
     pub relative_path: __sdk::__query_builder::Col<Photo, String>,
     pub sync_status: __sdk::__query_builder::Col<Photo, String>,
@@ -37,6 +37,8 @@ pub struct PhotoCols {
     pub retry_count: __sdk::__query_builder::Col<Photo, i32>,
     pub device_id: __sdk::__query_builder::Col<Photo, String>,
     pub owner: __sdk::__query_builder::Col<Photo, String>,
+    pub created_at: __sdk::__query_builder::Col<Photo, i64>,
+    pub updated_at: __sdk::__query_builder::Col<Photo, i64>,
 }
 
 impl __sdk::__query_builder::HasCols for Photo {
@@ -44,7 +46,6 @@ impl __sdk::__query_builder::HasCols for Photo {
     fn cols(table_name: &'static str) -> Self::Cols {
         PhotoCols {
             uuid: __sdk::__query_builder::Col::new(table_name, "uuid"),
-            id: __sdk::__query_builder::Col::new(table_name, "id"),
             collection_uuid: __sdk::__query_builder::Col::new(table_name, "collection_uuid"),
             relative_path: __sdk::__query_builder::Col::new(table_name, "relative_path"),
             sync_status: __sdk::__query_builder::Col::new(table_name, "sync_status"),
@@ -53,6 +54,8 @@ impl __sdk::__query_builder::HasCols for Photo {
             retry_count: __sdk::__query_builder::Col::new(table_name, "retry_count"),
             device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
+            created_at: __sdk::__query_builder::Col::new(table_name, "created_at"),
+            updated_at: __sdk::__query_builder::Col::new(table_name, "updated_at"),
         }
     }
 }

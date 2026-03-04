@@ -5,7 +5,6 @@ pub mod quail_event;
 pub mod spacetime_settings;
 pub mod sync_settings;
 
-pub use device::Device;
 pub use egg_record::EggRecord;
 pub use quail::{Gender, Quail, RingColor};
 pub use quail_event::{EventType, QuailEvent};

@@ -8,7 +8,6 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct QuailEvent {
     pub uuid: String,
-    pub id: u64,
     pub quail_uuid: String,
     pub event_type: String,
     pub event_date: String,
@@ -27,7 +26,6 @@ impl __sdk::InModule for QuailEvent {
 /// Provides typed access to columns for query building.
 pub struct QuailEventCols {
     pub uuid: __sdk::__query_builder::Col<QuailEvent, String>,
-    pub id: __sdk::__query_builder::Col<QuailEvent, u64>,
     pub quail_uuid: __sdk::__query_builder::Col<QuailEvent, String>,
     pub event_type: __sdk::__query_builder::Col<QuailEvent, String>,
     pub event_date: __sdk::__query_builder::Col<QuailEvent, String>,
@@ -42,7 +40,6 @@ impl __sdk::__query_builder::HasCols for QuailEvent {
     fn cols(table_name: &'static str) -> Self::Cols {
         QuailEventCols {
             uuid: __sdk::__query_builder::Col::new(table_name, "uuid"),
-            id: __sdk::__query_builder::Col::new(table_name, "id"),
             quail_uuid: __sdk::__query_builder::Col::new(table_name, "quail_uuid"),
             event_type: __sdk::__query_builder::Col::new(table_name, "event_type"),
             event_date: __sdk::__query_builder::Col::new(table_name, "event_date"),

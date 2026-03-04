@@ -9,6 +9,8 @@ use dioxus::prelude::*;
 
 #[cfg(feature = "components")]
 use std::path::PathBuf;
+#[cfg(feature = "components")]
+use uuid::Uuid;
 
 #[cfg(feature = "components")]
 /// Configuration for photo gallery components
@@ -32,24 +34,27 @@ impl PhotoGalleryContext {
         } else {
             PathBuf::from(&self.storage_path).join(relative_path)
         };
+        let original_path = abs_path.clone();
 
         let file_path = match size {
             PhotoSize::Original => abs_path,
             PhotoSize::Small => {
                 let mut thumb_path = abs_path.clone();
                 if let Some(name) = abs_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_small.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_128.webp", name.to_string_lossy()));
                 }
                 thumb_path
             }
             PhotoSize::Medium => {
                 let mut thumb_path = abs_path.clone();
                 if let Some(name) = abs_path.file_stem() {
-                    thumb_path.set_file_name(format!("{}_medium.webp", name.to_string_lossy()));
+                    thumb_path.set_file_name(format!("{}_512.webp", name.to_string_lossy()));
                 }
                 thumb_path
             }
         };
+
+        self.ensure_thumbnail_exists(&original_path, size);
 
         log::debug!(
             "load_photo_data: file_path={:?} exists={}",
@@ -80,6 +85,39 @@ impl PhotoGalleryContext {
         }
         None
     }
+
+    fn ensure_thumbnail_exists(&self, original_path: &std::path::Path, size: PhotoSize) {
+        if !matches!(size, PhotoSize::Small | PhotoSize::Medium) {
+            return;
+        }
+
+        let Some(stem) = original_path.file_stem().and_then(|s| s.to_str()) else {
+            return;
+        };
+        if Uuid::parse_str(stem).is_err() {
+            return;
+        }
+
+        let Some(parent) = original_path.parent() else {
+            return;
+        };
+        let target_name = match size {
+            PhotoSize::Small => format!("{}_128.webp", stem),
+            PhotoSize::Medium => format!("{}_512.webp", stem),
+            PhotoSize::Original => return,
+        };
+        let target_path = parent.join(target_name);
+        if target_path.exists() || !original_path.exists() {
+            return;
+        }
+
+        let _ = crate::thumbnail::create_thumbnails(
+            original_path.to_string_lossy().as_ref(),
+            stem,
+            128,
+            512,
+        );
+    }
 }
 
 #[cfg(feature = "components")]
@@ -88,14 +126,6 @@ enum PhotoSize {
     Original,
     Small,
     Medium,
-}
-
-#[cfg(feature = "components")]
-#[derive(Debug, Clone)]
-enum ImageLoadState {
-    Loading,
-    Loaded(String),
-    Failed,
 }
 
 #[cfg(feature = "components")]
@@ -113,34 +143,39 @@ pub fn ThumbnailImage(
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
 ) -> Element {
-    let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
-    // Load photo data from relative path
-    use_effect(move || {
-        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Small) {
-            image_state.set(ImageLoadState::Loaded(data));
-        } else {
-            image_state.set(ImageLoadState::Failed);
+    // Track relative_path changes with memo for reactive dependency tracking
+    let path_key = use_memo(move || relative_path.clone());
+
+    // Use resource for async photo loading instead of blocking in effect
+    let photo_resource = use_resource(move || {
+        let ctx = context.clone();
+        let path = path_key();
+        async move {
+            // Simulate async by spawning off-thread would be ideal, but for now
+            // we'll do the synchronous load in the resource which is better than
+            // doing it in an effect since it can show loading state properly
+            load_photo(ctx, path, PhotoSize::Small)
         }
     });
 
     rsx! {
         div { style: "width: 128px; height: 128px; border-radius: 8px; overflow: hidden; background: #f0f0f0;",
-            match image_state() {
-                ImageLoadState::Loading => rsx! {
+            match photo_resource() {
+                None => rsx! {
                     div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999;",
                         "⏳"
                     }
                 },
-                ImageLoadState::Loaded(url) => rsx! {
+                Some(Some(url)) => rsx! {
                     img {
                         src: "{url}",
                         alt: "{alt}",
                         style: "width: 100%; height: 100%; object-fit: cover;",
                     }
                 },
-                ImageLoadState::Failed => rsx! {
+                Some(None) => rsx! {
                     div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999;",
                         "📷"
                     }
@@ -159,33 +194,34 @@ pub fn PreviewImage(
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
 ) -> Element {
-    let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
-    use_effect(move || {
-        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Medium) {
-            image_state.set(ImageLoadState::Loaded(data));
-        } else {
-            image_state.set(ImageLoadState::Failed);
-        }
+    // Track relative_path changes with memo for reactive dependency tracking
+    let path_key = use_memo(move || relative_path.clone());
+
+    // Use resource for async photo loading instead of blocking in effect
+    let photo_resource = use_resource(move || {
+        let ctx = context.clone();
+        let path = path_key();
+        async move { load_photo(ctx, path, PhotoSize::Medium) }
     });
 
     rsx! {
         div { style: "max-width: 512px; max-height: 512px; border-radius: 8px; overflow: hidden; background: #f0f0f0;",
-            match image_state() {
-                ImageLoadState::Loading => rsx! {
+            match photo_resource() {
+                None => rsx! {
                     div { style: "width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; color: #999;",
                         "⏳"
                     }
                 },
-                ImageLoadState::Loaded(url) => rsx! {
+                Some(Some(url)) => rsx! {
                     img {
                         src: "{url}",
                         alt: "{alt}",
                         style: "max-width: 100%; max-height: 100%; object-fit: contain;",
                     }
                 },
-                ImageLoadState::Failed => rsx! {
+                Some(None) => rsx! {
                     div { style: "width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; color: #999;",
                         "📷"
                     }
@@ -201,16 +237,16 @@ pub fn PreviewImage(
 /// Accepts a relative path to the photo and loads from storage
 #[component]
 pub fn FullscreenImage(relative_path: String, on_close: EventHandler<()>) -> Element {
-    let mut image_state = use_signal(|| ImageLoadState::Loading);
     let context = use_context::<PhotoGalleryContext>();
 
-    use_effect(move || {
-        if let Some(data) = load_photo(context.clone(), relative_path.clone(), PhotoSize::Original)
-        {
-            image_state.set(ImageLoadState::Loaded(data));
-        } else {
-            image_state.set(ImageLoadState::Failed);
-        }
+    // Track relative_path changes with memo for reactive dependency tracking
+    let path_key = use_memo(move || relative_path.clone());
+
+    // Use resource for async photo loading instead of blocking in effect
+    let photo_resource = use_resource(move || {
+        let ctx = context.clone();
+        let path = path_key();
+        async move { load_photo(ctx, path, PhotoSize::Original) }
     });
 
     rsx! {
@@ -223,17 +259,17 @@ pub fn FullscreenImage(relative_path: String, on_close: EventHandler<()>) -> Ele
                 }
             }
             div { style: "flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px;",
-                match image_state() {
-                    ImageLoadState::Loading => rsx! {
+                match photo_resource() {
+                    None => rsx! {
                         div { style: "color: white; font-size: 48px;", "⏳" }
                     },
-                    ImageLoadState::Loaded(url) => rsx! {
+                    Some(Some(url)) => rsx! {
                         img {
                             src: "{url}",
                             style: "max-width: 100%; max-height: 100%; object-fit: contain;",
                         }
                     },
-                    ImageLoadState::Failed => rsx! {
+                    Some(None) => rsx! {
                         div { style: "color: white; font-size: 48px;", "📷" }
                     },
                 }

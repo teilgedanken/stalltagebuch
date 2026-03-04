@@ -8,13 +8,14 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct Quail {
     pub uuid: String,
-    pub id: u64,
     pub name: String,
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub birthday: Option<String>,
     pub device_id: String,
     pub owner: String,
+    pub created_at: i64,
 }
 
 impl __sdk::InModule for Quail {
@@ -26,13 +27,14 @@ impl __sdk::InModule for Quail {
 /// Provides typed access to columns for query building.
 pub struct QuailCols {
     pub uuid: __sdk::__query_builder::Col<Quail, String>,
-    pub id: __sdk::__query_builder::Col<Quail, u64>,
     pub name: __sdk::__query_builder::Col<Quail, String>,
     pub gender: __sdk::__query_builder::Col<Quail, String>,
     pub ring_color: __sdk::__query_builder::Col<Quail, Option<String>>,
     pub profile_photo: __sdk::__query_builder::Col<Quail, Option<String>>,
+    pub birthday: __sdk::__query_builder::Col<Quail, Option<String>>,
     pub device_id: __sdk::__query_builder::Col<Quail, String>,
     pub owner: __sdk::__query_builder::Col<Quail, String>,
+    pub created_at: __sdk::__query_builder::Col<Quail, i64>,
 }
 
 impl __sdk::__query_builder::HasCols for Quail {
@@ -40,13 +42,14 @@ impl __sdk::__query_builder::HasCols for Quail {
     fn cols(table_name: &'static str) -> Self::Cols {
         QuailCols {
             uuid: __sdk::__query_builder::Col::new(table_name, "uuid"),
-            id: __sdk::__query_builder::Col::new(table_name, "id"),
             name: __sdk::__query_builder::Col::new(table_name, "name"),
             gender: __sdk::__query_builder::Col::new(table_name, "gender"),
             ring_color: __sdk::__query_builder::Col::new(table_name, "ring_color"),
             profile_photo: __sdk::__query_builder::Col::new(table_name, "profile_photo"),
+            birthday: __sdk::__query_builder::Col::new(table_name, "birthday"),
             device_id: __sdk::__query_builder::Col::new(table_name, "device_id"),
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
+            created_at: __sdk::__query_builder::Col::new(table_name, "created_at"),
         }
     }
 }

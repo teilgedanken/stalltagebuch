@@ -8,8 +8,7 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct EggRecord {
     pub uuid: String,
-    pub id: u64,
-    pub record_date: String,
+    pub record_date: i64,
     pub total_eggs: i32,
     pub notes: Option<String>,
     pub device_id: String,
@@ -25,8 +24,7 @@ impl __sdk::InModule for EggRecord {
 /// Provides typed access to columns for query building.
 pub struct EggRecordCols {
     pub uuid: __sdk::__query_builder::Col<EggRecord, String>,
-    pub id: __sdk::__query_builder::Col<EggRecord, u64>,
-    pub record_date: __sdk::__query_builder::Col<EggRecord, String>,
+    pub record_date: __sdk::__query_builder::Col<EggRecord, i64>,
     pub total_eggs: __sdk::__query_builder::Col<EggRecord, i32>,
     pub notes: __sdk::__query_builder::Col<EggRecord, Option<String>>,
     pub device_id: __sdk::__query_builder::Col<EggRecord, String>,
@@ -38,7 +36,6 @@ impl __sdk::__query_builder::HasCols for EggRecord {
     fn cols(table_name: &'static str) -> Self::Cols {
         EggRecordCols {
             uuid: __sdk::__query_builder::Col::new(table_name, "uuid"),
-            id: __sdk::__query_builder::Col::new(table_name, "id"),
             record_date: __sdk::__query_builder::Col::new(table_name, "record_date"),
             total_eggs: __sdk::__query_builder::Col::new(table_name, "total_eggs"),
             notes: __sdk::__query_builder::Col::new(table_name, "notes"),

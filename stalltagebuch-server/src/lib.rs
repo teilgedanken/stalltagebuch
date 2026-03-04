@@ -5,17 +5,19 @@
 //! Generate client bindings: `spacetime generate --lang rust --out-dir ../src/spacetime/module_bindings`
 //! (or `--lang dioxus` when the Dioxus binding generator is available)
 
+#![allow(legacy_derive_helpers)]
+
 use spacetimedb::{reducer, ReducerContext, SpacetimeType, Table, Timestamp};
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
 
 /// A registered device that has connected to the database.
 #[spacetimedb::table(accessor = devices, public)]
+#[index(columns = [last_seen])]
 pub struct Device {
     /// Unique device identifier (e.g., ANDROID_ID on Android).
     #[primary_key]
     pub device_id: String,
-    pub id: u64,
     /// User-friendly device name (e.g., "Mein Handy", "Tablet").
     pub name: Option<String>,
     /// Optional comment/description for this device.
@@ -30,11 +32,11 @@ pub struct Device {
 
 /// A quail in the flock.
 #[spacetimedb::table(accessor = quails, public)]
+#[index(columns = [created_at])]
 pub struct Quail {
     /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
     pub uuid: String,
-    pub id: u64,
     pub name: String,
     /// "male" | "female" | "unknown"
     pub gender: String,
@@ -42,19 +44,23 @@ pub struct Quail {
     pub ring_color: Option<String>,
     /// UUID of the profile photo stored in the photo-gallery / Nextcloud.
     pub profile_photo: Option<String>,
+    /// Optional birth date (ISO 8601 date string YYYY-MM-DD).
+    pub birthday: Option<String>,
     /// ID of the device that created this quail.
     pub device_id: String,
     /// The SpacetimeDB identity of the user who owns this quail.
     pub owner: String,
+    /// Unix timestamp (seconds) when quail was created.
+    pub created_at: i64,
 }
 
 /// A lifecycle event for a quail.
 #[spacetimedb::table(accessor = quail_events, public)]
+#[index(columns = [event_date])]
 pub struct QuailEvent {
     /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
     pub uuid: String,
-    pub id: u64,
     pub quail_uuid: String,
     /// "born" | "alive" | "sick" | "healthy" | "marked_for_slaughter" | "slaughtered" | "died"
     pub event_type: String,
@@ -70,13 +76,13 @@ pub struct QuailEvent {
 
 /// A daily egg-production record.
 #[spacetimedb::table(accessor = egg_records, public)]
+#[index(columns = [record_date])]
 pub struct EggRecord {
     /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
     pub uuid: String,
-    pub id: u64,
-    /// ISO 8601 date string YYYY-MM-DD.
-    pub record_date: String,
+    /// Unix timestamp (seconds) for the record date.
+    pub record_date: i64,
     pub total_eggs: i32,
     pub notes: Option<String>,
     /// ID of the device that created this record.
@@ -86,11 +92,11 @@ pub struct EggRecord {
 
 /// A collection of photos (for a quail or event).
 #[spacetimedb::table(accessor = photo_collections, public)]
+#[index(columns = [created_at])]
 pub struct PhotoCollection {
     /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
     pub uuid: String,
-    pub id: u64,
     /// UUID of the quail this collection belongs to (if applicable).
     pub quail_uuid: Option<String>,
     /// UUID of the event this collection belongs to (if applicable).
@@ -102,15 +108,19 @@ pub struct PhotoCollection {
     /// ID of the device that created this collection.
     pub device_id: String,
     pub owner: String,
+    /// Unix timestamp (seconds) when collection was created.
+    pub created_at: i64,
+    /// Unix timestamp (seconds) when collection was last modified.
+    pub updated_at: i64,
 }
 
 /// A photo in a collection.
 #[spacetimedb::table(accessor = photos, public)]
+#[index(columns = [created_at])]
 pub struct Photo {
     /// Client-generated UUID used as the stable cross-device identifier.
     #[primary_key]
     pub uuid: String,
-    pub id: u64,
     /// UUID of the collection this photo belongs to.
     pub collection_uuid: String,
     /// Relative path from the app's photos directory (e.g. "quail-123/photo.jpg").
@@ -126,6 +136,10 @@ pub struct Photo {
     /// ID of the device that created this photo.
     pub device_id: String,
     pub owner: String,
+    /// Unix timestamp (seconds) when photo was created.
+    pub created_at: i64,
+    /// Unix timestamp (seconds) when photo was last modified.
+    pub updated_at: i64,
 }
 
 // ─── Reducer argument types ────────────────────────────────────────────────────
@@ -137,6 +151,7 @@ pub struct CreateQuailArgs {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub birthday: Option<String>,
     pub device_id: String,
 }
 
@@ -147,6 +162,7 @@ pub struct UpdateQuailArgs {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub birthday: Option<String>,
 }
 
 #[derive(SpacetimeType)]
@@ -172,7 +188,7 @@ pub struct UpdateEventArgs {
 #[derive(SpacetimeType)]
 pub struct UpsertEggRecordArgs {
     pub uuid: String,
-    pub record_date: String,
+    pub record_date: i64,
     pub total_eggs: i32,
     pub notes: Option<String>,
     pub device_id: String,
@@ -191,6 +207,7 @@ pub struct CreatePhotoCollectionArgs {
 pub struct UpdatePhotoCollectionArgs {
     pub uuid: String,
     pub preview_photo_uuid: Option<String>,
+    pub updated_at: i64,
 }
 
 #[derive(SpacetimeType)]
@@ -215,15 +232,23 @@ pub struct UpdatePhotoSyncStatusArgs {
 /// Create a new quail profile.
 #[reducer]
 pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
+    let now = ctx
+        .timestamp
+        .duration_since(Timestamp::UNIX_EPOCH)
+        .expect("timestamp should be after UNIX_EPOCH")
+        .as_secs() as i64;
+
     ctx.db.quails().insert(Quail {
         uuid: args.uuid,
-        id: 0,
+        
         name: args.name,
         gender: args.gender,
         ring_color: args.ring_color,
         profile_photo: args.profile_photo,
+        birthday: args.birthday,
         device_id: args.device_id,
         owner: ctx.sender().to_string(),
+        created_at: now,
     });
 }
 
@@ -283,7 +308,7 @@ pub fn set_quail_photo(ctx: &ReducerContext, quail_uuid: String, photo_uuid: Opt
 pub fn create_event(ctx: &ReducerContext, args: CreateEventArgs) {
     ctx.db.quail_events().insert(QuailEvent {
         uuid: args.uuid,
-        id: 0,
+        
         quail_uuid: args.quail_uuid,
         event_type: args.event_type,
         event_date: args.event_date,
@@ -338,7 +363,7 @@ pub fn upsert_egg_record(ctx: &ReducerContext, args: UpsertEggRecordArgs) {
     } else {
         ctx.db.egg_records().insert(EggRecord {
             uuid: args.uuid,
-            id: 0,
+            
             record_date: args.record_date,
             total_eggs: args.total_eggs,
             notes: args.notes,
@@ -362,15 +387,23 @@ pub fn delete_egg_record(ctx: &ReducerContext, uuid: String) {
 /// Create a photo collection.
 #[reducer]
 pub fn create_photo_collection(ctx: &ReducerContext, args: CreatePhotoCollectionArgs) {
+    let now = ctx
+        .timestamp
+        .duration_since(Timestamp::UNIX_EPOCH)
+        .expect("timestamp should be after UNIX_EPOCH")
+        .as_secs() as i64;
+
     ctx.db.photo_collections().insert(PhotoCollection {
         uuid: args.uuid,
-        id: 0,
+        
         quail_uuid: args.quail_uuid,
         event_uuid: args.event_uuid,
         preview_photo_uuid: None,
         name: args.name,
         device_id: args.device_id,
         owner: ctx.sender().to_string(),
+        created_at: now,
+        updated_at: now,
     });
 }
 
@@ -387,6 +420,7 @@ pub fn update_photo_collection(ctx: &ReducerContext, args: UpdatePhotoCollection
             return;
         }
         existing.preview_photo_uuid = args.preview_photo_uuid;
+        existing.updated_at = args.updated_at;
         ctx.db.photo_collections().uuid().update(existing);
     }
 }
@@ -416,9 +450,14 @@ pub fn delete_photo_collection(ctx: &ReducerContext, uuid: String) {
 /// Create a new photo in a collection.
 #[reducer]
 pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
+    let now = ctx
+        .timestamp
+        .duration_since(Timestamp::UNIX_EPOCH)
+        .expect("timestamp should be after UNIX_EPOCH")
+        .as_secs() as i64;
+
     ctx.db.photos().insert(Photo {
         uuid: args.uuid,
-        id: 0,
         collection_uuid: args.collection_uuid,
         relative_path: args.relative_path,
         sync_status: "local_only".to_string(),
@@ -427,6 +466,8 @@ pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
         retry_count: 0,
         device_id: args.device_id,
         owner: ctx.sender().to_string(),
+        created_at: now,
+        updated_at: now,
     });
 }
 
@@ -441,6 +482,11 @@ pub fn update_photo_sync_status(ctx: &ReducerContext, args: UpdatePhotoSyncStatu
         existing.sync_error = args.sync_error;
         existing.last_sync_attempt = args.last_sync_attempt;
         existing.retry_count = args.retry_count;
+        let now = ctx.timestamp
+            .duration_since(Timestamp::UNIX_EPOCH)
+            .expect("timestamp should be after UNIX_EPOCH")
+            .as_secs() as i64;
+        existing.updated_at = now;
         ctx.db.photos().uuid().update(existing);
     }
 }
@@ -514,7 +560,7 @@ pub fn register_device(ctx: &ReducerContext, args: RegisterDeviceArgs) {
         log::info!("register_device: creating new device {}", args.device_id);
         ctx.db.devices().insert(Device {
             device_id: args.device_id.clone(),
-            id: 0,
+            
             name: args.name,
             comment: args.comment,
             first_seen: now,

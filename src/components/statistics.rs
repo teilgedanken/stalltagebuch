@@ -37,8 +37,8 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         let mut valid_records: Vec<(chrono::NaiveDate, i32)> = egg_records()
             .into_iter()
             .filter_map(|record| {
-                let date =
-                    chrono::NaiveDate::parse_from_str(&record.record_date, "%Y-%m-%d").ok()?;
+                let date = chrono::DateTime::from_timestamp(record.record_date, 0)
+                    .map(|dt| dt.date_naive())?;
                 Some((date, record.total_eggs))
             })
             .collect();

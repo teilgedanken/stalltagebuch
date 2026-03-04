@@ -12,6 +12,7 @@ pub struct UpdateQuailArgs {
     pub gender: String,
     pub ring_color: Option<String>,
     pub profile_photo: Option<String>,
+    pub birthday: Option<String>,
 }
 
 impl __sdk::InModule for UpdateQuailArgs {
