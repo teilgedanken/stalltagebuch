@@ -28,6 +28,7 @@ captures/
 *~
 .DS_Store
 
+
 # Database
 *.db
 *.db-shm
@@ -35,3 +36,7 @@ captures/
 
 # Logs
 *.log
+
+#organisational
+old plans/
+data/

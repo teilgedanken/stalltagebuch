@@ -13,7 +13,7 @@ Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, E
 - JNI/Android: Kamera & Galerie über `camera.rs` + `android/MainActivity.kt`; nutze ClassLoader-Helper (siehe `camera.rs`). Führe keinen direkten Zugriff auf Android APIs außerhalb dieser Brücke ein.
 
 ## Build & Workflow
-- nutze IMMER `./build_android.sh`. Nutze NIE `dx build`;  Nutze auch NIE `cargo check`; das Script build_android.sh patcht Gradle, kopiert Manifest/Activity/Res und setzt Java 17.
+- nutze IMMER `./build_android.sh --release`. Nutze NIE `dx build`;  Nutze NIE `cargo check`; das Script build_android.sh patcht Gradle, kopiert Manifest/Activity/Res und setzt Java 17.
 - do NOT wrap to commands into additional bash or similar shells; just execute them directly!
 - Installiere APK danach mit: `adb install -r target/dx/stalltagebuch/debug/android/app/app/build/outputs/apk/debug/app-debug.apk`
 - Logcat Filter: `adb logcat | grep -iE "stalltagebuch|MainActivity"`
