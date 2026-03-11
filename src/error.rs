@@ -95,6 +95,20 @@ impl From<std::io::Error> for AppError {
     }
 }
 
+#[cfg(target_os = "android")]
+impl From<jni::errors::Error> for AppError {
+    fn from(e: jni::errors::Error) -> Self {
+        AppError::PermissionDenied(format!("JNI error: {}", e))
+    }
+}
+
+#[cfg(target_os = "android")]
+impl From<jni::errors::Error> for StalltagebuchError {
+    fn from(e: jni::errors::Error) -> Self {
+        StalltagebuchError::JniError(format!("JNI error: {}", e))
+    }
+}
+
 /// User-friendly error messages for UI (can be translated via i18n)
 impl AppError {
     #[allow(dead_code)]

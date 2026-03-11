@@ -1,6 +1,9 @@
 pub mod background_sync;
 pub mod device_id_service;
 pub mod download_service;
+pub mod export_service;
+pub mod import_service;
+pub mod import_v1_service;
 pub mod nextcloud_webdav;
 pub mod photo_paths;
 pub mod photo_service;

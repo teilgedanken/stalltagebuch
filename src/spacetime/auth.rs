@@ -35,7 +35,7 @@ pub fn use_persist_spacetime_token() {
 
     use_effect(move || {
         // When the connection state changes to Connected, extract and save the token
-        if let ConnectionState::Connected(_identity, ref token) = *connection_state.read() {
+        if let ConnectionState::Connected(_identity, ref token) = connection_state().clone() {
             // Save the token to persistent settings
             if let Ok(mut settings) = spacetime_settings_service::load_spacetime_settings() {
                 settings.token = token.clone();
@@ -67,7 +67,7 @@ pub fn use_register_device() {
 
     use_effect(move || {
         // Read the connection state to make this effect reactive
-        let state = connection_state.read().clone();
+        let state = connection_state().clone();
         log::info!(
             "Device registration: connection state changed to {:?}",
             state
@@ -91,7 +91,7 @@ pub fn use_register_device() {
             };
 
             // Check if device already has a name in the devices table
-            let devices_vec = devices.read().clone();
+            let devices_vec = devices().clone();
             let existing_device = devices_vec.iter().find(|d| d.device_id == device_id);
             let has_existing_name = existing_device.and_then(|d| d.name.as_ref()).is_some();
 

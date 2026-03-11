@@ -93,8 +93,11 @@ impl SpacetimeClient {
         reducer: &str,
         args: &A,
     ) -> Result<(), AppError> {
-        let body = serde_json::to_value(args)
+        // SpacetimeDB HTTP expects reducer parameters under a top-level `args` key
+        // for reducers declared as `fn reducer(ctx: &ReducerContext, args: SomeArgs)`.
+        let args_json = serde_json::to_value(args)
             .map_err(|e| AppError::Other(format!("serialise args: {e}")))?;
+        let body = serde_json::json!({ "args": args_json });
 
         let resp = self
             .http
@@ -103,7 +106,35 @@ impl SpacetimeClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::Network(e.to_string()))?;
+            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(AppError::Other(format!(
+                "reducer {reducer} failed ({status}): {text}"
+            )));
+        }
+        Ok(())
+    }
+
+    /// Call a reducer with an already-shaped JSON body.
+    ///
+    /// Use this for reducers with non-`args` signatures (e.g. multiple positional
+    /// arguments encoded as top-level keys).
+    pub async fn call_reducer_raw(
+        &self,
+        reducer: &str,
+        body: &serde_json::Value,
+    ) -> Result<(), AppError> {
+        let resp = self
+            .http
+            .post(self.reducer_url(reducer))
+            .bearer_auth(&self.token)
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
 
         if !resp.status().is_success() {
             let status = resp.status();
@@ -129,7 +160,7 @@ impl SpacetimeClient {
             .json(&SqlBody { sql: query })
             .send()
             .await
-            .map_err(|e| AppError::Network(e.to_string()))?;
+            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
 
         if !resp.status().is_success() {
             let status = resp.status();

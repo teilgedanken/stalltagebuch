@@ -17,9 +17,9 @@ tokio = { version = "1.0", features = ["rt", "time", "sync"] }
 log = "0.4.28"
 dioxus = { version = "0.7.1", optional = true }
 base64 = { version = "0.22", optional = true }
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
-    "rustls-tls",
+    "rustls",
 ], optional = true }
 reqwest_dav = { version = "0.2", default-features = false, features = [
     "rustls-tls",
@@ -28,7 +28,7 @@ rand = { version = "0.9", optional = true }
 
 # Android picker dependencies
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.21"
+jni = "0.22"
 ndk-context = "0.1"
 
 [features]

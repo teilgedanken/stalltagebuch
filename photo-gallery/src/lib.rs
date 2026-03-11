@@ -53,6 +53,6 @@ pub use components::{
     ThumbnailCollection, ThumbnailImage,
 };
 
-pub use picker::{
-    AndroidPickerConfig, PickerError, capture_photo, has_camera_permission, pick_image, pick_images,
-};
+#[cfg(target_os = "android")]
+pub use picker::AndroidPickerConfig;
+pub use picker::{PickerError, capture_photo, has_camera_permission, pick_image, pick_images};

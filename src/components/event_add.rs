@@ -26,7 +26,7 @@ pub fn EventAdd(
     let quail_id_for_save = quail_id.clone();
     let on_save = move |_| {
         // Check if connected to Spacetime
-        if connection.read().is_none() {
+        if connection().is_none() {
             error_message.set(Some(t!("error-not-connected")));
             return;
         }

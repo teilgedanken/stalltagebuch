@@ -22,8 +22,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     ]);
 
     let filtered_profiles = use_memo(move || {
-        let owner = connection
-            .read()
+        let owner = connection()
             .as_ref()
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());

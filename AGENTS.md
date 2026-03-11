@@ -130,7 +130,7 @@ A signal is a wrapper around a value that automatically tracks where it's read a
 
 ## Local State
 
-The `use_signal` hook creates state that is local to a single component. You can call the signal like a function (e.g. `my_signal()`) to clone the value, or use `.read()` to get a reference. `.write()` gets a mutable reference to the value.
+The `use_signal` hook creates state that is local to a single component. You can call the signal like a function (e.g. `my_signal()`) to clone the value, or use `my_signal.read()` to get a reference but only use `my_signal.read()` where `my_signal()` does not work because `.read()` destroys reactivity.
 
 Use `use_memo` to create a memoized value that recalculates when its dependencies change. Memos are useful for expensive calculations that you don't want to repeat unnecessarily.
 

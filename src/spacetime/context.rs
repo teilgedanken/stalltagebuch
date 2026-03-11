@@ -12,7 +12,7 @@
 //! Child components read data through the exposed signals:
 //! ```rust
 //! let ctx = use_spacetime();
-//! let quails = ctx.quails.read();
+//! let quails = ctx.quails();
 //! ```
 
 use super::{
@@ -65,7 +65,7 @@ impl SpacetimeContext {
 
     /// Return the underlying client if connected.
     pub fn get_client(&self) -> Option<SpacetimeClient> {
-        self.client.read().clone()
+        self.client().clone()
     }
 
     /// Connect to SpacetimeDB and load initial data.

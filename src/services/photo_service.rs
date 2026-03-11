@@ -1,5 +1,6 @@
 use crate::error::AppError;
 use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 // Global photo gallery service
@@ -52,8 +53,31 @@ pub fn convert_photo_error(e: photo_gallery::PhotoGalleryError) -> AppError {
 /// Returns (new_path, small_thumb_path, medium_thumb_path)
 pub async fn process_photo(path: String) -> Result<(String, String, String), AppError> {
     let service = init_photo_service();
+    let storage_root = PathBuf::from(get_storage_path());
+    std::fs::create_dir_all(&storage_root)?;
+
+    let source = PathBuf::from(&path);
+
+    // Picker returns files from cacheDir. Move/copy them into the managed photo
+    // storage first so UI loaders (which resolve relative paths against photos dir)
+    // can actually find originals and thumbnails.
+    let process_input = if source.parent() == Some(storage_root.as_path()) {
+        path
+    } else {
+        let ext = source
+            .extension()
+            .and_then(|e| e.to_str())
+            .filter(|e| !e.is_empty())
+            .unwrap_or("jpg");
+        let temp_name = format!("import_{}.{}", uuid::Uuid::new_v4(), ext);
+        let temp_target = storage_root.join(temp_name);
+
+        std::fs::copy(&source, &temp_target)?;
+        temp_target.to_string_lossy().to_string()
+    };
+
     service
-        .process_photo(path)
+        .process_photo(process_input)
         .await
         .map_err(convert_photo_error)
 }

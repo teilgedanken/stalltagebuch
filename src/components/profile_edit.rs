@@ -6,7 +6,7 @@ use crate::{
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
 use dioxus_i18n::t;
-use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService};
+use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
 use spacetime::Photo;
 
 #[component]
@@ -14,6 +14,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     // Spacetime subscriptions and data
     let quails = spacetime::use_table_quails();
     let photos_table = spacetime::use_table_photos();
+    let photo_collections_table = spacetime::use_table_photo_collections();
     let connection = spacetime::use_connection();
     let update_quail_reducer = spacetime::use_reducer_update_quail();
     let delete_quail_reducer = spacetime::use_reducer_delete_quail();
@@ -78,12 +79,15 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 // Load photos for this quail from SpacetimeDB
                 let quail_uuid_str = quail.uuid.clone();
-                let photo_list: Vec<Photo> = photos_table
-                    .read()
+                let collection_ids: std::collections::HashSet<String> = photo_collections_table()
                     .iter()
-                    .filter(|p| {
-                        p.collection_uuid.contains(&quail_uuid_str) || p.owner == quail.owner
-                    })
+                    .filter(|c| c.quail_uuid.as_ref() == Some(&quail_uuid_str))
+                    .map(|c| c.uuid.clone())
+                    .collect();
+
+                let photo_list: Vec<Photo> = photos_table()
+                    .iter()
+                    .filter(|p| collection_ids.contains(&p.collection_uuid))
                     .cloned()
                     .collect();
                 photos.set(photo_list);
@@ -94,7 +98,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let quail_id_for_submit = quail_id.clone();
     let mut handle_submit = move || {
         // Check if connected to Spacetime
-        if connection.read().is_none() {
+        if connection().is_none() {
             error.set(t!("error-not-connected"));
             return;
         }
@@ -155,7 +159,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let quail_id_for_delete = quail_id.clone();
     let mut handle_delete = move || {
         // Check if connected to Spacetime
-        if connection.read().is_none() {
+        if connection().is_none() {
             error.set(t!("error-not-connected"));
             return;
         }
@@ -289,7 +293,22 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         let gallery_items: Vec<GalleryItem> = photos()
                             .iter()
                             .filter_map(|photo| {
-                                let abs_path = photo_service.get_absolute_photo_path(&photo.relative_path);
+                                let thumb_or_original = photo_service
+                                    .get_photo_file_path(&photo.relative_path, PhotoSize::Small)
+                                    .or_else(|| {
+                                        photo_service.get_photo_file_path(
+                                            &photo.relative_path,
+                                            PhotoSize::Medium,
+                                        )
+                                    })
+                                    .or_else(|| {
+                                        photo_service.get_photo_file_path(
+                                            &photo.relative_path,
+                                            PhotoSize::Original,
+                                        )
+                                    });
+
+                                let abs_path = thumb_or_original?;
                                 match crate::image_processing::image_path_to_data_url(&abs_path) {
                                     Ok(data_url) => {
                                         Some(GalleryItem {

@@ -33,10 +33,19 @@ const DEFAULT_MAIN_ACTIVITY_CLASS: &str = "dev/dioxus/main/MainActivity";
 
 #[cfg(target_os = "android")]
 use jni::objects::{JClass, JObject, JString, JValue};
-
+#[cfg(target_os = "android")]
+use jni::{jni_sig, jni_str};
 #[cfg(target_os = "android")]
 use ndk_context::android_context;
 
+#[cfg(target_os = "android")]
+impl From<jni::errors::Error> for PickerError {
+    fn from(e: jni::errors::Error) -> Self {
+        PickerError::PermissionDenied(format!("JNI error: {}", e))
+    }
+}
+
+#[cfg(target_os = "android")]
 /// Configuration for the picker on Android
 ///
 /// This allows customization of the MainActivity class name for different apps.
@@ -45,7 +54,7 @@ pub struct AndroidPickerConfig {
     /// Fully qualified class name in slash format (e.g., "com/example/myapp/MainActivity")
     pub main_activity_class: String,
 }
-
+#[cfg(target_os = "android")]
 impl Default for AndroidPickerConfig {
     fn default() -> Self {
         Self {
@@ -55,16 +64,16 @@ impl Default for AndroidPickerConfig {
 }
 
 #[cfg(target_os = "android")]
-fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, PickerError> {
+fn get_app_class_loader<'a>(env: &mut jni::Env<'a>) -> Result<JObject<'a>, PickerError> {
     // ActivityThread.currentActivityThread()
     let at_cls = env
-        .find_class("android/app/ActivityThread")
+        .find_class(jni_str!("android/app/ActivityThread"))
         .map_err(|e| PickerError::PermissionDenied(format!("ActivityThread not found: {}", e)))?;
     let at = env
         .call_static_method(
             &at_cls,
-            "currentActivityThread",
-            "()Landroid/app/ActivityThread;",
+            jni_str!("currentActivityThread"),
+            jni_sig!("()Landroid/app/ActivityThread;"),
             &[],
         )
         .map_err(|e| PickerError::PermissionDenied(format!("currentActivityThread failed: {}", e)))?
@@ -75,7 +84,12 @@ fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, Pi
 
     // Prefer application class loader
     let app = env
-        .call_method(&at, "getApplication", "()Landroid/app/Application;", &[])
+        .call_method(
+            &at,
+            jni_str!("getApplication"),
+            jni_sig!("()Landroid/app/Application;"),
+            &[],
+        )
         .map_err(|e| PickerError::PermissionDenied(format!("getApplication failed: {}", e)))?
         .l()
         .map_err(|e| PickerError::PermissionDenied(format!("getApplication invalid: {}", e)))?;
@@ -83,14 +97,24 @@ fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, Pi
     if app.is_null() {
         // Fallback: system context
         let sys_ctx = env
-            .call_method(&at, "getSystemContext", "()Landroid/app/ContextImpl;", &[])
+            .call_method(
+                &at,
+                jni_str!("getSystemContext"),
+                jni_sig!("()Landroid/app/ContextImpl;"),
+                &[],
+            )
             .map_err(|e| PickerError::PermissionDenied(format!("getSystemContext failed: {}", e)))?
             .l()
             .map_err(|e| {
                 PickerError::PermissionDenied(format!("getSystemContext invalid: {}", e))
             })?;
         let loader = env
-            .call_method(&sys_ctx, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+            .call_method(
+                &sys_ctx,
+                jni_str!("getClassLoader"),
+                jni_sig!("()Ljava/lang/ClassLoader;"),
+                &[],
+            )
             .map_err(|e| {
                 PickerError::PermissionDenied(format!("getClassLoader (sys) failed: {}", e))
             })?
@@ -102,7 +126,12 @@ fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, Pi
     }
 
     let loader = env
-        .call_method(&app, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+        .call_method(
+            &app,
+            jni_str!("getClassLoader"),
+            jni_sig!("()Ljava/lang/ClassLoader;"),
+            &[],
+        )
         .map_err(|e| PickerError::PermissionDenied(format!("getClassLoader failed: {}", e)))?
         .l()
         .map_err(|e| PickerError::PermissionDenied(format!("getClassLoader invalid: {}", e)))?;
@@ -111,7 +140,7 @@ fn get_app_class_loader<'a>(env: &mut jni::JNIEnv<'a>) -> Result<JObject<'a>, Pi
 
 #[cfg(target_os = "android")]
 fn load_class<'a>(
-    env: &mut jni::JNIEnv<'a>,
+    env: &mut jni::Env<'a>,
     loader: &JObject<'a>,
     fq_slash: &str,
 ) -> Result<JClass<'a>, PickerError> {
@@ -123,39 +152,53 @@ fn load_class<'a>(
     let cls_obj = env
         .call_method(
             loader,
-            "loadClass",
-            "(Ljava/lang/String;)Ljava/lang/Class;",
+            jni_str!("loadClass"),
+            jni_sig!("(Ljava/lang/String;)Ljava/lang/Class;"),
             &[JValue::Object(&JObject::from(name))],
         )
         .map_err(|e| PickerError::PermissionDenied(format!("ClassLoader.loadClass failed: {}", e)))?
         .l()
         .map_err(|e| PickerError::PermissionDenied(format!("loadClass invalid: {}", e)))?;
-    Ok(JClass::from(cls_obj))
+    env.cast_local::<JClass<'a>>(cls_obj)
+        .map_err(|e| PickerError::PermissionDenied(format!("loadClass cast failed: {}", e)))
 }
 
 #[cfg(target_os = "android")]
 fn get_activity_instance<'a>(
-    env: &mut jni::JNIEnv<'a>,
+    env: &mut jni::Env<'a>,
     config: &AndroidPickerConfig,
 ) -> Result<(JObject<'a>, JClass<'a>), PickerError> {
     let loader = get_app_class_loader(env)?;
     let cls = load_class(env, &loader, &config.main_activity_class)?;
 
     let signature = format!("()L{};", config.main_activity_class);
+    let method_sig = jni::signature::RuntimeMethodSignature::from_str(&signature)
+        .map_err(|e| PickerError::PermissionDenied(format!("Invalid method signature: {}", e)))?;
+    let field_sig = jni::signature::RuntimeFieldSignature::from_str(&signature)
+        .map_err(|e| PickerError::PermissionDenied(format!("Invalid field signature: {}", e)))?;
 
     // Primary attempt: call the expected static helper generated by `@JvmStatic`
-    let instance = match env.call_static_method(&cls, "getInstance", &signature, &[]) {
+    let instance = match env.call_static_method(
+        &cls,
+        jni_str!("getInstance"),
+        method_sig.method_signature(),
+        &[],
+    ) {
         Ok(val) => val.l().map_err(|e| {
             PickerError::PermissionDenied(format!("getInstance() returned invalid object: {}", e))
         })?,
         Err(_err) => {
             // Clear any pending Java exception
-            if env.exception_check().unwrap_or(false) {
+            if env.exception_check() {
                 let _ = env.exception_clear();
             }
 
             // Try direct static `instance` field first
-            if let Ok(field) = env.get_static_field(&cls, "instance", &signature) {
+            if let Ok(field) = env.get_static_field(
+                &cls,
+                jni_str!("instance"),
+                field_sig.field_signature(),
+            ) {
                 let inst = field.l().map_err(|e| {
                     PickerError::PermissionDenied(format!("instance field invalid: {}", e))
                 })?;
@@ -164,8 +207,21 @@ fn get_activity_instance<'a>(
                 } else {
                     // instance is present but null; try Companion
                     let comp_signature = format!("L{}$Companion;", config.main_activity_class);
+                    let companion_field_sig = jni::signature::RuntimeFieldSignature::from_str(
+                        &comp_signature,
+                    )
+                    .map_err(|e| {
+                        PickerError::PermissionDenied(format!(
+                            "Invalid Companion signature: {}",
+                            e
+                        ))
+                    })?;
                     let comp_field = env
-                        .get_static_field(&cls, "Companion", &comp_signature)
+                        .get_static_field(
+                            &cls,
+                            jni_str!("Companion"),
+                            companion_field_sig.field_signature(),
+                        )
                         .map_err(|e| {
                             PickerError::PermissionDenied(format!(
                                 "Failed to get Companion field: {}",
@@ -184,7 +240,12 @@ fn get_activity_instance<'a>(
                         ));
                     }
 
-                    env.call_method(&comp_obj, "getInstance", &signature, &[])
+                    env.call_method(
+                        &comp_obj,
+                        jni_str!("getInstance"),
+                        method_sig.method_signature(),
+                        &[],
+                    )
                         .map_err(|e| {
                             PickerError::PermissionDenied(format!(
                                 "Companion.getInstance() failed: {}",
@@ -202,8 +263,18 @@ fn get_activity_instance<'a>(
             } else {
                 // No instance field — fall back to Companion object access
                 let comp_signature = format!("L{}$Companion;", config.main_activity_class);
+                let companion_field_sig = jni::signature::RuntimeFieldSignature::from_str(
+                    &comp_signature,
+                )
+                .map_err(|e| {
+                    PickerError::PermissionDenied(format!("Invalid Companion signature: {}", e))
+                })?;
                 let comp_field = env
-                    .get_static_field(&cls, "Companion", &comp_signature)
+                    .get_static_field(
+                        &cls,
+                        jni_str!("Companion"),
+                        companion_field_sig.field_signature(),
+                    )
                     .map_err(|e| {
                         PickerError::PermissionDenied(format!(
                             "Failed to get Companion field: {}",
@@ -221,7 +292,12 @@ fn get_activity_instance<'a>(
                     ));
                 }
 
-                env.call_method(&comp_obj, "getInstance", &signature, &[])
+                env.call_method(
+                    &comp_obj,
+                    jni_str!("getInstance"),
+                    method_sig.method_signature(),
+                    &[],
+                )
                     .map_err(|e| {
                         PickerError::PermissionDenied(format!(
                             "Companion.getInstance() failed: {}",
@@ -248,6 +324,21 @@ fn get_activity_instance<'a>(
     Ok((instance, cls))
 }
 
+#[cfg(target_os = "android")]
+fn with_android_env<T>(
+    f: impl FnOnce(&mut jni::Env<'_>) -> Result<T, PickerError>,
+) -> Result<T, PickerError> {
+    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
+    if vm_ptr.is_null() {
+        return Err(PickerError::PermissionDenied(
+            "JavaVM pointer is null".to_string(),
+        ));
+    }
+
+    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) };
+    vm.attach_current_thread(f)
+}
+
 /// Pick a single image from the gallery
 ///
 /// On Android, this launches the gallery picker and waits for user selection.
@@ -260,72 +351,85 @@ pub fn pick_image() -> Result<PathBuf, PickerError> {
 /// Pick a single image from the gallery with custom Android configuration
 #[cfg(target_os = "android")]
 pub fn pick_image_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, PickerError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| PickerError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| PickerError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    with_android_env(|env| {
+        // Get MainActivity instance and class
+        let (activity, main_cls) = get_activity_instance(env, config)?;
 
-    // Get MainActivity instance and class
-    let (activity, main_cls) = get_activity_instance(&mut env, config)?;
+        // Clear previous error
+        env.call_static_method(&main_cls, jni_str!("clearLastError"), jni_sig!("()V"), &[])
+            .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
 
-    // Clear previous error
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
+        // Call launchImagePicker on the activity instance
+        env.call_method(&activity, jni_str!("launchImagePicker"), jni_sig!("()V"), &[])
+            .map_err(|e| {
+                PickerError::PermissionDenied(format!("launchImagePicker failed: {}", e))
+            })?;
 
-    // Call launchImagePicker on the activity instance
-    env.call_method(&activity, "launchImagePicker", "()V", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("launchImagePicker failed: {}", e)))?;
+        // Poll for result (60 seconds timeout)
+        for _ in 0..600 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // Poll for result (60 seconds timeout)
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
+            // Check for photo path
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastPhotoPath"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let path: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        return Ok(PathBuf::from(path));
+                    }
+                }
+            }
 
-        // Check for photo path
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPath", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let path: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    return Ok(PathBuf::from(path));
+            // Check for error
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastError"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let err: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        return Err(PickerError::PermissionDenied(err));
+                    }
                 }
             }
         }
 
-        // Check for error
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    return Err(PickerError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-
-    Err(PickerError::Timeout(
-        "Image picker timeout - no selection made".to_string(),
-    ))
+        Err(PickerError::Timeout(
+            "Image picker timeout - no selection made".to_string(),
+        ))
+    })
 }
 
 /// Pick multiple images from the gallery
@@ -340,75 +444,91 @@ pub fn pick_images() -> Result<Vec<PathBuf>, PickerError> {
 /// Pick multiple images from the gallery with custom Android configuration
 #[cfg(target_os = "android")]
 pub fn pick_images_with_config(config: &AndroidPickerConfig) -> Result<Vec<PathBuf>, PickerError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| PickerError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| PickerError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    with_android_env(|env| {
+        let (activity, main_cls) = get_activity_instance(env, config)?;
 
-    let (activity, main_cls) = get_activity_instance(&mut env, config)?;
+        env.call_static_method(&main_cls, jni_str!("clearLastError"), jni_sig!("()V"), &[])
+            .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
 
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
+        env.call_method(
+            &activity,
+            jni_str!("launchImagePickerMulti"),
+            jni_sig!("()V"),
+            &[],
+        )
+            .map_err(|e| {
+                PickerError::PermissionDenied(format!("launchImagePickerMulti failed: {}", e))
+            })?;
 
-    env.call_method(&activity, "launchImagePickerMulti", "()V", &[])
-        .map_err(|e| {
-            PickerError::PermissionDenied(format!("launchImagePickerMulti failed: {}", e))
-        })?;
+        for _ in 0..600 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
 
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastPhotoPaths"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let combined: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        let paths = combined
+                            .lines()
+                            .filter(|l: &&str| !l.trim().is_empty())
+                            .map(PathBuf::from)
+                            .collect::<Vec<_>>();
+                        if !paths.is_empty() {
+                            return Ok(paths);
+                        }
+                    }
+                }
+            }
 
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPaths", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let combined: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    let paths = combined
-                        .lines()
-                        .filter(|l| !l.trim().is_empty())
-                        .map(PathBuf::from)
-                        .collect::<Vec<_>>();
-                    if !paths.is_empty() {
-                        return Ok(paths);
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastError"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let err: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        return Err(PickerError::PermissionDenied(err));
                     }
                 }
             }
         }
 
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    return Err(PickerError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-
-    Err(PickerError::Timeout(
-        "Image picker timeout (multi) - no selection made".to_string(),
-    ))
+        Err(PickerError::Timeout(
+            "Image picker timeout (multi) - no selection made".to_string(),
+        ))
+    })
 }
 
 /// Capture a photo using the camera
@@ -423,72 +543,83 @@ pub fn capture_photo() -> Result<PathBuf, PickerError> {
 /// Capture a photo using the camera with custom Android configuration
 #[cfg(target_os = "android")]
 pub fn capture_photo_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, PickerError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| PickerError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| PickerError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    with_android_env(|env| {
+        // Get MainActivity instance and class
+        let (activity, main_cls) = get_activity_instance(env, config)?;
 
-    // Get MainActivity instance and class
-    let (activity, main_cls) = get_activity_instance(&mut env, config)?;
+        // Clear previous error
+        env.call_static_method(&main_cls, jni_str!("clearLastError"), jni_sig!("()V"), &[])
+            .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
 
-    // Clear previous error
-    env.call_static_method(&main_cls, "clearLastError", "()V", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
+        // Call launchCamera on the activity instance
+        env.call_method(&activity, jni_str!("launchCamera"), jni_sig!("()V"), &[])
+            .map_err(|e| PickerError::PermissionDenied(format!("launchCamera failed: {}", e)))?;
 
-    // Call launchCamera on the activity instance
-    env.call_method(&activity, "launchCamera", "()V", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("launchCamera failed: {}", e)))?;
+        // Poll for result (60 seconds timeout)
+        for _ in 0..600 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // Poll for result (60 seconds timeout)
-    for _ in 0..600 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
+            // Check for photo path
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastPhotoPath"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let path: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        return Ok(PathBuf::from(path));
+                    }
+                }
+            }
 
-        // Check for photo path
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastPhotoPath", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let path: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    return Ok(PathBuf::from(path));
+            // Check for error
+            if let Ok(result) =
+                env.call_static_method(
+                    &main_cls,
+                    jni_str!("getLastError"),
+                    jni_sig!("()Ljava/lang/String;"),
+                    &[],
+                )
+            {
+                if let Ok(obj) = result.l() {
+                    if !obj.is_null() {
+                        let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
+                            PickerError::PermissionDenied(format!("String cast failed: {}", e))
+                        })?;
+                        let err: String = env
+                            .get_string(&obj_str)
+                            .map_err(|e| {
+                                PickerError::PermissionDenied(format!(
+                                    "String conversion failed: {}",
+                                    e
+                                ))
+                            })?
+                            .into();
+                        return Err(PickerError::PermissionDenied(err));
+                    }
                 }
             }
         }
 
-        // Check for error
-        if let Ok(result) =
-            env.call_static_method(&main_cls, "getLastError", "()Ljava/lang/String;", &[])
-        {
-            if let Ok(obj) = result.l() {
-                if !obj.is_null() {
-                    let err: String = env
-                        .get_string((&obj).into())
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "String conversion failed: {}",
-                                e
-                            ))
-                        })?
-                        .into();
-                    return Err(PickerError::PermissionDenied(err));
-                }
-            }
-        }
-    }
-
-    Err(PickerError::Timeout(
-        "Camera timeout - no photo taken".to_string(),
-    ))
+        Err(PickerError::Timeout(
+            "Camera timeout - no photo taken".to_string(),
+        ))
+    })
 }
 
 /// Check if camera permission is granted
@@ -502,24 +633,26 @@ pub fn has_camera_permission() -> Result<bool, PickerError> {
 pub fn has_camera_permission_with_config(
     config: &AndroidPickerConfig,
 ) -> Result<bool, PickerError> {
-    let vm_ptr = android_context().vm() as *mut *const jni::sys::JNIInvokeInterface_;
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) }
-        .map_err(|e| PickerError::PermissionDenied(format!("JavaVM failed: {}", e)))?;
-    let mut env = vm
-        .attach_current_thread()
-        .map_err(|e| PickerError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    with_android_env(|env| {
+        // Get MainActivity instance
+        let (activity, _cls) = get_activity_instance(env, config)?;
 
-    // Get MainActivity instance
-    let (activity, _cls) = get_activity_instance(&mut env, config)?;
+        // Call hasCameraPermission
+        let result = env
+            .call_method(
+                &activity,
+                jni_str!("hasCameraPermission"),
+                jni_sig!("()Z"),
+                &[],
+            )
+            .map_err(|e| {
+                PickerError::PermissionDenied(format!("hasCameraPermission failed: {}", e))
+            })?;
 
-    // Call hasCameraPermission
-    let result = env
-        .call_method(&activity, "hasCameraPermission", "()Z", &[])
-        .map_err(|e| PickerError::PermissionDenied(format!("hasCameraPermission failed: {}", e)))?;
-
-    result
-        .z()
-        .map_err(|e| PickerError::PermissionDenied(format!("Boolean conversion failed: {}", e)))
+        result
+            .z()
+            .map_err(|e| PickerError::PermissionDenied(format!("Boolean conversion failed: {}", e)))
+    })
 }
 
 // Non-Android implementations (stubs that return platform errors)

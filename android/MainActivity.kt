@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import android.util.Log
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -70,6 +71,9 @@ class MainActivity : WryActivity() {
         @Volatile
         private var lastError: String? = null
         
+        @Volatile
+        private var lastDocumentPath: String? = null
+        
         /**
          * Gibt den Pfad der zuletzt aufgenommenen/ausgewählten Einzeldatei zurück.
          * - `null` bedeutet: kein Ergebnis / Fehler oder Abbruch.
@@ -91,6 +95,13 @@ class MainActivity : WryActivity() {
          */
         @JvmStatic
         fun getLastPhotoPaths(): String? = currentPhotoPaths
+        
+        /**
+         * Liefert den Pfad der zuletzt ausgewählten Dokument-Datei (z.B. ZIP).
+         * - `null` bedeutet: kein Ergebnis / Fehler oder Abbruch.
+         */
+        @JvmStatic
+        fun getLastDocumentPath(): String? = lastDocumentPath
         
         /**
          * Setzt den letzten Fehler zurück. Kann von JNI-Aufrufern genutzt werden,
@@ -115,6 +126,10 @@ class MainActivity : WryActivity() {
     // ActivityResultLauncher für Kamera
     // - `TakePicture()` benötigt eine URI (z. B. über FileProvider) in die die Kamera-App schreibt.
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
+    
+    // ActivityResultLauncher für Dokument-Auswahl (ZIP-Dateien)
+    // - `OpenDocument()` für einzelne Datei-Auswahl via SAF
+    private lateinit var pickDocumentLauncher: ActivityResultLauncher<Array<String>>
     
     // Temporäre URI für Kamera-Foto
     private var photoUri: Uri? = null
@@ -218,6 +233,36 @@ class MainActivity : WryActivity() {
                 currentPhotoPaths = null
             }
             currentPhotoFile = null
+        }
+        
+        // Register Dokument-Auswahl (ZIP-Dateien)
+        pickDocumentLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    // Kopiere ausgewählte ZIP in App-Cache
+                    // - FileProvider SAF URI wird in einen lokalen Dateipfad konvertiert
+                    // - Zieldatei wird in getCacheDir()/import_temp.zip gespeichert
+                    val cacheDir = cacheDir
+                    val importTempFile = File(cacheDir, "import_temp.zip")
+                    
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        importTempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    
+                    lastDocumentPath = importTempFile.absolutePath
+                    lastError = null
+                } catch (e: Exception) {
+                    lastError = "Fehler beim Kopieren der ZIP-Datei: ${e.message}"
+                    lastDocumentPath = null
+                }
+            } else {
+                lastError = "Keine Datei ausgewählt"
+                lastDocumentPath = null
+            }
         }
     }
     
@@ -442,28 +487,74 @@ class MainActivity : WryActivity() {
     }
     
     /**
-     * Erstelle eindeutige Datei für Foto
-     *
-     * Verhalten & Gründe:
-     * - Dateien werden in `getExternalFilesDir("photos")` abgelegt wenn verfügbar. Diese Location
-     *   ist App-privat und wird bei App-Deinstallation entfernt. Falls `null` (unwahrscheinlich),
-     *   nutzen wir `filesDir` als Fallback.
-     * - Wir erzeugen eine eindeutige Datei mit Präfix `WACHTEL_yyyyMMdd_HHmmss_` um Kollisionen
-     *   zwischen mehreren Aufnahmen zu vermeiden.
-     * - `createTempFile` sorgt für eine sichere Dateierzeugung mit eindeutigem Namen.
+     * Öffne Datei-Auswahl für ZIP-Dateien (Backup-Import).
+     * - Entfernt vorherige Ergebnis-/Fehlerzustände
+     * - Verwendet SAF (Storage Access Framework) für sichere Dateiauswahl
+     * - Kopiert ausgewählte Datei in App-Cache für weitere Verarbeitung
      */
-    private fun createImageFile(): File {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = getExternalFilesDir("photos") ?: filesDir
+    fun launchDocumentPicker() {
+        try {
+            lastDocumentPath = null
+            lastError = null
+            
+            // Starte Datei-Picker für ZIP-Dateien
+            pickDocumentLauncher.launch(arrayOf("application/zip"))
+        } catch (e: Exception) {
+            lastError = "Fehler beim Öffnen der Dateiauswahl: ${e.message}"
+        }
+    }
+    
+    /**
+     * Gebe den Pfad zum Documents-Ordner für lokale Backups zurück.
+     * - Android: /storage/emulated/0/Documents/Stalltagebuch/
+     * - Erstelle Ordner, falls nicht existent
+     * - Rückgabe: Der Pfad oder null bei Fehler
+     */
+    fun getDocumentsPath(): String? {
+        return try {
+            val documentsDir = File("/storage/emulated/0/Documents/Stalltagebuch")
+            if (!documentsDir.exists()) {
+                documentsDir.mkdirs()
+            }
+            if (documentsDir.isDirectory) {
+                documentsDir.absolutePath
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Failed to get documents path: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Erstelle eindeutige Datei für Dokument
+     */
+    private fun createDocumentFile(filename: String): File {
+        val storageDir = getDocumentsPath()?.let { File(it) } ?: filesDir
         
         if (!storageDir.exists()) {
             storageDir.mkdirs()
         }
         
-        return File.createTempFile(
-            "WACHTEL_${timestamp}_",
-            ".jpg",
-            storageDir
-        )
+        return File(storageDir, filename)
+    }
+    
+    /**
+     * Erstelle eindeutige Datei für Foto mit Timestamp im Namen.
+     * - Zielverzeichnis: app-spezifischer Cache (`cacheDir`)
+     * - Dateiname: JPEG mit Timestamp (z.B. "IMG_20260309_140523.jpg")
+     * - Rückgabe: File-Objekt (existiert nach Ausführung)
+     */
+    private fun createImageFile(): File {
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val imageFileName = "IMG_${timeStamp}.jpg"
+        val storageDir: File = cacheDir
+        return File(storageDir, imageFileName).apply {
+            // Stelle sicher, dass die Datei existiert
+            if (!exists()) {
+                createNewFile()
+            }
+        }
     }
 }

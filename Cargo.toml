@@ -24,7 +24,7 @@ license = "MIT OR Apache-2.0"
 dioxus-gallery-components = { path = "dioxus-gallery-components" }
 photo-gallery = { path = "photo-gallery", features = ["sync", "components"] }
 nextcloud-auth = { path = "nextcloud-auth" }
-dioxus = { version = "0.7.1", features = [] }
+dioxus = { version = "0.7.3", features = [] }
 dioxus-i18n = { git = "https://github.com/Kannen/dioxus-i18n.git", branch = "main" }
 unic-langid = { version = "0.9", features = ["macros"] }
 spacetimedb_sdk = { package = "spacetimedb-sdk", git = "https://github.com/enaut/SpacetimeDB.git", branch = "copilot/create-pr-for-dioxus-changes" }
@@ -33,11 +33,11 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 openssl = { version = "0.10", features = ["vendored"] }
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
-    "rustls-tls",
+    "rustls",
 ] }
-reqwest_dav = { version = "0.2", default-features = false, features = [
+reqwest_dav = { version = "0.3", default-features = false, features = [
     "rustls-tls",
 ] }
 base64 = "0.22"
@@ -53,10 +53,10 @@ image = { version = "0.25", default-features = false, features = [
     "webp",
 ] }
 rand = "0.9"
-zip = { version = "6", default-features = false, features = ["deflate"] }
+zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.21"
+jni = "0.22"
 ndk-context = "0.1"
 android_logger = "0.15"
 

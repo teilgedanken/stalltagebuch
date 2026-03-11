@@ -19,6 +19,7 @@
 //! automatic token persistence across app restarts.
 
 pub mod auth;
+pub mod client;
 
 // Re-export auth utilities for token persistence
 pub use auth::{load_saved_token, use_persist_spacetime_token, use_register_device};

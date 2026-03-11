@@ -33,7 +33,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
-        if connection.read().is_none() {
+        if connection().is_none() {
             error.set(Some(t!("error", error: "SpacetimeDB not connected")));
             return;
         }

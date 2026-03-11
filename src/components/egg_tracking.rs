@@ -48,7 +48,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         error.set(None);
         success.set(false);
 
-        if connection.read().is_none() {
+        if connection().is_none() {
             error.set(Some(t!("error-not-connected")));
             return;
         }

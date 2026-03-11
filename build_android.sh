@@ -28,6 +28,8 @@ DX_APP_DIR="$ROOT_DIR/target/dx/stalltagebuch/$BUILD_TYPE/android/app"
 APP_SRC_MAIN="$DX_APP_DIR/app/src/main"
 RES_XML_DIR="$APP_SRC_MAIN/res/xml"
 BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/dev/dioxus/main/BuildConfig.kt"
+BUNDLE_PATH="${BUNDLE_IDENTIFIER//./\/}"
+BUNDLE_BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/$BUNDLE_PATH/BuildConfig.kt"
 
 prepare_android_overrides() {
     local step_label="$1"
@@ -40,6 +42,9 @@ prepare_android_overrides() {
     if [[ -f "$ROOT_DIR/android/proguard-rules.pro" ]]; then
         cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
     fi
+
+    # Remove stale/generated alias files that can trigger redeclaration loops.
+    rm -f "$BUILD_CONFIG_FILE" "$BUNDLE_BUILD_CONFIG_FILE"
 
     if [[ "$BUNDLE_IDENTIFIER" != "dev.dioxus.main" ]]; then
         mkdir -p "$(dirname "$BUILD_CONFIG_FILE")"
@@ -64,12 +69,12 @@ find_build_tools() {
             fi
         done
     fi
-    
+
     if [[ -z "$sdk_path" || ! -d "$sdk_path/build-tools" ]]; then
         echo ""
         return
     fi
-    
+
     # Find the latest build-tools version
     local latest_version
     latest_version=$(ls -1 "$sdk_path/build-tools" 2>/dev/null | sort -V | tail -1)
@@ -102,6 +107,18 @@ fi
 # (dx may have regenerated app/proguard-rules.pro) — copy again right before Gradle packaging.
 if [[ -f "$ROOT_DIR/android/proguard-rules.pro" && -d "$DX_APP_DIR/app" ]]; then
     cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
+fi
+
+# dx can (re)generate alias files under the bundle package; remove stale self-aliases,
+# then recreate only the dev.dioxus.main indirection if needed.
+rm -f "$BUNDLE_BUILD_CONFIG_FILE"
+if [[ "$BUNDLE_IDENTIFIER" != "dev.dioxus.main" ]]; then
+    mkdir -p "$(dirname "$BUILD_CONFIG_FILE")"
+    cat > "$BUILD_CONFIG_FILE" <<EOF
+package dev.dioxus.main
+
+typealias BuildConfig = ${BUNDLE_IDENTIFIER}.BuildConfig
+EOF
 fi
 
 rm -f "$DX_LOG"

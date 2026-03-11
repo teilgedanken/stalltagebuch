@@ -36,8 +36,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         // Depend on refresh_counter to force re-evaluation
         let _ = refresh_counter();
 
-        let owner = connection
-            .read()
+        let owner = connection()
             .as_ref()
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
@@ -56,8 +55,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
 
     let quail_id_for_events_memo = quail_id.clone();
     let events = use_memo(move || {
-        let owner = connection
-            .read()
+        let owner = connection()
             .as_ref()
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
@@ -84,8 +82,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
 
     let quail_id_for_photos_memo = quail_id.clone();
     let photo_collections = use_memo(move || {
-        let owner = connection
-            .read()
+        let owner = connection()
             .as_ref()
             .and_then(|conn| conn.try_identity())
             .map(|id| id.to_string());
@@ -106,10 +103,13 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         rows
     });
 
-    let photo_uuid_to_path = use_memo(move || {
+    let photo_uuid_to_meta = use_memo(move || {
         let mut map = std::collections::HashMap::new();
         for photo in photos_table().iter() {
-            map.insert(photo.uuid.clone(), photo.relative_path.clone());
+            map.insert(
+                photo.uuid.clone(),
+                (photo.relative_path.clone(), photo.created_at),
+            );
         }
         map
     });
@@ -124,19 +124,25 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         map
     });
 
-    let filtered_thumbnail_collections = use_memo(move || {
+    let filtered_photo_items = use_memo(move || {
         let collections = photo_collections();
-        let photo_map = photo_uuid_to_path();
-        collections
-            .into_iter()
-            .filter_map(|collection| {
-                collection.preview_photo_uuid.as_ref().and_then(|uuid| {
-                    photo_map
-                        .get(uuid)
-                        .map(|path| (collection.uuid.clone(), uuid.clone(), path.clone()))
-                })
-            })
-            .collect::<Vec<_>>()
+        let photo_map = photo_uuid_to_meta();
+        let coll_photos = collection_to_photos();
+
+        let mut rows: Vec<(String, String, i64)> = vec![];
+        for collection in collections {
+            if let Some(photo_uuids) = coll_photos.get(&collection.uuid) {
+                for uuid in photo_uuids {
+                    if let Some((path, created_at)) = photo_map.get(uuid) {
+                        rows.push((uuid.clone(), path.clone(), *created_at));
+                    }
+                }
+            }
+        }
+
+        // Stable chronological order by creation date (oldest first).
+        rows.sort_by(|a, b| a.2.cmp(&b.2).then_with(|| a.0.cmp(&b.0)));
+        rows
     });
 
     // Auto-refresh when quails table changes to pick up edits from profile_edit screen
@@ -253,14 +259,16 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
 
                     // Photo Gallery Grid
                     {
-                        let thumbnails = filtered_thumbnail_collections();
-                        if !thumbnails.is_empty() {
+                        let photo_items = filtered_photo_items();
+                        if !photo_items.is_empty() {
                             let mut show_fullscreen = use_signal(|| false);
                             let mut selected_photos = use_signal(Vec::<String>::new);
                             let mut selected_index = use_signal(|| 0usize);
-                            let coll_photos = collection_to_photos();
-                            let photo_map = photo_uuid_to_path();
                             let mut photo_refresh = use_signal(|| 0u32);
+                            let all_paths: Vec<String> = photo_items
+                                .iter()
+                                .map(|(_, path, _)| path.clone())
+                                .collect();
 
                             rsx! {
                                 div { style: "margin-top:24px;",
@@ -272,30 +280,22 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     }
 
                                     div { style: "display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:12px;",
-                                        for (collection_uuid, preview_uuid, preview_path) in thumbnails {
+                                        for (idx, (photo_uuid, photo_path, _created_at)) in photo_items.iter().enumerate() {
                                             div {
-                                                key: "{preview_uuid}-{photo_refresh()}",
+                                                key: "{photo_uuid}-{photo_refresh()}",
                                                 style: "cursor: pointer; position: relative;",
                                                 onclick: {
-                                                    let coll_photos_click = coll_photos.clone();
-                                                    let photo_map_click = photo_map.clone();
-                                                    let collection_uuid_click = collection_uuid.clone();
+                                                    let all_paths_click = all_paths.clone();
                                                     move |_| {
-                                                        if let Some(photo_uuids) = coll_photos_click.get(&collection_uuid_click) {
-                                                            let paths: Vec<String> = photo_uuids
-                                                                .iter()
-                                                                .filter_map(|uuid| photo_map_click.get(uuid).cloned())
-                                                                .collect();
-                                                            if !paths.is_empty() {
-                                                                selected_photos.set(paths);
-                                                                selected_index.set(0);
-                                                                show_fullscreen.set(true);
-                                                            }
+                                                        if !all_paths_click.is_empty() {
+                                                            selected_photos.set(all_paths_click.clone());
+                                                            selected_index.set(idx);
+                                                            show_fullscreen.set(true);
                                                         }
                                                     }
                                                 },
                                                 ThumbnailImage {
-                                                    relative_path: preview_path,
+                                                    relative_path: photo_path.clone(),
                                                 }
                                             }
                                         }
