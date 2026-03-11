@@ -21,7 +21,7 @@ reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "rustls",
 ], optional = true }
-reqwest_dav = { version = "0.2", default-features = false, features = [
+reqwest_dav = { version = "0.3", default-features = false, features = [
     "rustls-tls",
 ], optional = true }
 rand = { version = "0.9", optional = true }

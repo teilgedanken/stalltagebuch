@@ -41,7 +41,7 @@ reqwest_dav = { version = "0.3", default-features = false, features = [
     "rustls-tls",
 ] }
 base64 = "0.22"
-toml = "0.9"
+toml = "0.9.8"
 sha2 = "0.10"
 ulid = "1.1"
 tokio = { version = "1.0", features = ["rt", "time", "macros"] }
