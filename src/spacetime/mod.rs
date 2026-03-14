@@ -25,5 +25,5 @@ pub mod client;
 pub use auth::{load_saved_token, use_persist_spacetime_token, use_register_device};
 
 // Re-export the generated module bindings
-pub use crate::spacetime_module_bindings::dioxus::*;
-pub use crate::spacetime_module_bindings::*;
+pub use crate::dioxus_spacetime_module_bindings::dioxus::*;
+pub use crate::dioxus_spacetime_module_bindings::*;

@@ -1,6 +1,6 @@
 use crate::{Screen, spacetime};
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[derive(Clone, Debug)]
 struct EggStatistics {
@@ -137,16 +137,16 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
             div { style: "margin-bottom: 20px; padding-top: 8px;",
                 h1 { style: "color: #0066cc; margin: 0 0 16px 0; font-size: 24px; font-weight: 700;",
                     "📊 "
-                    {t!("stats-title")}
+                    {tid!("stats-title")}
                 }
 
                 // Period filter
                 div { style: "display: flex; gap: 8px; flex-wrap: wrap;",
                     for (label , value) in [
-                        (t!("period-all"), "all"),
-                        (t!("period-week"), "week"),
-                        (t!("period-month"), "month"),
-                        (t!("period-year"), "year"),
+                        (tid!("period-all"), "all"),
+                        (tid!("period-week"), "week"),
+                        (tid!("period-month"), "month"),
+                        (tid!("period-year"), "year"),
                     ]
                     {
                         button {
@@ -173,27 +173,27 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { class: "card",
                         h2 { style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
                             "📈 "
-                            {t!("stats-overview")}
+                            {tid!("stats-overview")}
                         }
                         div { style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;",
 
                             StatCard {
-                                label: t!("stats-total-records"),
+                                label: tid!("stats-total-records"),
                                 value: format!("{}", s.total_records),
                                 icon: "📋",
                             }
                             StatCard {
-                                label: t!("stats-total-eggs"),
+                                label: tid!("stats-total-eggs"),
                                 value: format!("{}", s.total_eggs),
                                 icon: "🥚",
                             }
                             StatCard {
-                                label: t!("stats-min"),
+                                label: tid!("stats-min"),
                                 value: format!("{}", s.min_eggs),
                                 icon: "⬇️",
                             }
                             StatCard {
-                                label: t!("stats-max"),
+                                label: tid!("stats-max"),
                                 value: format!("{}", s.max_eggs),
                                 icon: "⬆️",
                             }
@@ -204,22 +204,22 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { class: "card",
                         h2 { style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
                             "📊 "
-                            {t!("stats-averages")}
+                            {tid!("stats-averages")}
                         }
                         div { style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;",
 
                             StatCard {
-                                label: t!("stats-daily-avg"),
+                                label: tid!("stats-daily-avg"),
                                 value: format!("{:.1}", s.daily_average),
                                 icon: "📅",
                             }
                             StatCard {
-                                label: t!("stats-weekly-avg"),
+                                label: tid!("stats-weekly-avg"),
                                 value: format!("{:.1}", s.weekly_average),
                                 icon: "📆",
                             }
                             StatCard {
-                                label: t!("stats-monthly-avg"),
+                                label: tid!("stats-monthly-avg"),
                                 value: format!("{:.1}", s.monthly_average),
                                 icon: "🗓️",
                             }
@@ -231,9 +231,9 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         div { class: "card", style: "background: #e3f2fd;",
                             p { style: "margin: 0; font-size: 14px; color: #1565c0;",
                                 "📅 "
-                                {t!("stats-period")}
+                                {tid!("stats-period")}
                                 ": {first} "
-                                {t!("stats-until")}
+                                {tid!("stats-until")}
                                 " {last}"
                             }
                         }
@@ -244,7 +244,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         div { class: "card",
                             h2 { style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
                                 "📈 "
-                                {t!("stats-last-10-days")}
+                                {tid!("stats-last-10-days")}
                             }
                             div { style: "display: flex; flex-direction: column; gap: 8px;",
                                 for (date , eggs) in trend().iter().take(10) {
@@ -263,7 +263,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 div {
                     class: "card",
                     style: "text-align: center; padding: 40px; color: #999;",
-                    {t!("stats-no-data")} // Empty state when no statistics data available
+                    {tid!("stats-no-data")} // Empty state when no statistics data available
                 }
             }
 
@@ -274,7 +274,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     style: "width: 100%;",
                     onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
                     "➕ "
-                    {t!("stats-add-entry")}
+                    {tid!("stats-add-entry")}
                 }
             }
         }

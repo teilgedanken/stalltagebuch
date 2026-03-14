@@ -4,7 +4,7 @@ use crate::Screen;
 use crate::models::{EventType, Gender};
 use crate::spacetime;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use photo_gallery::{CollectionFullscreen, ThumbnailImage};
 use spacetimedb_sdk::DbContext;
 
@@ -166,11 +166,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                     style: "padding: 8px 16px; background: #e0e0e0; color: #333; border-radius: 8px; font-size: 16px;",
                     onclick: move |_| on_navigate.call(Screen::ProfileList),
                     "← "
-                    {t!("action-back")}
+                    {tid!("action-back")}
                 }
                 h1 {
                     style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
-                    {t!("profile-detail-title")} // Profile
+                    {tid!("profile-detail-title")} // Profile
                 }
             }
 
@@ -200,45 +200,45 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     EventType::Born => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "🐣 "
-                                            {t!("status-born")}
+                                            {tid!("status-born")}
                                         }
                                     },
                                     EventType::Alive => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "✅ "
-                                            {t!("status-alive")}
+                                            {tid!("status-alive")}
                                         }
                                     },
                                     EventType::Sick => rsx! {
                                         span { style: "padding:6px 14px; background:#ffe0e0; border-radius:16px; font-size:13px; color:#cc3333;",
                                             "🤒 "
-                                            {t!("status-sick")}
+                                            {tid!("status-sick")}
                                         }
                                     },
                                     EventType::Healthy => rsx! {
                                         span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
                                             "💪 "
-                                            {t!("status-healthy")}
+                                            {tid!("status-healthy")}
                                         }
                                     },
                                     EventType::MarkedForSlaughter => {
                                         rsx! {
                                             span { style: "padding:6px 14px; background:#fff3e0; border-radius:16px; font-size:13px; color:#ff8800;",
                                                 "🥩 "
-                                                {t!("status-marked")}
+                                                {tid!("status-marked")}
                                             }
                                         }
                                     }
                                     EventType::Slaughtered => rsx! {
                                         span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
                                             "🥩 "
-                                            {t!("status-slaughtered")}
+                                            {tid!("status-slaughtered")}
                                         }
                                     },
                                     EventType::Died => rsx! {
                                         span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
                                             "🪦 "
-                                            {t!("status-died")}
+                                            {tid!("status-died")}
                                         }
                                     },
                                 }
@@ -275,7 +275,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     div { style: "display:flex; align-items:center; margin-bottom:12px;",
                                         h3 { style: "margin:0; font-size:18px; color:#333; font-weight:600;",
                                             "📸 "
-                                            {t!("photos-title")} // Fotos
+                                            {tid!("photos-title")} // Fotos
                                         }
                                     }
 
@@ -322,7 +322,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         div { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;",
                             h3 { style: "margin:0; font-size:18px; color:#333; font-weight:600;",
                                 "📅 "
-                                {t!("events-timeline-title")}
+                                {tid!("events-timeline-title")}
                             }
                             button {
                                 style: "padding:8px 16px; background:#0066cc; color:white; border-radius:8px; font-size:14px; font-weight:500;",
@@ -336,14 +336,14 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     }
                                 },
                                 "+ "
-                                {t!("action-add-event")} // Add event
+                                {tid!("action-add-event")} // Add event
                             }
                         }
 
                         if events().is_empty() {
                             div {
                                 style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
-                                {t!("events-empty")} // No events available
+                                {tid!("events-empty")} // No events available
                             }
                         } else {
                             div { style: "display:flex; flex-direction:column; gap:12px;",
@@ -402,13 +402,13 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                             move |_| on_navigate.call(Screen::ProfileEdit(quail_id_for_edit.clone()))
                         },
                         "✏️ "
-                        {t!("action-edit")}
+                        {tid!("action-edit")}
                     }
                 }
             } else {
                 div { style: "padding:48px; text-align:center;",
                     div { style: "font-size:48px; margin-bottom:16px;", "⏳" }
-                    div { style: "color:#666;", {t!("loading-profile")} } // Loading profile...
+                    div { style: "color:#666;", {tid!("loading-profile")} } // Loading profile...
                 }
             }
         }

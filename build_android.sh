@@ -10,6 +10,48 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+inject_rustls_android_helper_sources() {
+    # The jni-0.22 branch currently doesn't ship populated Maven artifacts in git checkouts.
+    # Copy the Kotlin helper directly from the crate checkout into the generated app sources.
+    local verifier_src
+    verifier_src=$(find "$HOME/.cargo" -type f -path "*/rustls-platform-verifier*/android/rustls-platform-verifier/src/main/java/org/rustls/platformverifier/CertificateVerifier.kt" 2>/dev/null | sort | tail -n1 || true)
+    if [[ -z "$verifier_src" ]]; then
+        echo "⚠ rustls-platform-verifier CertificateVerifier.kt not found in Cargo cache"
+        return 0
+    fi
+
+    local verifier_dir="$APP_SRC_MAIN/kotlin/org/rustls/platformverifier"
+    mkdir -p "$verifier_dir"
+    local verifier_file="$verifier_dir/CertificateVerifier.kt"
+    cp "$verifier_src" "$verifier_file"
+
+    # Avoid false-positive "Revoked" on Android when certs omit OCSP responder URLs.
+    # This keeps strict revocation failures for real revoked certs, but treats
+    # "undetermined" / "missing OCSP responder" as non-fatal.
+    if ! grep -q 'UNDETERMINED_REVOCATION_STATUS' "$verifier_file"; then
+        awk '
+            /return VerificationResult\(StatusCode\.Revoked, e\.toString\(\)\)/ && !done {
+                print "                if (e.reason == CertPathValidatorException.BasicReason.UNDETERMINED_REVOCATION_STATUS || (e.message?.contains(\"Certificate does not specify OCSP responder\") == true)) {"
+                print "                    Log.w(TAG, \"revocation status undetermined (missing OCSP responder): $e\")"
+                print "                    return VerificationResult(StatusCode.Ok)"
+                print "                }"
+                print ""
+                done = 1
+            }
+            { print }
+        ' "$verifier_file" > "$verifier_file.tmp"
+        mv "$verifier_file.tmp" "$verifier_file"
+    fi
+
+    cat > "$verifier_dir/BuildConfig.kt" <<EOF
+package org.rustls.platformverifier
+
+internal object BuildConfig {
+    const val TEST: Boolean = false
+}
+EOF
+}
+
 # Extract bundle identifier from Dioxus.toml (fallback to dev.dioxus.main)
 BUNDLE_IDENTIFIER=$(sed -n 's/^[[:space:]]*identifier[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$ROOT_DIR/Dioxus.toml" | head -n1)
 if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
@@ -109,6 +151,9 @@ if [[ -f "$ROOT_DIR/android/proguard-rules.pro" && -d "$DX_APP_DIR/app" ]]; then
     cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
 fi
 
+# Ensure rustls-platform-verifier Android Kotlin helper is available to the generated app.
+inject_rustls_android_helper_sources
+
 # dx can (re)generate alias files under the bundle package; remove stale self-aliases,
 # then recreate only the dev.dioxus.main indirection if needed.
 rm -f "$BUNDLE_BUILD_CONFIG_FILE"
@@ -126,6 +171,7 @@ rm -f "$DX_LOG"
 if [[ "$BUILD_TYPE" == "release" ]]; then
     echo "[3/3] Running Gradle assembleRelease with lint disabled"
     pushd "$DX_APP_DIR" >/dev/null
+    chmod +x ./gradlew
     ./gradlew \
         -x lintVitalAnalyzeRelease \
         -x lintVitalReportRelease \

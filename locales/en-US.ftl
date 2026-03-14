@@ -823,6 +823,23 @@ sync-username = Username
 # Source: ./src/components/settings.rs:1394
 sync-waiting = Waiting for login...
 
+backup-upload-button = ☁️ Upload backup to Nextcloud
+backup-upload-button-running = ⏳ Backup upload in progress...
+backup-upload-failed = ❌ Backup upload failed: { $error }
+backup-upload-running = 🔄 Creating and uploading backup...
+backup-upload-success = ✅ Backup uploaded successfully: { $filename }
+
+sync-photo-status-active = Active: { $count }
+sync-photo-status-error = Errors: { $count }
+sync-photo-status-pending = Pending: { $count }
+sync-photo-status-synced = Synced: { $count }
+sync-photo-status-title = 📷 Photo sync status
+
+sync-status-running-full = 🔄 Running full synchronization...
+sync-status-success-photos = ✅ Sync complete: uploaded { $count } photos
+sync-upload-progress-detail = Uploaded { $current } of { $total } photos ({ $percent }%)
+sync-upload-progress-title = Uploading photos...
+
 # Source: ./src/components/event_edit.rs:296
 updated = Updated
 

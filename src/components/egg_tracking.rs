@@ -1,7 +1,7 @@
 use crate::{Screen, spacetime};
 use chrono::Local;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[component]
 pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>) -> Element {
@@ -49,7 +49,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         success.set(false);
 
         if connection().is_none() {
-            error.set(Some(t!("error-not-connected")));
+            error.set(Some(tid!("error-not-connected")));
             return;
         }
 
@@ -57,18 +57,18 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         let eggs_str = total_eggs();
         let eggs_trimmed = eggs_str.trim();
         if eggs_trimmed.is_empty() {
-            error.set(Some(t!("error-eggs-count-empty")));
+            error.set(Some(tid!("error-eggs-count-empty")));
             return;
         }
 
         let eggs_count = match eggs_trimmed.parse::<i32>() {
             Ok(n) if n >= 0 => n,
             Ok(_) => {
-                error.set(Some(t!("error-eggs-count-negative")));
+                error.set(Some(tid!("error-eggs-count-negative")));
                 return;
             }
             Err(_) => {
-                error.set(Some(t!("error-eggs-count-invalid")));
+                error.set(Some(tid!("error-eggs-count-invalid")));
                 return;
             }
         };
@@ -79,7 +79,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         let record_date = match chrono::NaiveDate::parse_from_str(date_trimmed, "%Y-%m-%d") {
             Ok(d) => d,
             Err(_) => {
-                error.set(Some(t!("error-date-format")));
+                error.set(Some(tid!("error-date-format")));
                 return;
             }
         };
@@ -89,7 +89,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         {
             Some(ts) => ts,
             None => {
-                error.set(Some(t!("error-date-format")));
+                error.set(Some(tid!("error-date-format")));
                 return;
             }
         };
@@ -141,7 +141,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
             div { style: "display: flex; align-items: center; margin-bottom: 24px;",
                 h1 { style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
                     "🥚 "
-                    {t!("egg-tracking-title")}
+                    {tid!("egg-tracking-title")}
                 }
             }
 
@@ -157,7 +157,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
             if success() {
                 div { style: "background: #efe; border: 1px solid #cfc; color: #3a3; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
                     "✅ "
-                    {t!("egg-tracking-success")}
+                    {tid!("egg-tracking-success")}
                 }
             }
 
@@ -165,7 +165,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
             if existing_record_uuid().is_some() {
                 div { style: "background: #e8f4f8; padding: 12px; margin-bottom: 16px; border-radius: 8px; border-left: 3px solid #0066cc; font-size: 14px; color: #333;",
                     "📝 "
-                    {t!("egg-tracking-exists-warning")}
+                    {tid!("egg-tracking-exists-warning")}
                 }
             }
 
@@ -175,7 +175,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                 // Date Field
                 div { style: "margin-bottom: 20px;",
                     label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-date-required")}
+                        {tid!("field-date-required")}
                     }
                     input {
                         r#type: "date",
@@ -185,19 +185,19 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                         autofocus: true,
                     }
                     p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                        {t!("field-date-format-hint")}
+                        {tid!("field-date-format-hint")}
                     }
                 }
 
                 // Total Eggs Field
                 div { style: "margin-bottom: 20px;",
                     label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-eggs-count-required")}
+                        {tid!("field-eggs-count-required")}
                     }
                     input {
                         r#type: "number",
                         class: "input",
-                        placeholder: t!("field-eggs-count-placeholder"),
+                        placeholder: tid!("field-eggs-count-placeholder"),
                         min: "0",
                         value: "{total_eggs}",
                         oninput: move |e| total_eggs.set(e.value()),
@@ -207,12 +207,12 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                 // Notes Field
                 div { style: "margin-bottom: 20px;",
                     label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-notes")}
+                        {tid!("field-notes")}
                     }
                     textarea {
                         class: "input",
                         style: "min-height: 80px; resize: vertical; font-family: inherit;",
-                        placeholder: t!("field-notes-placeholder"),
+                        placeholder: tid!("field-notes-placeholder"),
                         value: "{notes}",
                         oninput: move |e| notes.set(e.value()),
                     }
@@ -226,9 +226,9 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                         onclick: move |_| handle_submit(),
                         "💾 "
                         if existing_record_uuid().is_some() {
-                            {t!("action-update")}
+                            {tid!("action-update")}
                         } else {
-                            {t!("action-save")}
+                            {tid!("action-save")}
                         }
                     }
                 }
@@ -241,7 +241,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                     style: "flex: 1; padding: 12px;",
                     onclick: move |_| on_navigate.call(Screen::EggHistory),
                     "📋 "
-                    {t!("egg-tracking-show-history")}
+                    {tid!("egg-tracking-show-history")}
                 }
             }
         }

@@ -33,3 +33,6 @@
 
 # Keep FileProvider
 -keep class androidx.core.content.FileProvider { *; }
+
+# rustls-platform-verifier Android helper accessed via JNI/reflection
+-keep, includedescriptorclasses class org.rustls.platformverifier.** { *; }

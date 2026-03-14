@@ -1,8 +1,8 @@
 # Generated translation template by dx-i18n
-# Contains 246 translation keys
+# Contains 260 translation keys
 
 # Add event
-# Source: ./src/components/profile_detail.rs:342
+# Source: ./src/components/profile_detail.rs:339
 action-add-event = Ereignis
 
 # Source: ./src/components/profile_add.rs:136
@@ -19,19 +19,19 @@ action-cancel = Abbrechen
 # UNUSED: This key is no longer used in the code
 action-close = Schließen
 
-# Source: ./src/components/event_edit.rs:560
+# Source: ./src/components/event_edit.rs:564
 action-delete = Löschen
 
-# Source: ./src/components/profile_edit.rs:405
+# Source: ./src/components/profile_edit.rs:403
 action-delete-permanently = Endgültig löschen
 
-# Source: ./src/components/profile_edit.rs:419
+# Source: ./src/components/profile_edit.rs:417
 action-delete-quail = Wachtel löschen
 
-# Source: ./src/components/profile_detail.rs:408
+# Source: ./src/components/profile_detail.rs:405
 action-edit = Bearbeiten
 
-# Source: ./src/components/event_edit.rs:441
+# Source: ./src/components/event_edit.rs:445
 action-gallery = Galerie
 
 # Source: ./src/components/profile_add.rs:278
@@ -40,10 +40,10 @@ action-loading = Lädt...
 # Source: ./src/components/egg_history.rs:47
 action-new = Neu
 
-# Source: ./src/components/event_edit.rs:527
+# Source: ./src/components/event_edit.rs:531
 action-photo = Foto
 
-# Source: ./src/components/settings.rs:378
+# Source: ./src/components/settings.rs:371
 action-retry = Erneut versuchen
 
 # Source: ./src/components/egg_tracking.rs:231
@@ -58,10 +58,10 @@ action-update = Aktualisieren
 # Source: ./src/components/home.rs:25
 app-title = Wachtel-Stallbuch
 
-# Source: ./src/components/settings.rs:1267
+# Source: ./src/components/settings.rs:1187
 backup-cleanup-button = 🧹 Verwaiste Fotos löschen
 
-# Source: ./src/components/settings.rs:1253
+# Source: ./src/components/settings.rs:1173
 backup-cleanup-description = Entfernt Fotos ohne gültige Wachtel- oder Ereigniszuordnung.
 
 # Source: ./src/components/settings.rs:1050
@@ -74,17 +74,18 @@ backup-cleanup-error = ❌ Fehler beim Bereinigen: { $error }
 # UNUSED: This key is no longer used in the code
 backup-cleanup-success = ✅ { $count } verwaiste Fotos gelöscht
 
-# Source: ./src/components/settings.rs:1250
+# Source: ./src/components/settings.rs:1170
 backup-cleanup-title = 🧹 Speicherbereinigung
 
-# Source: ./src/components/settings.rs:1263
+# Source: ./src/components/settings.rs:1183
 # Parameters: $error
 backup-db-error = ❌ Datenbankfehler: { $error }
 
 # Source: ./src/components/settings.rs:1289
+# UNUSED: This key is no longer used in the code
 backup-export-button = 📤 Daten exportieren
 
-# Source: ./src/components/settings.rs:1277
+# Source: ./src/components/settings.rs:1197
 backup-export-description = Erstellt eine ZIP-Sicherung mit Wachteln, Ereignissen, Eiern und Fotos und kann diese wieder importieren.
 
 # Source: ./src/components/settings.rs:1100
@@ -97,10 +98,10 @@ backup-export-error = ❌ Fehler beim Export: { $error }
 # UNUSED: This key is no longer used in the code
 backup-export-success = ✅ Export erzeugt: { $path }
 
-# Source: ./src/components/settings.rs:1274
+# Source: ./src/components/settings.rs:1194
 backup-export-title = 📦 Daten sichern & wiederherstellen
 
-# Source: ./src/components/settings.rs:1320
+# Source: ./src/components/settings.rs:1267
 backup-import-button = 📥 Daten aus import.zip einspielen
 
 # Source: ./src/components/settings.rs:1158
@@ -108,7 +109,7 @@ backup-import-button = 📥 Daten aus import.zip einspielen
 # UNUSED: This key is no longer used in the code
 backup-import-error = ❌ Fehler beim Import: { $error }
 
-# Source: ./src/components/settings.rs:1310
+# Source: ./src/components/settings.rs:1257
 # Parameters: $path
 backup-import-missing = ❌ Importdatei nicht gefunden: { $path }
 
@@ -117,7 +118,24 @@ backup-import-missing = ❌ Importdatei nicht gefunden: { $path }
 # UNUSED: This key is no longer used in the code
 backup-import-success = ✅ Import erfolgreich aus { $path }
 
-# Source: ./src/components/profile_edit.rs:397
+# Source: ./src/components/settings.rs:1235
+backup-upload-button = ☁️ Backup zu Nextcloud hochladen
+
+# Source: ./src/components/settings.rs:1233
+backup-upload-button-running = ⏳ Backup-Upload läuft...
+
+# Source: ./src/components/settings.rs:1223
+# Parameters: $error
+backup-upload-failed = ❌ Backup-Upload fehlgeschlagen: { $error }
+
+# Source: ./src/components/settings.rs:1212
+backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
+
+# Source: ./src/components/settings.rs:1217
+# Parameters: $filename
+backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
+
+# Source: ./src/components/profile_edit.rs:395
 confirm-delete-quail = Möchten Sie diese Wachtel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 
 # Source: ./src/components/egg_history.rs:109
@@ -157,10 +175,10 @@ error-access-failed = Zugriff fehlgeschlagen
 # Source: ./src/components/profile_add.rs:271
 error-android-only = Nur auf Android verfügbar
 
-# Source: ./src/components/event_edit.rs:517
+# Source: ./src/components/event_edit.rs:521
 error-android-only-camera = Kamera nur auf Android verfügbar
 
-# Source: ./src/components/event_edit.rs:431
+# Source: ./src/components/event_edit.rs:435
 error-android-only-gallery = Galerie nur auf Android verfügbar
 
 # Source: ./src/components/statistics.rs:54
@@ -173,18 +191,18 @@ error-camera-android-only = Kamera nur auf Android verfügbar
 # Source: ./src/components/profile_photo_card.rs:272
 error-capture-failed = Fehler bei Aufnahme
 
-# Source: ./src/components/event_edit.rs:501
+# Source: ./src/components/event_edit.rs:505
 # Parameters: $error
 error-capture-photo = Aufnahmefehler: { $error }
 
-# Source: ./src/components/settings.rs:299
+# Source: ./src/components/settings.rs:292
 error-client = Client-Fehler
 
 # Source: ./src/components/profile_detail.rs:296
 # UNUSED: This key is no longer used in the code
 error-collection-failed = Fehler beim Laden der Bildersammlung
 
-# Source: ./src/components/settings.rs:975
+# Source: ./src/components/settings.rs:967
 error-connection = Verbindungsfehler
 
 # Database connection error
@@ -227,7 +245,7 @@ error-eggs-count-invalid = Ungültige Eierzahl
 # Source: ./src/components/egg_tracking.rs:67
 error-eggs-count-negative = Eierzahl darf nicht negativ sein
 
-# Source: ./src/components/event_edit.rs:211
+# Source: ./src/components/event_edit.rs:215
 error-empty-date = Datum darf nicht leer sein
 
 # Source: ./src/components/event_add.rs:94
@@ -238,10 +256,10 @@ error-event-save = Fehler beim Speichern: { $error }
 # Source: ./src/components/event_add.rs:40
 error-invalid-date = Ungültiges Datumsformat
 
-# Source: ./src/components/event_edit.rs:421
+# Source: ./src/components/event_edit.rs:425
 error-invalid-event-id = Ungueltige Ereignis-ID
 
-# Source: ./src/components/settings.rs:866
+# Source: ./src/components/settings.rs:858
 error-json = JSON-Fehler
 
 # Failed to load events
@@ -268,7 +286,7 @@ error-load-profiles-failed = Profile laden fehlgeschlagen
 # UNUSED: This key is no longer used in the code
 error-loading = Fehler beim Laden: { $error }
 
-# Source: ./src/components/settings.rs:943
+# Source: ./src/components/settings.rs:935
 error-login-timeout = Timeout: Keine Anmeldung innerhalb von 5 Minuten
 
 # Source: ./src/components/profile_photo_card.rs:180
@@ -278,13 +296,13 @@ error-multiselect-android-only = Mehrfach-Auswahl nur auf Android verfügbar
 # Source: ./src/components/profile_add.rs:32
 error-name-required = Name darf nicht leer sein
 
-# Source: ./src/components/settings.rs:290
+# Source: ./src/components/settings.rs:283
 error-network = Fehler
 
 # Source: ./src/components/egg_tracking.rs:52
 error-not-connected = Nicht mit SpacetimeDB verbunden
 
-# Source: ./src/components/event_edit.rs:414
+# Source: ./src/components/event_edit.rs:418
 # Parameters: $error
 error-pick-images = Auswahlfehler: { $error }
 
@@ -304,7 +322,7 @@ error-save-failed = Fehler beim Speichern
 # Source: ./src/components/profile_photo_card.rs:165
 error-selection-failed = Fehler bei Auswahl
 
-# Source: ./src/components/settings.rs:966
+# Source: ./src/components/settings.rs:958
 error-server = Server-Fehler
 
 # Error message when loading trend data fails
@@ -312,10 +330,10 @@ error-server = Server-Fehler
 # UNUSED: This key is no longer used in the code
 error-trend-load = Fehler beim Laden des Trends
 
-# Source: ./src/components/settings.rs:880
+# Source: ./src/components/settings.rs:872
 error-unexpected-status = Unerwarteter Status
 
-# Source: ./src/components/settings.rs:822
+# Source: ./src/components/settings.rs:817
 error-webdav-client = WebDAV-Client-Fehler
 
 # Source: ./src/components/event_add.rs:81
@@ -325,7 +343,7 @@ event-add-for = für { $name }
 # Source: ./src/components/event_add.rs:79
 event-add-title = Ereignis hinzufügen
 
-# Source: ./src/components/event_edit.rs:285
+# Source: ./src/components/event_edit.rs:289
 event-edit-title = Ereignis bearbeiten
 
 # Source: ./src/components/event_edit.rs:179
@@ -354,25 +372,25 @@ event-type-sick = 🤒 Krank
 event-type-slaughtered = 🥩 Geschlachtet
 
 # No events available
-# Source: ./src/components/profile_detail.rs:349
+# Source: ./src/components/profile_detail.rs:346
 events-empty = Keine Ereignisse vorhanden
 
-# Source: ./src/components/profile_detail.rs:328
+# Source: ./src/components/profile_detail.rs:325
 events-timeline-title = Ereignisse
 
-# Source: ./src/components/settings.rs:431
+# Source: ./src/components/settings.rs:428
 export-description = Erstelle eine Sicherung aller Wachteldaten und Fotos als ZIP-Datei.
 
-# Source: ./src/components/settings.rs:418
+# Source: ./src/components/settings.rs:415
 export-failed = Fehler beim Exportieren
 
-# Source: ./src/components/settings.rs:402
+# Source: ./src/components/settings.rs:395
 export-in-progress = Export läuft...
 
-# Source: ./src/components/settings.rs:414
+# Source: ./src/components/settings.rs:410
 export-success = Datensicherung erfolgreich erstellt
 
-# Source: ./src/components/settings.rs:428
+# Source: ./src/components/settings.rs:425
 export-title = Daten exportieren
 
 # Source: ./src/components/event_add.rs:118
@@ -394,15 +412,15 @@ field-eggs-count-required = Anzahl Eier *
 field-event-type = Ereignistyp
 
 # Gender
-# Source: ./src/components/profile_edit.rs:239
+# Source: ./src/components/profile_edit.rs:237
 field-gender = Geschlecht
 
 # e.g. Hen 1
-# Source: ./src/components/profile_edit.rs:228
+# Source: ./src/components/profile_edit.rs:226
 field-name-placeholder = z.B. Flecki
 
 # Name *
-# Source: ./src/components/profile_edit.rs:223
+# Source: ./src/components/profile_edit.rs:221
 field-name-required = Name *
 
 # Source: ./src/components/egg_tracking.rs:210
@@ -415,14 +433,14 @@ field-notes-optional = Notizen (optional)
 field-notes-placeholder = Besonderheiten, Auffälligkeiten, etc.
 
 # Photos count
-# Source: ./src/components/profile_edit.rs:284
+# Source: ./src/components/profile_edit.rs:282
 field-photos = Fotos
 
 # Ring color
-# Source: ./src/components/profile_edit.rs:255
+# Source: ./src/components/profile_edit.rs:253
 field-ring-color = Ringfarbe
 
-# Source: ./src/components/event_edit.rs:303
+# Source: ./src/components/event_edit.rs:307
 field-type = Typ
 
 # Female gender option
@@ -437,19 +455,19 @@ gender-male = Männlich
 # Source: ./src/components/profile_add.rs:183
 gender-unknown = Unbekannt
 
-# Source: ./src/components/settings.rs:548
+# Source: ./src/components/settings.rs:550
 import-description = Importiere Daten aus einer ZIP-Sicherungsdatei (v1 oder v2 Format).
 
-# Source: ./src/components/settings.rs:484
+# Source: ./src/components/settings.rs:481
 import-failed = Fehler beim Importieren
 
-# Source: ./src/components/settings.rs:506
+# Source: ./src/components/settings.rs:503
 import-in-progress = Import läuft...
 
 # Source: ./src/components/settings.rs:518
 import-success = Daten erfolgreich importiert
 
-# Source: ./src/components/settings.rs:545
+# Source: ./src/components/settings.rs:547
 import-title = Daten importieren
 
 # DB: {path}
@@ -458,7 +476,7 @@ import-title = Daten importieren
 # UNUSED: This key is no longer used in the code
 info-db-path = DB: { $path }
 
-# Source: ./src/components/profile_edit.rs:277
+# Source: ./src/components/profile_edit.rs:275
 info-photos-detail-view = Fotos werden in der Detailansicht hinzugefügt. Hier können Sie nur das Profilbild auswählen oder Fotos löschen.
 
 # Source: ./src/components/home.rs:88
@@ -474,18 +492,19 @@ info-spacetimedb-disconnected = SpacetimeDB: nicht verbunden
 info-spacetimedb-error = SpacetimeDB: Verbindungsfehler
 
 # Tap a photo to mark it as profile photo.
-# Source: ./src/components/profile_edit.rs:362
+# Source: ./src/components/profile_edit.rs:360
 info-tap-photo-to-mark = Tippen Sie auf ein Foto, um es als Profilbild zu markieren.
 
-# Source: ./src/components/event_edit.rs:564
+# Source: ./src/components/event_edit.rs:568
 loading-event = Lade Ereignis...
 
 # Loading profile...
-# Source: ./src/components/profile_detail.rs:414
+# Source: ./src/components/profile_detail.rs:411
 loading-profile = Lade Profil...
 
 # the format string for the chrono format time.
 # Source: ./src/components/settings.rs:13
+# UNUSED: This key is no longer used in the code
 log-time-format = %H:%M:%S
 
 # Eier
@@ -505,11 +524,11 @@ nav-profiles = Profile
 nav-statistics = Statistik
 
 # Network connectivity check in progress
-# Source: ./src/components/settings.rs:357
+# Source: ./src/components/settings.rs:350
 network-checking = Netzwerkverbindung prüfen...
 
 # No internet connection message
-# Source: ./src/components/settings.rs:371
+# Source: ./src/components/settings.rs:364
 network-offline = Keine Internet-Verbindung
 
 # Source: ./src/components/statistics.rs:146
@@ -532,7 +551,7 @@ photo-none-selected = Kein Foto ausgewählt
 # Source: ./src/components/profile_add.rs:232
 photo-selected = Foto ausgewählt
 
-# Source: ./src/components/event_edit.rs:347
+# Source: ./src/components/event_edit.rs:351
 # Parameters: $count
 photos-count = Fotos ({ $count })
 
@@ -542,7 +561,7 @@ photos-count = Fotos ({ $count })
 photos-empty = Keine Fotos vorhanden. Fügen Sie Fotos in der Detailansicht hinzu.
 
 # Fotos
-# Source: ./src/components/profile_detail.rs:281
+# Source: ./src/components/profile_detail.rs:278
 photos-title = Fotos
 
 # Source: ./src/components/event_add.rs:137
@@ -559,17 +578,17 @@ profile-add-title = Wachtel hinzufügen
 profile-created-success = Profil erstellt!
 
 # Profile
-# Source: ./src/components/profile_detail.rs:176
+# Source: ./src/components/profile_detail.rs:173
 profile-detail-title = Profil
 
-# Source: ./src/components/profile_edit.rs:196
+# Source: ./src/components/profile_edit.rs:194
 profile-edit-title = Profil bearbeiten
 
 # Gender field label
 # Source: ./src/components/profile_add.rs:177
 profile-gender-label = Geschlecht
 
-# Source: ./src/components/profile_list.rs:118
+# Source: ./src/components/profile_list.rs:117
 profile-list-empty = Keine Profile vorhanden
 
 # Source: ./src/components/home.rs:44
@@ -635,7 +654,7 @@ ring-color-white = Weiß
 # Source: ./src/components/profile_add.rs:206
 ring-color-yellow = Gelb
 
-# Source: ./src/components/profile_list.rs:110
+# Source: ./src/components/profile_list.rs:109
 search-placeholder-name = Suche...
 
 # Source: ./src/components/home.rs:65
@@ -687,10 +706,10 @@ stats-until = bis
 # Source: ./src/components/statistics.rs:217
 stats-weekly-avg = Wöchentlich
 
-# Source: ./src/components/profile_detail.rs:212
+# Source: ./src/components/profile_detail.rs:209
 status-alive = Am Leben
 
-# Source: ./src/components/profile_detail.rs:206
+# Source: ./src/components/profile_detail.rs:203
 status-born = Geboren
 
 # Source: ./src/components/home.rs:29
@@ -702,141 +721,175 @@ status-db-error = DB-Fehler: { $error }
 # Parameters: $count
 status-db-ready = Datenbank bereit ({ $count } Profile)
 
-# Source: ./src/components/profile_detail.rs:244
+# Source: ./src/components/profile_detail.rs:241
 status-died = Gestorben
 
-# Source: ./src/components/profile_detail.rs:224
+# Source: ./src/components/profile_detail.rs:221
 status-healthy = Gesund
 
 # Source: ./src/components/home.rs:11
 status-initializing = Initialisiere...
 
-# Source: ./src/components/profile_detail.rs:231
+# Source: ./src/components/profile_detail.rs:228
 status-marked = Markiert
 
-# Source: ./src/components/profile_detail.rs:218
+# Source: ./src/components/profile_detail.rs:215
 status-sick = Krank
 
-# Source: ./src/components/profile_detail.rs:238
+# Source: ./src/components/profile_detail.rs:235
 status-slaughtered = Geschlachtet
 
-# Source: ./src/components/profile_edit.rs:204
+# Source: ./src/components/profile_edit.rs:202
 success-profile-updated = Profil erfolgreich aktualisiert!
 
-# Source: ./src/components/settings.rs:1047
+# Source: ./src/components/settings.rs:1039
 sync-configured = Synchronisierung konfiguriert
 
-# Source: ./src/components/settings.rs:1385
+# Source: ./src/components/settings.rs:1332
 sync-connecting = Verbinde mit Server...
 
-# Source: ./src/components/settings.rs:1129
+# Source: ./src/components/settings.rs:1093
 sync-delete-config = Konfiguration löschen
 
-# Source: ./src/components/settings.rs:1421
+# Source: ./src/components/settings.rs:1368
 sync-error = Fehler bei der Anmeldung
 
-# Source: ./src/components/settings.rs:1116
+# Source: ./src/components/settings.rs:1080
 sync-failed = Sync fehlgeschlagen
 
 # Source: ./src/components/settings.rs:1088
+# UNUSED: This key is no longer used in the code
 sync-last-sync = Letzte Sync
 
-# Source: ./src/components/settings.rs:1379
+# Source: ./src/components/settings.rs:1326
 sync-login = Mit Nextcloud anmelden
 
-# Source: ./src/components/settings.rs:1406
+# Source: ./src/components/settings.rs:1353
 sync-login-browser = Im Browser öffnen
 
-# Source: ./src/components/settings.rs:1438
+# Source: ./src/components/settings.rs:1385
 sync-login-info-title = Wie funktioniert die Anmeldung?
 
 # Login instructions
-# Source: ./src/components/settings.rs:1400
+# Source: ./src/components/settings.rs:1347
 sync-login-instructions = Bitte öffnen Sie diesen Link in Ihrem Browser und melden Sie sich an:
 
 # Step 1: Click login button
-# Source: ./src/components/settings.rs:1442
+# Source: ./src/components/settings.rs:1389
 sync-login-step1 = Klicken Sie auf 'Mit Nextcloud anmelden'
 
 # Step 2: Open browser link
-# Source: ./src/components/settings.rs:1443
+# Source: ./src/components/settings.rs:1390
 sync-login-step2 = Öffnen Sie den Link im Browser
 
 # Step 3: Login to Nextcloud
-# Source: ./src/components/settings.rs:1444
+# Source: ./src/components/settings.rs:1391
 sync-login-step3 = Melden Sie sich bei Ihrer Nextcloud an
 
 # Step 4: Confirm access
-# Source: ./src/components/settings.rs:1445
+# Source: ./src/components/settings.rs:1392
 sync-login-step4 = Bestätigen Sie den Zugriff für diese App
 
 # Step 5: Return to app
-# Source: ./src/components/settings.rs:1446
+# Source: ./src/components/settings.rs:1393
 sync-login-step5 = Kehren Sie zur App zurück und klicken Sie 'Weiter'
 
-# Source: ./src/components/settings.rs:1414
+# Source: ./src/components/settings.rs:1361
 sync-login-success = Anmeldung erfolgreich!
 
-# Source: ./src/components/settings.rs:851
+# Source: ./src/components/settings.rs:843
 sync-login-success-folder = Anmeldung erfolgreich! Ordner erstellt.
 
 # Source: ./src/components/settings.rs:435
 # UNUSED: This key is no longer used in the code
 sync-not-configured = Noch keine Synchronisierung konfiguriert
 
-# Source: ./src/components/settings.rs:1122
+# Source: ./src/components/settings.rs:1086
 sync-now = Jetzt synchronisieren
 
-# Source: ./src/components/settings.rs:1065
+# Source: ./src/components/settings.rs:1057
 sync-path = Pfad
 
 # Remote path hint text
-# Source: ./src/components/settings.rs:1367
+# Source: ./src/components/settings.rs:1314
 sync-path-hint = Ordner auf dem Server, in dem die Fotos gespeichert werden
 
 # Remote path input label
-# Source: ./src/components/settings.rs:1356
+# Source: ./src/components/settings.rs:1303
 sync-path-label = Speicherpfad
 
+# Source: ./src/components/settings.rs:1108
+# Parameters: $count
+sync-photo-status-active = Aktiv: { $count }
+
+# Source: ./src/components/settings.rs:1117
+# Parameters: $count
+sync-photo-status-error = Fehler: { $count }
+
+# Source: ./src/components/settings.rs:1104
+# Parameters: $count
+sync-photo-status-pending = Ausstehend: { $count }
+
+# Source: ./src/components/settings.rs:1112
+# Parameters: $count
+sync-photo-status-synced = Synchronisiert: { $count }
+
+# Source: ./src/components/settings.rs:1100
+sync-photo-status-title = 📷 Foto-Sync Status
+
 # Polling in background message
-# Source: ./src/components/settings.rs:1396
+# Source: ./src/components/settings.rs:1343
 sync-polling-background = Polling läuft im Hintergrund (max. 5 Minuten)
 
 # Source: ./src/components/settings.rs:572
 # UNUSED: This key is no longer used in the code
 sync-running = Vollständige synchronisierung läuft
 
-# Source: ./src/components/settings.rs:1051
+# Source: ./src/components/settings.rs:1043
 sync-server = Server
 
 # Server URL hint text
-# Source: ./src/components/settings.rs:1348
+# Source: ./src/components/settings.rs:1295
 sync-server-hint = Die vollständige URL zu Ihrer Nextcloud-Instanz
 
 # Server URL input label
-# Source: ./src/components/settings.rs:1337
+# Source: ./src/components/settings.rs:1284
 sync-server-url = Nextcloud Server URL
 
-# Source: ./src/components/settings.rs:995
+# Source: ./src/components/settings.rs:987
 sync-settings-deleted = Einstellungen gelöscht
 
 # Setup sync heading
-# Source: ./src/components/settings.rs:1330
+# Source: ./src/components/settings.rs:1277
 sync-setup-title = Nextcloud Synchronisierung einrichten
+
+# Source: ./src/components/settings.rs:1070
+sync-status-running-full = 🔄 Vollständige Synchronisation...
+
+# Source: ./src/components/settings.rs:1074
+# Parameters: $count
+sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 
 # Source: ./src/components/settings.rs:582
 # Parameters: $eggs, $quails, $photos, $events
 # UNUSED: This key is no longer used in the code
 sync-success = Synchronisierung abgeschlossen: { $quails } Wachteln, { $events } Ereignisse, { $eggs } Eier-Einträge, { $photos } Fotos
 
-# Source: ./src/components/settings.rs:1058
+# Source: ./src/components/settings.rs:1153
+# Parameters: $current, $percent, $total
+sync-upload-progress-detail = { $current } von { $total } Fotos hochgeladen ({ $percent }%)
+
+# Source: ./src/components/settings.rs:1150
+sync-upload-progress-title = Fotos werden hochgeladen...
+
+# Source: ./src/components/settings.rs:1050
 sync-username = Benutzer
 
 # Waiting for login message
-# Source: ./src/components/settings.rs:1394
+# Source: ./src/components/settings.rs:1341
 sync-waiting = Warte auf Anmeldung...
 
-# Source: ./src/components/event_edit.rs:296
+# Source: ./src/components/event_edit.rs:300
 updated = Aktualisiert
 
 # Source: ./src/components/egg_history.rs:86

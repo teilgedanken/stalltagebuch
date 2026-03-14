@@ -4,13 +4,13 @@ use photo_gallery::PhotoGalleryContext;
 
 mod camera;
 mod components;
+mod dioxus_spacetime_module_bindings;
 mod error;
 mod i18n;
 mod image_processing;
 mod models;
 mod services;
 mod spacetime;
-mod spacetime_module_bindings;
 
 use components::{
     AddProfileScreen, EggHistoryScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
@@ -25,12 +25,64 @@ fn main() {
     init_logger();
     // Panic hook: capture backtraces and log them so Android logcat contains useful info
     std::panic::set_hook(Box::new(|info| {
-        log::error!("Encountered panic: {:?}", info);
+        let payload = if let Some(message) = info.payload().downcast_ref::<&str>() {
+            (*message).to_string()
+        } else if let Some(message) = info.payload().downcast_ref::<String>() {
+            message.clone()
+        } else {
+            "<non-string panic payload>".to_string()
+        };
+        if let Some(location) = info.location() {
+            log::error!(
+                "Encountered panic at {}:{}:{}: {}",
+                location.file(),
+                location.line(),
+                location.column(),
+                payload
+            );
+        } else {
+            log::error!("Encountered panic: {}", payload);
+        }
         log::error!("Backtrace:\n{:?}", std::backtrace::Backtrace::capture());
     }));
+    init_android_tls_verifier();
     log::info!("App start: Stalltagebuch wird gestartet");
     dioxus::launch(App);
 }
+
+#[cfg(target_os = "android")]
+fn init_android_tls_verifier() {
+    use jni::errors::Error as JniError;
+    use jni::objects::JObject;
+    use ndk_context::android_context;
+
+    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
+    let context_ptr = android_context().context() as jni::sys::jobject;
+
+    if vm_ptr.is_null() || context_ptr.is_null() {
+        log::error!("Android TLS verifier init failed: missing VM or context pointer");
+        return;
+    }
+
+    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) };
+    match vm.attach_current_thread(|env| -> Result<(), JniError> {
+        let context_global = unsafe { JObject::from_raw(env, context_ptr) };
+        let context_local = env.new_local_ref(&context_global)?;
+        std::mem::forget(context_global);
+
+        rustls_platform_verifier::android::init_with_env(env, context_local)
+    }) {
+        Ok(()) => {
+            log::info!("Android TLS verifier initialized");
+        }
+        Err(error) => {
+            log::error!("Android TLS verifier init failed: {}", error);
+        }
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+fn init_android_tls_verifier() {}
 
 #[inline]
 fn init_logger() {
@@ -78,6 +130,59 @@ pub enum Screen {
 }
 
 #[component]
+fn PhotoSyncManager() -> Element {
+    spacetime::use_subscription(&["SELECT * FROM photos"]);
+
+    let ctx = spacetime::use_spacetimedb_context();
+    let connection_state = ctx.state;
+    let photos = spacetime::use_table_photos();
+    let mut sync_in_flight = use_signal_sync(|| false);
+    let mut last_triggered_pending = use_signal_sync(|| 0usize);
+
+    use_effect(move || {
+        let is_connected = matches!(
+            connection_state(),
+            spacetime::ConnectionState::Connected(_, _)
+        );
+        let pending_count = photos()
+            .iter()
+            .filter(|photo| {
+                matches!(
+                    photo.sync_status.as_str(),
+                    "local_only" | "pending" | "error"
+                )
+            })
+            .count();
+
+        if !is_connected {
+            last_triggered_pending.set(0);
+            return;
+        }
+
+        if pending_count == 0 {
+            last_triggered_pending.set(0);
+            return;
+        }
+
+        if sync_in_flight() || pending_count == last_triggered_pending() {
+            return;
+        }
+
+        sync_in_flight.set(true);
+        last_triggered_pending.set(pending_count);
+
+        spawn(async move {
+            if let Err(error) = services::background_sync::sync_now().await {
+                log::warn!("Automatic photo sync skipped/failed: {}", error);
+            }
+            sync_in_flight.set(false);
+        });
+    });
+
+    rsx! {}
+}
+
+#[component]
 fn App() -> Element {
     let mut current_screen = use_signal(|| Screen::Home);
     use_init_i18n(i18n::init_i18n);
@@ -118,6 +223,7 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
         div { style: "display: flex; flex-direction: column; height: 100vh; font-family: sans-serif;",
+            PhotoSyncManager {}
 
             // Main Content
             div { style: "flex: 1; overflow-y: auto;",

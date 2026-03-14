@@ -273,7 +273,7 @@ pub fn use_subscription(queries: &[&str]) {
 
     use_effect(move || {
         let queries = queries.clone();
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             conn.subscription_builder()
                 .on_applied(|_ctx| {})
                 .on_error(|_ctx, _err| {})
@@ -335,7 +335,7 @@ pub fn use_reducer_create_event()
     let conn_signal = use_connection();
 
     move |args: create_event_args_type::CreateEventArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_event(args);
         }
     }
@@ -348,7 +348,7 @@ pub fn use_reducer_create_photo()
     let conn_signal = use_connection();
 
     move |args: create_photo_args_type::CreatePhotoArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_photo(args);
         }
     }
@@ -361,7 +361,7 @@ pub fn use_reducer_create_photo_collection()
     let conn_signal = use_connection();
 
     move |args: create_photo_collection_args_type::CreatePhotoCollectionArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_photo_collection(args);
         }
     }
@@ -374,7 +374,7 @@ pub fn use_reducer_create_quail()
     let conn_signal = use_connection();
 
     move |args: create_quail_args_type::CreateQuailArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.create_quail(args);
         }
     }
@@ -386,7 +386,7 @@ pub fn use_reducer_delete_device() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |device_id: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_device(device_id);
         }
     }
@@ -398,7 +398,7 @@ pub fn use_reducer_delete_egg_record() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_egg_record(uuid);
         }
     }
@@ -410,7 +410,7 @@ pub fn use_reducer_delete_event() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_event(uuid);
         }
     }
@@ -422,7 +422,7 @@ pub fn use_reducer_delete_photo() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_photo(uuid);
         }
     }
@@ -434,7 +434,7 @@ pub fn use_reducer_delete_photo_collection() -> impl Fn(String) + Clone + 'stati
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_photo_collection(uuid);
         }
     }
@@ -446,7 +446,7 @@ pub fn use_reducer_delete_quail() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.delete_quail(uuid);
         }
     }
@@ -459,7 +459,7 @@ pub fn use_reducer_register_device()
     let conn_signal = use_connection();
 
     move |args: register_device_args_type::RegisterDeviceArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.register_device(args);
         }
     }
@@ -471,7 +471,7 @@ pub fn use_reducer_set_quail_photo() -> impl Fn(String, Option<String>) + Clone 
     let conn_signal = use_connection();
 
     move |quail_uuid: String, photo_uuid: Option<String>| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.set_quail_photo(quail_uuid, photo_uuid);
         }
     }
@@ -484,7 +484,7 @@ pub fn use_reducer_update_device()
     let conn_signal = use_connection();
 
     move |args: update_device_args_type::UpdateDeviceArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_device(args);
         }
     }
@@ -497,7 +497,7 @@ pub fn use_reducer_update_event()
     let conn_signal = use_connection();
 
     move |args: update_event_args_type::UpdateEventArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_event(args);
         }
     }
@@ -510,7 +510,7 @@ pub fn use_reducer_update_photo_collection()
     let conn_signal = use_connection();
 
     move |args: update_photo_collection_args_type::UpdatePhotoCollectionArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_photo_collection(args);
         }
     }
@@ -523,7 +523,7 @@ pub fn use_reducer_update_photo_sync_status()
     let conn_signal = use_connection();
 
     move |args: update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_photo_sync_status(args);
         }
     }
@@ -536,7 +536,7 @@ pub fn use_reducer_update_quail()
     let conn_signal = use_connection();
 
     move |args: update_quail_args_type::UpdateQuailArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.update_quail(args);
         }
     }
@@ -549,7 +549,7 @@ pub fn use_reducer_upsert_egg_record()
     let conn_signal = use_connection();
 
     move |args: upsert_egg_record_args_type::UpsertEggRecordArgs| {
-        if let Some(conn) = conn_signal.as_ref() {
+        if let Some(conn) = conn_signal.read().as_ref() {
             let _ = conn.reducers.upsert_egg_record(args);
         }
     }

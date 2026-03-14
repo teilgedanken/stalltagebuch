@@ -15,7 +15,7 @@ pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
     }
 
     let runtime = load_runtime()?;
-    let metadata_client = SpacetimePhotoMetadataClient::new(&runtime)?;
+    let metadata_client = SpacetimePhotoMetadataClient::new(&runtime).await?;
     let photo = metadata_client
         .query_photo_by_uuid(uuid)
         .await?
@@ -53,10 +53,4 @@ pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
             Err(AppError::Other(format!("photo download failed: {err}")))
         }
     }
-}
-
-/// Downloads and merges operations from sync/ops/ directory
-pub async fn download_and_merge_ops() -> Result<usize, AppError> {
-    // Operation log sync is kept separate from photo-on-demand downloads.
-    Ok(0)
 }

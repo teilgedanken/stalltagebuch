@@ -5,7 +5,7 @@ use crate::{
 };
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
 use spacetime::Photo;
 
@@ -99,12 +99,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut handle_submit = move || {
         // Check if connected to Spacetime
         if connection().is_none() {
-            error.set(t!("error-not-connected"));
+            error.set(tid!("error-not-connected"));
             return;
         }
 
         if name().trim().is_empty() {
-            error.set(t!("error-name-required")); // Name is required
+            error.set(tid!("error-name-required")); // Name is required
             return;
         }
 
@@ -160,7 +160,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut handle_delete = move || {
         // Check if connected to Spacetime
         if connection().is_none() {
-            error.set(t!("error-not-connected"));
+            error.set(tid!("error-not-connected"));
             return;
         }
 
@@ -191,7 +191,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 }
                 h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700; flex: 1;",
                     "✏️ "
-                    {t!("profile-edit-title")}
+                    {tid!("profile-edit-title")}
                 }
             }
 
@@ -199,7 +199,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
             if success() {
                 div { style: "padding: 12px 16px; background: #d4edda; border-radius: 8px; color: #155724; font-size: 14px; margin-bottom: 16px; border-left: 3px solid #28a745;",
                     "✓ "
-                    {t!("success-profile-updated")}
+                    {tid!("success-profile-updated")}
                 }
             }
 
@@ -218,12 +218,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-name-required")} // Name *
+                        {tid!("field-name-required")} // Name *
                     }
                     input {
                         style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
                         r#type: "text",
-                        placeholder: "{t!(\"field-name-placeholder\")}", // e.g. Hen 1
+                        placeholder: "{tid!(\"field-name-placeholder\")}", // e.g. Hen 1
                         value: "{name}",
                         oninput: move |e| name.set(e.value()),
                         autofocus: true,
@@ -234,15 +234,15 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-gender")} // Gender
+                        {tid!("field-gender")} // Gender
                     }
                     select {
                         style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
                         value: "{gender}",
                         onchange: move |e| gender.set(e.value()),
-                        option { value: "unknown", {t!("gender-unknown")} } // Unknown
-                        option { value: "female", {t!("gender-female")} } // Female
-                        option { value: "male", {t!("gender-male")} } // Male
+                        option { value: "unknown", {tid!("gender-unknown")} } // Unknown
+                        option { value: "female", {tid!("gender-female")} } // Female
+                        option { value: "male", {tid!("gender-male")} } // Male
                     }
                 }
 
@@ -250,36 +250,36 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("field-ring-color")} // Ring color
+                        {tid!("field-ring-color")} // Ring color
                     }
                     select {
                         style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
                         value: "{ring_color}",
                         onchange: move |e| ring_color.set(e.value()),
-                        option { value: "", {t!("ring-color-none")} } // None
-                        option { value: "lila", {t!("ring-color-purple")} } // Purple
-                        option { value: "rosa", {t!("ring-color-pink")} } // Pink
-                        option { value: "hellblau", {t!("ring-color-light-blue")} } // Light blue
-                        option { value: "dunkelblau", {t!("ring-color-dark-blue")} } // Dark blue
-                        option { value: "rot", {t!("ring-color-red")} } // Red
-                        option { value: "orange", {t!("ring-color-orange")} } // Orange
-                        option { value: "weiss", {t!("ring-color-white")} } // White
-                        option { value: "gelb", {t!("ring-color-yellow")} } // Yellow
-                        option { value: "schwarz", {t!("ring-color-black")} } // Black
-                        option { value: "gruen", {t!("ring-color-green")} } // Green
+                        option { value: "", {tid!("ring-color-none")} } // None
+                        option { value: "lila", {tid!("ring-color-purple")} } // Purple
+                        option { value: "rosa", {tid!("ring-color-pink")} } // Pink
+                        option { value: "hellblau", {tid!("ring-color-light-blue")} } // Light blue
+                        option { value: "dunkelblau", {tid!("ring-color-dark-blue")} } // Dark blue
+                        option { value: "rot", {tid!("ring-color-red")} } // Red
+                        option { value: "orange", {tid!("ring-color-orange")} } // Orange
+                        option { value: "weiss", {tid!("ring-color-white")} } // White
+                        option { value: "gelb", {tid!("ring-color-yellow")} } // Yellow
+                        option { value: "schwarz", {tid!("ring-color-black")} } // Black
+                        option { value: "gruen", {tid!("ring-color-green")} } // Green
                     }
                 }
 
                 div { style: "padding: 12px; background: #e3f2fd; border-radius: 8px; color: #0066cc; font-size: 13px; margin-bottom: 20px;",
                     "ℹ️ "
-                    {t!("info-photos-detail-view")}
+                    {tid!("info-photos-detail-view")}
                 }
 
                 // Photo Gallery with Profile Selection
                 div { style: "margin-bottom: 24px;",
                     label {
                         style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {format!("{} ({})", t!("field-photos"), photos().len())} // Photos count
+                        {format!("{} ({})", tid!("field-photos"), photos().len())} // Photos count
                     }
 
                     {
@@ -357,7 +357,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     if !photos().is_empty() {
                         div {
                             style: "margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 6px; font-size: 12px; color: #666;",
-                            {t!("info-tap-photo-to-mark")} // Tap a photo to mark it as profile photo.
+                            {tid!("info-tap-photo-to-mark")} // Tap a photo to mark it as profile photo.
                         }
                     }
                 }
@@ -371,10 +371,10 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         onclick: move |_| handle_submit(),
                         if saving() {
                             "⏳ "
-                            {t!("action-saving")}
+                            {tid!("action-saving")}
                         } else {
                             "✓ "
-                            {t!("action-save")}
+                            {tid!("action-save")}
                         }
                     }
                     button {
@@ -382,7 +382,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         disabled: saving(),
                         onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone())),
                         "✕ "
-                        {t!("action-cancel")}
+                        {tid!("action-cancel")}
                     }
                 }
 
@@ -392,7 +392,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         div {
                             div { style: "margin-bottom: 16px; padding: 12px; background: #fff3cd; border-radius: 8px; color: #856404;",
                                 "⚠️ "
-                                {t!("confirm-delete-quail")}
+                                {tid!("confirm-delete-quail")}
                             }
                             div { style: "display: flex; gap: 12px;",
                                 button {
@@ -400,12 +400,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     style: "flex: 1; padding: 14px; font-size: 16px; font-weight: 600;",
                                     onclick: move |_| handle_delete(),
                                     "🗑️ "
-                                    {t!("action-delete-permanently")}
+                                    {tid!("action-delete-permanently")}
                                 }
                                 button {
                                     style: "flex: 1; padding: 14px; background: #e0e0e0; color: #666; font-size: 16px; font-weight: 600;",
                                     onclick: move |_| show_delete_confirm.set(false),
-                                    {t!("action-cancel")} // Cancel
+                                    {tid!("action-cancel")} // Cancel
                                 }
                             }
                         }
@@ -414,7 +414,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                             style: "width: 100%; padding: 12px; background: #ffe6e6; color: #cc0000; font-size: 14px; font-weight: 600; border: 1px solid #ffcccc; border-radius: 8px;",
                             onclick: move |_| show_delete_confirm.set(true),
                             "🗑️ "
-                            {t!("action-delete-quail")}
+                            {tid!("action-delete-quail")}
                         }
                     }
                 }

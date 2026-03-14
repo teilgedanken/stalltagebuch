@@ -1,19 +1,12 @@
 use crate::Screen;
-use crate::models::{SpacetimeSettings, SyncSettings};
+use crate::models::SpacetimeSettings;
 use crate::services::export_service::ExportProgress;
 use crate::services::{export_service, spacetime_settings_service};
 use crate::spacetime::{ConnectionState, use_spacetimedb_context};
 use chrono::{Local, TimeZone};
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use serde::{Deserialize, Serialize};
-
-fn format_hms(ts_ms: i64) -> String {
-    match Local.timestamp_millis_opt(ts_ms).single() {
-        Some(dt) => dt.format(&t!("log-time-format")).to_string(), // the format string for the chrono format time.
-        None => String::from("--:--:--"),
-    }
-}
 
 // ─── SpacetimeDB settings card ────────────────────────────────────────────────
 
@@ -174,7 +167,7 @@ fn DevicesCard() -> Element {
     // Subscribe to the devices table
     crate::spacetime::use_subscription(&["SELECT * FROM devices"]);
 
-    let devices = crate::spacetime_module_bindings::dioxus::use_table_devices();
+    let devices = crate::dioxus_spacetime_module_bindings::dioxus::use_table_devices();
     let mut current_device_id = use_signal(|| String::new());
 
     // Get current device ID on mount
@@ -258,10 +251,14 @@ enum NetworkStatus {
 
 #[component]
 fn NetworkCheckCard() -> Element {
-    let mut network_status = use_signal(|| NetworkStatus::Checking);
+    let mut network_status = use_signal_sync(|| NetworkStatus::Checking);
+    let error_network_label = tid!("error-network").to_string();
+    let error_client_label = tid!("error-client").to_string();
 
     // Check network connectivity on mount
     use_effect(move || {
+        let error_network_label = error_network_label.clone();
+        let error_client_label = error_client_label.clone();
         spawn(async move {
             // Try to connect to a reliable service
             match reqwest::Client::builder()
@@ -287,8 +284,7 @@ fn NetworkCheckCard() -> Element {
                         Err(e) => {
                             network_status.set(NetworkStatus::Offline(format!(
                                 "{}: {}",
-                                t!("error-network"),
-                                e
+                                error_network_label, e
                             )));
                         }
                     }
@@ -296,8 +292,7 @@ fn NetworkCheckCard() -> Element {
                 Err(e) => {
                     network_status.set(NetworkStatus::Offline(format!(
                         "{}: {}",
-                        t!("error-client"),
-                        e
+                        error_client_label, e
                     )));
                 }
             }
@@ -306,6 +301,8 @@ fn NetworkCheckCard() -> Element {
 
     let recheck = move |_| {
         network_status.set(NetworkStatus::Checking);
+        let error_network_label = tid!("error-network").to_string();
+        let error_client_label = tid!("error-client").to_string();
         spawn(async move {
             match reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(5))
@@ -330,8 +327,7 @@ fn NetworkCheckCard() -> Element {
                         Err(e) => {
                             network_status.set(NetworkStatus::Offline(format!(
                                 "{}: {}",
-                                t!("error-network"),
-                                e
+                                error_network_label, e
                             )));
                         }
                     }
@@ -339,8 +335,7 @@ fn NetworkCheckCard() -> Element {
                 Err(e) => {
                     network_status.set(NetworkStatus::Offline(format!(
                         "{}: {}",
-                        t!("error-client"),
-                        e
+                        error_client_label, e
                     )));
                 }
             }
@@ -354,7 +349,7 @@ fn NetworkCheckCard() -> Element {
                     div { style: "display: flex; align-items: center; gap: 12px;",
                         div { style: "font-size: 24px;", "🔄" }
                         div {
-                            p { style: "margin: 0; font-weight: 600; font-size: 14px;", {t!("network-checking")} } // Network connectivity check in progress
+                            p { style: "margin: 0; font-weight: 600; font-size: 14px;", {tid!("network-checking")} } // Network connectivity check in progress
                         }
                     }
                 }
@@ -368,14 +363,14 @@ fn NetworkCheckCard() -> Element {
                             div {
                                 p {
                                     style: "margin: 0; font-weight: 600; font-size: 14px; color: #c62828;",
-                                    {t!("network-offline")} // No internet connection message
+                                    {tid!("network-offline")} // No internet connection message
                                 }
                                 p { style: "margin: 0; font-size: 12px; color: #666;", "{error}" }
                             }
                         }
                         button { class: "btn-primary", style: "width: 100%;", onclick: recheck,
                             "🔄 "
-                            {t!("action-retry")}
+                            {tid!("action-retry")}
                         }
                     }
                 }
@@ -389,9 +384,9 @@ fn NetworkCheckCard() -> Element {
 /// Card component that manages data export to ZIP files.
 #[component]
 fn ExportCard() -> Element {
-    let mut export_progress = use_signal(|| None::<ExportProgress>);
-    let mut export_status = use_signal(|| String::new());
-    let mut is_exporting = use_signal(|| false);
+    let mut export_progress = use_signal_sync(|| None::<ExportProgress>);
+    let mut export_status = use_signal_sync(|| String::new());
+    let mut is_exporting = use_signal_sync(|| false);
 
     let handle_export = move |_| {
         if is_exporting() {
@@ -399,7 +394,7 @@ fn ExportCard() -> Element {
         }
 
         is_exporting.set(true);
-        export_status.set(t!("export-in-progress"));
+        export_status.set(tid!("export-in-progress"));
         export_progress.set(Some(ExportProgress::Starting));
 
         spawn(async move {
@@ -414,12 +409,12 @@ fn ExportCard() -> Element {
             {
                 Ok(path) => {
                     status_sig.with_mut(|s| {
-                        *s = format!("✅ {}\n📁 {}", t!("export-success"), path.display())
+                        *s = format!("✅ {}\n📁 {}", tid!("export-success"), path.display())
                     });
                     progress_sig.with_mut(|s| *s = Some(ExportProgress::Complete));
                 }
                 Err(e) => {
-                    status_sig.with_mut(|s| *s = format!("❌ {}: {}", t!("export-failed"), e));
+                    status_sig.with_mut(|s| *s = format!("❌ {}: {}", tid!("export-failed"), e));
                     progress_sig.with_mut(|s| *s = None);
                 }
             }
@@ -429,10 +424,10 @@ fn ExportCard() -> Element {
 
     rsx! {
         div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "💾 " {t!("export-title")} }
+            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "💾 " {tid!("export-title")} }
 
             p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
-                {t!("export-description")}
+                {tid!("export-description")}
             }
 
             if let Some(progress) = export_progress() {
@@ -485,7 +480,7 @@ fn ImportCard() -> Element {
         {
             spawn(async move {
                 if let Err(e) = crate::camera::launch_document_picker() {
-                    import_status.set(format!("❌ {}: {}", t!("import-failed"), e));
+                    import_status.set(format!("❌ {}: {}", tid!("import-failed"), e));
                     return;
                 }
 
@@ -498,7 +493,7 @@ fn ImportCard() -> Element {
                     }
 
                     if let Some(err) = crate::camera::get_last_error() {
-                        import_status.set(format!("❌ {}: {}", t!("import-failed"), err));
+                        import_status.set(format!("❌ {}: {}", tid!("import-failed"), err));
                         return;
                     }
 
@@ -507,7 +502,7 @@ fn ImportCard() -> Element {
 
                 if let Some(path) = selected_path {
                     is_importing.set(true);
-                    import_status.set(t!("import-in-progress"));
+                    import_status.set(tid!("import-in-progress"));
 
                     let mut progress_sig = import_progress;
                     let mut status_sig = import_status;
@@ -522,7 +517,7 @@ fn ImportCard() -> Element {
                             status_sig.with_mut(|s| {
                                 *s = format!(
                                     "✅ {} ({} items, {} photos)",
-                                    t!("import-success"),
+                                    tid!("import-success"),
                                     count,
                                     photo_count
                                 )
@@ -531,13 +526,13 @@ fn ImportCard() -> Element {
                         }
                         Err(e) => {
                             status_sig
-                                .with_mut(|s| *s = format!("❌ {}: {}", t!("import-failed"), e));
+                                .with_mut(|s| *s = format!("❌ {}: {}", tid!("import-failed"), e));
                             progress_sig.with_mut(|s| *s = None);
                         }
                     }
                     importing_sig.set(false);
                 } else {
-                    import_status.set(format!("❌ {}: no file selected", t!("import-failed")));
+                    import_status.set(format!("❌ {}: no file selected", tid!("import-failed")));
                 }
             });
         }
@@ -551,10 +546,10 @@ fn ImportCard() -> Element {
 
     rsx! {
         div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "📂 " {t!("import-title")} }
+            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "📂 " {tid!("import-title")} }
 
             p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
-                {t!("import-description")}
+                {tid!("import-description")}
             }
 
             if let Some(progress) = import_progress() {
@@ -614,63 +609,70 @@ enum LoginState {
     Error(String),
 }
 
-#[derive(Clone, PartialEq)]
-enum ConnectionStatus {
-    Checking,
-    Connected,
-    Failed(String),
-}
-
-fn to_sync_settings(saved: &SpacetimeSettings) -> Option<SyncSettings> {
-    if !saved.is_nextcloud_configured() || saved.nextcloud_remote_path.trim().is_empty() {
-        return None;
-    }
-
-    Some(SyncSettings::new(
-        saved.nextcloud_url.clone(),
-        saved.nextcloud_username.clone(),
-        saved.nextcloud_app_password.clone(),
-        saved.nextcloud_remote_path.clone(),
-    ))
-}
-
 #[component]
 pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
-    let mut server_url = use_signal(|| String::from("https://"));
-    let mut remote_path = use_signal(|| String::from("/Stalltagebuch"));
-    let mut login_state = use_signal(|| LoginState::NotStarted);
-    let mut current_settings = use_signal(|| None::<SyncSettings>);
-    let mut status_message = use_signal(|| String::new());
+    let mut server_url = use_signal_sync(|| String::from("https://"));
+    let mut remote_path = use_signal_sync(|| String::from("/Stalltagebuch"));
+    let mut login_state = use_signal_sync(|| LoginState::NotStarted);
+    let mut current_settings = use_signal_sync(|| None::<SpacetimeSettings>);
+    let mut status_message = use_signal_sync(|| String::new());
     // Separater bool für laufende Synchronisierung, damit Anzeige sicher zurückgesetzt wird
-    let mut is_syncing = use_signal(|| false);
-    let connection_status = use_signal(|| None::<ConnectionStatus>);
-    let mut background_sync_running =
-        use_signal(|| crate::services::background_sync::is_background_sync_running());
-    // Live Countdown & Log
-    let mut sync_eta = use_signal(|| crate::services::background_sync::next_sync_eta_seconds());
-    let mut sync_log = use_signal(|| crate::services::background_sync::get_sync_log());
+    let mut is_syncing = use_signal_sync(|| false);
+    let is_backup_uploading = use_signal_sync(|| false);
+    let mut upload_progress = use_signal_sync(|| (0usize, 0usize));
 
-    // Ticker Effekt (1s Interval) aktualisiert ETA und Log ohne User-Interaktion
-    use_effect(move || {
-        // Spawn ticker loop (kein Cleanup nötig für einfache 1s Timer)
-        spawn(async move {
-            loop {
-                sync_eta.set(crate::services::background_sync::next_sync_eta_seconds());
-                sync_log.set(crate::services::background_sync::get_sync_log());
-                background_sync_running
-                    .set(crate::services::background_sync::is_background_sync_running());
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    use_coroutine(move |_: UnboundedReceiver<()>| async move {
+        let mut rx = crate::services::background_sync::subscribe_upload_progress();
+        loop {
+            match rx.changed().await {
+                Ok(_) => {
+                    let progress = *rx.borrow_and_update();
+                    upload_progress.set(progress);
+                }
+                Err(_) => break,
             }
-        });
+        }
+    });
+
+    crate::spacetime::use_subscription(&["SELECT * FROM photos"]);
+    let photos = crate::spacetime::use_table_photos();
+    let pending_count = use_memo(move || {
+        photos()
+            .iter()
+            .filter(|photo| {
+                matches!(
+                    photo.sync_status.as_str(),
+                    "local_only" | "pending" | "error"
+                )
+            })
+            .count()
+    });
+    let uploading_count = use_memo(move || {
+        photos()
+            .iter()
+            .filter(|photo| matches!(photo.sync_status.as_str(), "uploading" | "downloading"))
+            .count()
+    });
+    let synced_count = use_memo(move || {
+        photos()
+            .iter()
+            .filter(|photo| photo.sync_status == "synced")
+            .count()
+    });
+    let error_count = use_memo(move || {
+        photos()
+            .iter()
+            .filter(|photo| matches!(photo.sync_status.as_str(), "error" | "download_failed"))
+            .count()
     });
 
     // Load existing settings on mount
     use_effect(move || {
         if let Ok(saved) = spacetime_settings_service::load_spacetime_settings() {
-            if let Some(sync_cfg) = to_sync_settings(&saved) {
-                server_url.set(sync_cfg.server_url.clone());
-                remote_path.set(sync_cfg.remote_path.clone());
-                current_settings.set(Some(sync_cfg));
+            if saved.is_nextcloud_configured() && !saved.nextcloud_remote_path.trim().is_empty() {
+                server_url.set(saved.nextcloud_url.clone());
+                remote_path.set(saved.nextcloud_remote_path.clone());
+                current_settings.set(Some(saved));
                 login_state.set(LoginState::Success);
             }
         }
@@ -697,7 +699,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 Err(e) => {
                     login_state.set(LoginState::Error(format!(
                         "{}: {:?}",
-                        t!("error-client"),
+                        tid!("error-client"),
                         e
                     )));
                     return;
@@ -740,7 +742,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                             );
                                             login_state.set(LoginState::Error(format!(
                                                 "{}: {:?}",
-                                                t!("error-client"),
+                                                tid!("error-client"),
                                                 e
                                             )));
                                             return;
@@ -828,36 +830,33 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                                         e
                                                                     );
                                                                     login_state.set(LoginState::Error(
-                                                                        format!("{}: {:?}", t!("error-webdav-client"), e),
+                                                                        format!("{}: {:?}", tid!("error-webdav-client"), e),
                                                                     ));
                                                                     return;
                                                                 }
                                                             }
 
-                                                            // Save credentials
-                                                            let settings = SyncSettings::new(
-                                                                result.server,
-                                                                result.login_name,
-                                                                result.app_password,
-                                                                remote_path_value.clone(),
-                                                            );
+                                                            // Save credentials in SpacetimeSettings.
+                                                            let mut st_settings = spacetime_settings_service::load_spacetime_settings()
+                                                                .unwrap_or_default();
+                                                            st_settings.nextcloud_url =
+                                                                result.server;
+                                                            st_settings.nextcloud_username =
+                                                                result.login_name;
+                                                            st_settings.nextcloud_app_password =
+                                                                result.app_password;
+                                                            st_settings.nextcloud_remote_path =
+                                                                remote_path_value.clone();
 
-                                                            if let Ok(mut st_settings) = spacetime_settings_service::load_spacetime_settings() {
-                                                                st_settings.nextcloud_url = settings.server_url.clone();
-                                                                st_settings.nextcloud_username = settings.username.clone();
-                                                                st_settings.nextcloud_app_password = settings.app_password.clone();
-                                                                st_settings.nextcloud_remote_path = settings.remote_path.clone();
-
-                                                                if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
-                                                                    log::error!("Failed to persist Nextcloud settings: {}", e);
-                                                                }
+                                                            if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
+                                                                log::error!("Failed to persist Nextcloud settings: {}", e);
                                                             }
 
-                                                            current_settings.set(Some(settings));
+                                                            current_settings.set(Some(st_settings));
                                                             login_state.set(LoginState::Success);
                                                             status_message.set(format!(
                                                                 "\u{2705} {}",
-                                                                t!("sync-login-success-folder")
+                                                                tid!("sync-login-success-folder")
                                                             ));
                                                             log::info!(
                                                                 "LoginFlow: Zugangsdaten gespeichert und Login abgeschlossen."
@@ -872,7 +871,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                             login_state.set(LoginState::Error(
                                                                 format!(
                                                                     "{}: {}",
-                                                                    t!("error-json"),
+                                                                    tid!("error-json"),
                                                                     e
                                                                 ),
                                                             ));
@@ -886,7 +885,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                     );
                                                     login_state.set(LoginState::Error(format!(
                                                         "{}: {}",
-                                                        t!("error-unexpected-status"),
+                                                        tid!("error-unexpected-status"),
                                                         response.status()
                                                     )));
                                                     return;
@@ -949,7 +948,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
                                     log::error!("LoginFlow: Polling-Timeout nach 5 Minuten.");
                                     login_state.set(LoginState::Error(
-                                        t!("error-login-timeout").to_string(),
+                                        tid!("error-login-timeout").to_string(),
                                     ));
                                 });
                             }
@@ -960,7 +959,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 );
                                 login_state.set(LoginState::Error(format!(
                                     "{}: {}",
-                                    t!("error-json"),
+                                    tid!("error-json"),
                                     e
                                 )));
                             }
@@ -972,7 +971,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         );
                         login_state.set(LoginState::Error(format!(
                             "{}: {}",
-                            t!("error-server"),
+                            tid!("error-server"),
                             response.status()
                         )));
                     }
@@ -981,7 +980,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     log::error!("LoginFlow: Verbindungsfehler beim Flow-Start: {}", e);
                     login_state.set(LoginState::Error(format!(
                         "{}: {}",
-                        t!("error-connection"),
+                        tid!("error-connection"),
                         e
                     )));
                 }
@@ -1001,7 +1000,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
         }
         current_settings.set(None);
         login_state.set(LoginState::NotStarted);
-        status_message.set(format!("\u{2705} {}", t!("sync-settings-deleted")));
+        status_message.set(format!("\u{2705} {}", tid!("sync-settings-deleted")));
     };
 
     rsx! {
@@ -1012,11 +1011,11 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     class: "btn-back",
                     onclick: move |_| on_navigate.call(Screen::Home),
                     "← "
-                    {t!("action-back")}
+                    {tid!("action-back")}
                 }
                 h1 { style: "flex: 1; text-align: center; margin: 0; font-size: 24px; color: #0066cc;",
                     "⚙️ "
-                    {t!("settings-title")}
+                    {tid!("settings-title")}
                 }
                 div { style: "width: 80px;" }
             }
@@ -1053,52 +1052,28 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     style: "margin-bottom: 16px; background: #e8f5e9;",
                     h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #2e7d32;",
                         "\u{2705} " // Sync configured successfully heading
-                        {t!("sync-configured")}
+                        {tid!("sync-configured")}
                     }
                     p { style: "margin: 4px 0; font-size: 14px;",
                         strong {
-                            {t!("sync-server")}
+                            {tid!("sync-server")}
                             ": "
                         } // Server URL label
-                        "{settings.server_url}"
+                        "{settings.nextcloud_url}"
                     }
                     p { style: "margin: 4px 0; font-size: 14px;",
                         strong {
-                            {t!("sync-username")}
+                            {tid!("sync-username")}
                             ": "
                         } // Username label
-                        "{settings.username}"
+                        "{settings.nextcloud_username}"
                     }
                     p { style: "margin: 4px 0; font-size: 14px;",
                         strong {
-                            {t!("sync-path")}
+                            {tid!("sync-path")}
                             ": "
                         } // Remote path label
-                        "{settings.remote_path}"
-                        " "
-                        match connection_status() {
-                            Some(ConnectionStatus::Checking) => rsx! {
-                                span { class: "spinner", style: "font-size: 12px;", "⏳" }
-                            },
-                            Some(ConnectionStatus::Connected) => rsx! {
-                                span { style: "color: green; font-weight: bold;", "✓" }
-                            },
-                            Some(ConnectionStatus::Failed(ref err)) => rsx! {
-                                span { style: "color: red; font-weight: bold;", title: "{err}", "⚠️" }
-                            },
-                            None => rsx! {
-                                span {}
-                            },
-                        }
-                    }
-                    if let Some(last_sync) = settings.last_sync {
-                        p { style: "margin: 4px 0; font-size: 14px;",
-                            strong {
-                                {t!("sync-last-sync")}
-                                ": "
-                            } // Last sync timestamp label
-                            "{last_sync}"
-                        }
+                        "{settings.nextcloud_remote_path}"
                     }
 
                     div { style: "display: flex; gap: 12px; margin-top: 12px;",
@@ -1108,96 +1083,60 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                             onclick: move |_| {
                                 spawn(async move {
                                     is_syncing.set(true);
-                                    status_message.set("🔄 Vollständige Synchronisation...".to_string());
+                                    status_message.set(tid!("sync-status-running-full").to_string());
                                     match crate::services::background_sync::sync_now().await {
                                         Ok(stats) => {
-                                            status_message
-                                                .set(
-                                                    format!(
-                                                        "✅ Sync erfolgreich: {} Ops heruntergeladen, {} Fotos hochgeladen",
-                                                        stats.operations_downloaded,
-                                                        stats.photos_uploaded,
-                                                    ),
-                                                );
+                                            status_message.set(
+                                                tid!("sync-status-success-photos", count : stats.photos_uploaded)
+                                                    .to_string(),
+                                            );
                                             // Settings will be reloaded via SpacetimeDB subscriptions
                                         }
                                         Err(e) => {
-                                            status_message.set(format!("❌ {}: {}", t!("sync-failed"), e));
+                                            status_message.set(format!("❌ {}: {}", tid!("sync-failed"), e));
                                         }
                                     }
                                     is_syncing.set(false);
                                 });
                             },
-                            {format!("🔄 {}", t!("sync-now"))}
+                            {format!("🔄 {}", tid!("sync-now"))}
                         }
                         button {
                             class: "btn-danger",
                             style: "flex: 1;",
                             onclick: delete_settings,
                             "🗑️ "
-                            {t!("sync-delete-config")}
+                            {tid!("sync-delete-config")}
                         }
                     }
 
-                    // Background sync toggle
+                    // Reactive photo sync status
                     div { style: "margin-top: 16px; padding: 12px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #0066cc;",
-                        div { style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;",
-                            div {
-                                p { style: "margin: 0; font-weight: 600; font-size: 14px;",
-                                    "🔄 Automatische Synchronisation"
-                                }
-                                p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                                    {
-                                        let interval = crate::services::background_sync::sync_interval_seconds();
-                                        format!("Synchronisiert alle {} Sekunden im Hintergrund", interval)
-                                    }
-                                }
-                            }
-                            button {
-                                class: if background_sync_running() { "btn-danger" } else { "btn-primary" },
-                                onclick: move |_| {
-                                    if background_sync_running() {
-                                        crate::services::background_sync::stop_background_sync();
-                                        background_sync_running.set(false);
-                                        status_message
-                                            .set("⏸️ Automatische Synchronisation gestoppt".to_string());
-                                    } else {
-                                        crate::services::background_sync::start_background_sync();
-                                        background_sync_running.set(true);
-                                        status_message
-                                            .set("▶️ Automatische Synchronisation gestartet".to_string());
-                                    }
-                                },
-                                if background_sync_running() {
-                                    "⏸️ Stoppen"
-                                } else {
-                                    "▶️ Starten"
-                                }
-                            }
+                        p { style: "margin: 0 0 10px 0; font-weight: 600; font-size: 14px;",
+                            {tid!("sync-photo-status-title")}
                         }
-                        if background_sync_running() {
-                            p { style: "margin: 8px 0 0 0; font-size: 12px; color: #2e7d32; font-weight: 600;",
-                                "✓ Läuft im Hintergrund – nächster Sync in: "
-                                span { style: "font-weight: 700;", "{sync_eta().unwrap_or(0)}s" }
+                        p {
+                            style: "margin: 4px 0; font-size: 12px; color: #333;",
+                            {tid!("sync-photo-status-pending", count : pending_count())}
+                        }
+                        p {
+                            style: "margin: 4px 0; font-size: 12px; color: #333;",
+                            {tid!("sync-photo-status-active", count : uploading_count())}
+                        }
+                        p {
+                            style: "margin: 4px 0; font-size: 12px; color: #2e7d32;",
+                            {tid!("sync-photo-status-synced", count : synced_count())}
+                        }
+                        if error_count() > 0 {
+                            p {
+                                style: "margin: 4px 0; font-size: 12px; color: #c62828;",
+                                {tid!("sync-photo-status-error", count : error_count())}
                             }
                         }
                     }
 
                     // Photo Upload Progress
                     {
-                        let mut upload_progress = use_signal(|| (0usize, 0usize));
-                        use_coroutine(move |_: UnboundedReceiver<()>| async move {
-                            let mut rx = crate::services::background_sync::subscribe_upload_progress();
-                            loop {
-                                match rx.changed().await {
-                                    Ok(_) => {
-                                        let progress = *rx.borrow_and_update();
-                                        upload_progress.set(progress);
-                                    }
-                                    Err(_) => break,
-                                }
-                            }
-                        });
                         let (current, total) = upload_progress();
                         if total > 0 {
                             let percent = if total > 0 {
@@ -1210,9 +1149,11 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 8px;",
                                         span { style: "font-size: 24px;", "📤" }
                                         div { style: "flex: 1;",
-                                            p { style: "margin: 0; font-weight: 600; font-size: 14px;", "Fotos werden hochgeladen..." }
+                                            p { style: "margin: 0; font-weight: 600; font-size: 14px;",
+                                                {tid!("sync-upload-progress-title")}
+                                            }
                                             p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                                                "{current} von {total} Fotos hochgeladen ({percent}%)"
+                                                {tid!("sync-upload-progress-detail", current : current, total : total, percent : percent)}
                                             }
                                         }
                                     }
@@ -1226,40 +1167,13 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         }
                     }
 
-                    // Session Sync Log Anzeige
-                    div { style: "margin-top: 16px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #ddd;",
-                        h3 { style: "margin: 0 0 8px 0; font-size: 16px;",
-                            "📝 Sync Sitzung (flüchtig)"
-                        }
-                        {
-                            let log_entries = sync_log();
-                            if log_entries.is_empty() {
-                                rsx! {
-                                    p { style: "margin: 0; font-size: 12px; color: #666;", "Noch keine Einträge" }
-                                }
-                            } else {
-                                rsx! {
-                                    div { style: "display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto;",
-                                        for entry in log_entries {
-                                            div { style: "font-size: 12px; padding: 4px 6px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #0066cc;",
-                                                span { style: "color: #333;",
-                                                    "{format_hms(entry.ts_ms)}: Ops {entry.operations_downloaded} · Fotos {entry.photos_uploaded}"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     // Cleanup orphaned photos
                     div { style: "margin-top: 16px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #ddd;",
                         h3 { style: "margin: 0 0 8px 0; font-size: 16px;",
-                            {t!("backup-cleanup-title")}
+                            {tid!("backup-cleanup-title")}
                         }
                         p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
-                            {t!("backup-cleanup-description")}
+                            {tid!("backup-cleanup-description")}
                         }
                         button {
                             class: "btn-danger",
@@ -1269,21 +1183,21 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 move |_| {
                                     let confirmed = if cfg!(target_os = "android") { true } else { true };
                                     if confirmed {
-                                        status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
+                                        status_message.set(tid!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
                                     }
                                 }
                             },
-                            {t!("backup-cleanup-button")}
+                            {tid!("backup-cleanup-button")}
                         }
                     }
 
                     // Daten-Export / -Import
                     div { style: "margin-top: 16px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #ddd;",
                         h3 { style: "margin: 0 0 8px 0; font-size: 16px;",
-                            {t!("backup-export-title")}
+                            {tid!("backup-export-title")}
                         }
                         p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
-                            {t!("backup-export-description")}
+                            {tid!("backup-export-description")}
                         }
                         div { style: "display: flex; flex-direction: column; gap: 8px;",
                             button {
@@ -1291,11 +1205,38 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 style: "width: 100%;",
                                 onclick: {
                                     let mut status_message = status_message.clone();
+                                    let mut is_backup_uploading = is_backup_uploading.clone();
                                     move |_| {
-                                        status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
+                                        if is_backup_uploading() {
+                                            return;
+                                        }
+
+                                        is_backup_uploading.set(true);
+                                        status_message.set(tid!("backup-upload-running").to_string());
+                                        spawn(async move {
+                                            match crate::services::backup_service::upload_backup_to_nextcloud().await {
+                                                Ok(filename) => {
+                                                    status_message.set(
+                                                        tid!("backup-upload-success", filename : filename)
+                                                            .to_string(),
+                                                    );
+                                                }
+                                                Err(error) => {
+                                                    status_message.set(
+                                                        tid!("backup-upload-failed", error : error.to_string())
+                                                            .to_string(),
+                                                    );
+                                                }
+                                            }
+                                            is_backup_uploading.set(false);
+                                        });
                                     }
                                 },
-                                {t!("backup-export-button")}
+                                if is_backup_uploading() {
+                                    {tid!("backup-upload-button-running")}
+                                } else {
+                                    {tid!("backup-upload-button")}
+                                }
                             }
                             button {
                                 class: "btn-danger",
@@ -1315,18 +1256,18 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                             if !import_path.exists() {
                                                 status_message
                                                     .set(
-                                                        t!(
+                                                        tid!(
                                                             "backup-import-missing", path : import_path.display()
                                                             .to_string()
                                                         ),
                                                     );
                                                 return;
                                             }
-                                            status_message.set(t!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
+                                            status_message.set(tid!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
                                         });
                                     }
                                 },
-                                {t!("backup-import-button")}
+                                {tid!("backup-import-button")}
                             }
                         }
                     }
@@ -1336,14 +1277,14 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 div { class: "card",
                     h2 {
                         style: "margin: 0 0 16px 0; font-size: 18px; color: #333;",
-                        {t!("sync-setup-title")} // Setup sync heading
+                        {tid!("sync-setup-title")} // Setup sync heading
                     }
 
                     // Server URL
                     div { style: "margin-bottom: 16px;",
                         label {
                             style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                            {t!("sync-server-url")} // Server URL input label
+                            {tid!("sync-server-url")} // Server URL input label
                         }
                         input {
                             r#type: "url",
@@ -1354,7 +1295,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         }
                         p {
                             style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                            {t!("sync-server-hint")} // Server URL hint text
+                            {tid!("sync-server-hint")} // Server URL hint text
                         }
                     }
 
@@ -1362,7 +1303,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { style: "margin-bottom: 16px;",
                         label {
                             style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                            {t!("sync-path-label")} // Remote path input label
+                            {tid!("sync-path-label")} // Remote path input label
                         }
                         input {
                             r#type: "text",
@@ -1373,7 +1314,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         }
                         p {
                             style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                            {t!("sync-path-hint")} // Remote path hint text
+                            {tid!("sync-path-hint")} // Remote path hint text
                         }
                     }
 
@@ -1385,13 +1326,13 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 onclick: start_login,
                                 disabled: server_url().trim().is_empty() || !server_url().starts_with("http"),
                                 "🔐 "
-                                {t!("sync-login")}
+                                {tid!("sync-login")}
                             }
                         },
                         LoginState::InitiatingFlow => rsx! {
                             div { style: "padding: 12px; background: #fff3cd; border-radius: 4px; text-align: center;",
                                 "🔄 "
-                                {t!("sync-connecting")}
+                                {tid!("sync-connecting")}
                             }
                         },
                         LoginState::WaitingForUser { login_url, poll_url: _, token: _ } => {
@@ -1400,19 +1341,19 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 12px;",
                                         div { style: "font-size: 32px; animation: spin 2s linear infinite;", "💠" }
                                         div {
-                                            p { style: "margin: 0; font-weight: 600; font-size: 16px;", {t!("sync-waiting")} } // Waiting for login message
+                                            p { style: "margin: 0; font-weight: 600; font-size: 16px;", {tid!("sync-waiting")} } // Waiting for login message
                                             p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                                                {t!("sync-polling-background")} // Polling in background message
+                                                {tid!("sync-polling-background")} // Polling in background message
                                             }
                                         }
                                     }
-                                    p { style: "margin: 0 0 12px 0; font-size: 14px;", {t!("sync-login-instructions")} } // Login instructions
+                                    p { style: "margin: 0 0 12px 0; font-size: 14px;", {tid!("sync-login-instructions")} } // Login instructions
                                     a {
                                         href: "{login_url}",
                                         target: "_blank",
                                         style: "display: block; padding: 12px; background: #0066cc; color: white; text-decoration: none; border-radius: 4px; text-align: center; font-weight: 600;",
                                         "🌐 "
-                                        {t!("sync-login-browser")}
+                                        {tid!("sync-login-browser")}
                                     }
                                 }
                             }
@@ -1420,14 +1361,14 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                         LoginState::Success => rsx! {
                             div { style: "padding: 12px; background: #d4edda; border-radius: 4px; text-align: center; color: #155724;",
                                 "\u{2705} " // Login success message
-                                {t!("sync-login-success")}
+                                {tid!("sync-login-success")}
                             }
                         },
                         LoginState::Error(error) => rsx! {
                             div { style: "padding: 12px; background: #f8d7da; border-radius: 4px; color: #721c24;",
                                 p { style: "margin: 0 0 12px 0; font-weight: 600;",
                                     "\u{274c} "
-                                    {t!("sync-error")}
+                                    {tid!("sync-error")}
                                 } // Login error heading // Login error heading
                                 p { style: "margin: 0; font-size: 14px;", "{error}" }
                                 button {
@@ -1444,15 +1385,15 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { style: "margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #0066cc;",
                         p { style: "margin: 0 0 8px 0; font-size: 14px; font-weight: 600;",
                             "\u{2139}\u{fe0f} " // How login works heading
-                            {t!("sync-login-info-title")}
+                            {tid!("sync-login-info-title")}
                         }
                         ul {
                             style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
-                            li { {t!("sync-login-step1")} } // Step 1: Click login button
-                            li { {t!("sync-login-step2")} } // Step 2: Open browser link
-                            li { {t!("sync-login-step3")} } // Step 3: Login to Nextcloud
-                            li { {t!("sync-login-step4")} } // Step 4: Confirm access
-                            li { {t!("sync-login-step5")} } // Step 5: Return to app
+                            li { {tid!("sync-login-step1")} } // Step 1: Click login button
+                            li { {tid!("sync-login-step2")} } // Step 2: Open browser link
+                            li { {tid!("sync-login-step3")} } // Step 3: Login to Nextcloud
+                            li { {tid!("sync-login-step4")} } // Step 4: Confirm access
+                            li { {tid!("sync-login-step5")} } // Step 5: Return to app
                         }
                     }
                 }

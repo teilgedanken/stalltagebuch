@@ -10,6 +10,7 @@ Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, E
 - Modelle: `src/models/*` als reine Datenstrukturen (Owned Types, `PartialEq`, `Clone` wenn als Props genutzt).
 - Datenbank: Schema + Migration in `database/schema.rs` – CRDT Felder (`rev`, `logical_clock`, `deleted`) und `op_log`/`sync_queue` für Sync. Änderungen: neue Migration statt direktes Anpassen bestehender CREATE.
 - Sync: Settings via `sync_settings` Tabelle; Autostart in `App` über `use_effect` nach `init_database`.
+- Sync-Architektur (aktuell): Kein CRDT-Op-Datei-Sync mehr (`sync/ops/*` entfernt). Strukturdaten laufen über SpacetimeDB-Subscriptions; Nextcloud wird für Foto-Upload/Download und manuelle ZIP-Backups genutzt. Keine neuen periodischen Thread-Loop-Syncs einführen.
 - JNI/Android: Kamera & Galerie über `camera.rs` + `android/MainActivity.kt`; nutze ClassLoader-Helper (siehe `camera.rs`). Führe keinen direkten Zugriff auf Android APIs außerhalb dieser Brücke ein.
 
 ## Build & Workflow
@@ -20,6 +21,7 @@ Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, E
 
 ## Internationalisierung
 - Keys generieren: `dx-i18n -o locales/de-DE.ftl` (nicht manuell neue Keys direkt in Datei hinzufügen – nur Übersetzungen ergänzen). Nutze vorhandene i18n Initialisierung: `use_init_i18n(i18n::init_i18n);`.
+- nutze `tid!` Makro für i18n Keys in Komponenten, z.B. `tid!("home_screen_title")`.
 
 ## Stil & Konventionen
 - Fehler: Zentral in `error.rs` erweitern statt ad-hoc `eprintln!` Streuung – vorhandene Pattern respektieren.

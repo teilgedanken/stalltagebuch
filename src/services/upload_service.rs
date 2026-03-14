@@ -10,7 +10,7 @@ where
     F: FnMut(usize, usize),
 {
     let runtime = load_runtime()?;
-    let metadata_client = SpacetimePhotoMetadataClient::new(&runtime)?;
+    let metadata_client = SpacetimePhotoMetadataClient::new(&runtime).await?;
     let webdav = NextcloudWebDav::new(&runtime).await?;
 
     let photos = metadata_client

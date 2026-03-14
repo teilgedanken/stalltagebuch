@@ -1,14 +1,14 @@
 use crate::Screen;
 use crate::spacetime::{self, ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[component]
 pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     let quails = spacetime::use_table_quails();
     spacetime::use_subscription(&["SELECT * FROM quails"]);
 
-    let mut db_status = use_signal(|| Err(t!("status-initializing")));
+    let mut db_status = use_signal(|| Err(tid!("status-initializing")));
     let spacetimedb_ctx = use_spacetimedb_context();
     let connection_state = spacetimedb_ctx.state;
 
@@ -16,13 +16,13 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     use_effect(move || {
         // Database initialization is now handled by SpacetimeDB context
         let count = quails().len();
-        db_status.set(Ok(format!("✅ {}", t!("status-db-ready", count: count))));
+        db_status.set(Ok(format!("✅ {}", tid!("status-db-ready", count: count))));
     });
 
     rsx! {
         div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
             h1 { style: "color: #0066cc; text-align: center; margin-bottom: 24px; margin-top: 48px; font-size: 28px; font-weight: 700;",
-                {format!("🥚 {}", t!("app-title"))}
+                {format!("🥚 {}", tid!("app-title"))}
             }
             if let Err(db_status) = db_status() {
                 // Status Card
@@ -41,18 +41,18 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                         class: "btn-primary",
                         style: "padding: 16px; font-size: 16px; display: flex; align-items: center; justify-content: center;",
                         onclick: move |_| on_navigate.call(Screen::ProfileList),
-                        {format!("🐦 {}", t!("profile-list-title"))}
+                        {format!("🐦 {}", tid!("profile-list-title"))}
                     }
                     button {
                         class: "btn-success",
                         style: "padding: 16px; font-size: 16px; display: flex; align-items: center; justify-content: center;",
                         onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
-                        {format!("🥚 {}", t!("egg-tracking-title"))}
+                        {format!("🥚 {}", tid!("egg-tracking-title"))}
                     }
                     button {
                         style: "padding: 16px; font-size: 16px; background: #ff8c00; color: white; display: flex; align-items: center; justify-content: center;",
                         onclick: move |_| on_navigate.call(Screen::Statistics),
-                        {format!("📊 {}", t!("stats-title"))}
+                        {format!("📊 {}", tid!("stats-title"))}
                     }
                 }
             }
@@ -62,7 +62,7 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                     class: "btn-secondary",
                     style: "width: 100%; padding: 16px; font-size: 16px; display: flex; align-items: center; justify-content: center;",
                     onclick: move |_| on_navigate.call(Screen::Settings),
-                    {format!("⚙️ {}", t!("settings-title"))}
+                    {format!("⚙️ {}", tid!("settings-title"))}
                 }
             }
 
@@ -81,13 +81,13 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                     {
                         match connection_state() {
                             ConnectionState::Disconnected => {
-                                t!("info-spacetimedb-disconnected").to_string()
+                                tid!("info-spacetimedb-disconnected").to_string()
                             }
-                            ConnectionState::Connecting => t!("info-spacetimedb-connecting").to_string(),
+                            ConnectionState::Connecting => tid!("info-spacetimedb-connecting").to_string(),
                             ConnectionState::Connected(_, _) => {
-                                t!("info-spacetimedb-connected").to_string()
+                                tid!("info-spacetimedb-connected").to_string()
                             }
-                            ConnectionState::Error => t!("info-spacetimedb-error").to_string(),
+                            ConnectionState::Error => tid!("info-spacetimedb-error").to_string(),
                         }
                     }
                 }

@@ -1,6 +1,6 @@
 use crate::{Screen, models::EggRecord, spacetime};
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[component]
 pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
@@ -28,7 +28,7 @@ pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
         mapped
     });
 
-    let status_message = format!("✅ {}", t!("egg-history-loaded", count: records().len()));
+    let status_message = format!("✅ {}", tid!("egg-history-loaded", count: records().len()));
 
     rsx! {
         div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
@@ -37,14 +37,14 @@ pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
             div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-top: 8px;",
                 h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
                     "📋 "
-                    {t!("egg-history-title")}
+                    {tid!("egg-history-title")}
                 }
                 button {
                     class: "btn-success",
                     style: "padding: 10px 20px; font-size: 16px; font-weight: 500;",
                     onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
                     "+ "
-                    {t!("action-new")}
+                    {tid!("action-new")}
                 }
             }
 
@@ -58,7 +58,7 @@ pub fn EggHistoryScreen(on_navigate: EventHandler<Screen>) -> Element {
             // Records List
             if records().is_empty() {
                 div { style: "text-align: center; padding: 40px; color: #999;",
-                    {t!("egg-history-empty")}
+                    {tid!("egg-history-empty")}
                 }
             } else {
                 for record in records().iter() {
@@ -79,13 +79,13 @@ fn EggRecordCard(record: EggRecord, on_edit: EventHandler<String>) -> Element {
     use chrono::Datelike;
     let weekday_num = record.record_date.weekday().num_days_from_monday();
     let weekday = match weekday_num {
-        0 => t!("weekday-mon"),
-        1 => t!("weekday-tue"),
-        2 => t!("weekday-wed"),
-        3 => t!("weekday-thu"),
-        4 => t!("weekday-fri"),
-        5 => t!("weekday-sat"),
-        6 => t!("weekday-sun"),
+        0 => tid!("weekday-mon"),
+        1 => tid!("weekday-tue"),
+        2 => tid!("weekday-wed"),
+        3 => tid!("weekday-thu"),
+        4 => tid!("weekday-fri"),
+        5 => tid!("weekday-sat"),
+        6 => tid!("weekday-sun"),
         _ => String::new(),
     };
 
@@ -106,7 +106,7 @@ fn EggRecordCard(record: EggRecord, on_edit: EventHandler<String>) -> Element {
                     div { style: "display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;",
                         span { style: "display: inline-block; padding: 6px 14px; background: #fff3e0; border-radius: 12px; font-size: 16px; color: #ff8c00; font-weight: 600;",
                             "🥚 "
-                            {t!("egg-history-eggs-count", count : record.total_eggs)}
+                            {tid!("egg-history-eggs-count", count : record.total_eggs)}
                         }
                     }
                     if let Some(notes) = &record.notes {

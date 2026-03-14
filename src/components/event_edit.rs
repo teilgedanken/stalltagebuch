@@ -6,7 +6,7 @@ use crate::{
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use dioxus_gallery_components::{Gallery, GalleryConfig, GalleryItem};
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use photo_gallery::{Photo, PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
 
 /// Helper component to load and display event photos using Gallery
@@ -204,7 +204,7 @@ pub fn EventEditScreen(
     let mut handle_save = move || {
         // Check if connected to Spacetime
         if connection().is_none() {
-            error.set(t!("error-not-connected"));
+            error.set(tid!("error-not-connected"));
             return;
         }
 
@@ -212,14 +212,14 @@ pub fn EventEditScreen(
         error.set(String::new());
 
         if event_date_str().is_empty() {
-            error.set(t!("error-empty-date"));
+            error.set(tid!("error-empty-date"));
             saving.set(false);
             return;
         }
         let parsed_date = match NaiveDate::parse_from_str(&event_date_str(), "%Y-%m-%d") {
             Ok(d) => d,
             Err(_) => {
-                error.set(t!("error-invalid-date"));
+                error.set(tid!("error-invalid-date"));
                 saving.set(false);
                 return;
             }
@@ -260,7 +260,7 @@ pub fn EventEditScreen(
     let mut handle_delete = move || {
         // Check if connected to Spacetime
         if connection().is_none() {
-            error.set(t!("error-not-connected"));
+            error.set(tid!("error-not-connected"));
             return;
         }
 
@@ -286,7 +286,7 @@ pub fn EventEditScreen(
                     onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id.clone())),
                     "←"
                 }
-                h1 { style: "margin:0; font-size:22px; color:#0066cc;", {t!("event-edit-title")} }
+                h1 { style: "margin:0; font-size:22px; color:#0066cc;", {tid!("event-edit-title")} }
             }
             if !error().is_empty() {
                 div { style: "background:#ffe6e6; padding:12px; border-radius:8px; color:#c00; margin-bottom:16px;",
@@ -297,14 +297,14 @@ pub fn EventEditScreen(
             if success() {
                 div { style: "background:#e6ffe6; padding:12px; border-radius:8px; color:#060; margin-bottom:16px;",
                     "✓ "
-                    {t!("updated")}
+                    {tid!("updated")}
                 }
             }
             if let Some(_) = event() {
                 // Event type
                 div { style: "margin-bottom:16px;",
                     label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {t!("field-type")}
+                        {tid!("field-type")}
                     }
                     select {
                         value: event_type().as_str(),
@@ -313,19 +313,19 @@ pub fn EventEditScreen(
                             event_type.set(EventType::from_str(v.as_str()));
                         },
                         style: "width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;",
-                        option { value: "born", {t!("event-type-born")} }
-                        option { value: "alive", {t!("event-type-alive")} }
-                        option { value: "sick", {t!("event-type-sick")} }
-                        option { value: "healthy", {t!("event-type-healthy")} }
-                        option { value: "marked_for_slaughter", {t!("event-type-marked")} }
-                        option { value: "slaughtered", {t!("event-type-slaughtered")} }
-                        option { value: "died", {t!("event-type-died")} }
+                        option { value: "born", {tid!("event-type-born")} }
+                        option { value: "alive", {tid!("event-type-alive")} }
+                        option { value: "sick", {tid!("event-type-sick")} }
+                        option { value: "healthy", {tid!("event-type-healthy")} }
+                        option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
+                        option { value: "slaughtered", {tid!("event-type-slaughtered")} }
+                        option { value: "died", {tid!("event-type-died")} }
                     }
                 }
                 // Date
                 div { style: "margin-bottom:16px;",
                     label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {t!("field-date")}
+                        {tid!("field-date")}
                     }
                     input {
                         r#type: "date",
@@ -337,7 +337,7 @@ pub fn EventEditScreen(
                 // Notes
                 div { style: "margin-bottom:16px;",
                     label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {t!("field-notes")}
+                        {tid!("field-notes")}
                     }
                     textarea {
                         value: "{notes}",
@@ -348,7 +348,7 @@ pub fn EventEditScreen(
                 // Photos grid
                 div { style: "margin-bottom:20px;",
                     label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {t!("photos-count", count : photos().len())}
+                        {tid!("photos-count", count : photos().len())}
                     }
                     EventPhotoGallery {
                         event_id: event_id.clone(),
@@ -415,24 +415,24 @@ pub fn EventEditScreen(
                                                                 Err(err) => {
                                                                     error.set(format!(
                                                                         "{}: {}",
-                                                                        t!("error-pick-images", error: ""),
+                                                                        tid!("error-pick-images", error: ""),
                                                                         err
                                                                     ));
                                                                 }
                                                             }
                                                         }
                                                     } else {
-                                                        error.set(t!("error-invalid-event-id"));
+                                                        error.set(tid!("error-invalid-event-id"));
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    error.set(t!("error-pick-images", error : e.to_string()));
+                                                    error.set(tid!("error-pick-images", error : e.to_string()));
                                                 }
                                             }
                                         }
                                         #[cfg(not(target_os = "android"))]
                                         {
-                                            error.set(t!("error-android-only-gallery"));
+                                            error.set(tid!("error-android-only-gallery"));
                                         }
                                         uploading.set(false);
                                     });
@@ -442,7 +442,7 @@ pub fn EventEditScreen(
                                 "⏳"
                             } else {
                                 "🖼️ "
-                                {t!("action-gallery")}
+                                {tid!("action-gallery")}
                             }
                         }
                         button {
@@ -502,23 +502,23 @@ pub fn EventEditScreen(
                                                             Err(err) => {
                                                                 error.set(format!(
                                                                     "{}: {}",
-                                                                    t!("error-capture-photo", error: ""),
+                                                                    tid!("error-capture-photo", error: ""),
                                                                     err
                                                                 ));
                                                             }
                                                         }
                                                     } else {
-                                                        error.set(t!("error-invalid-event-id"));
+                                                        error.set(tid!("error-invalid-event-id"));
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    error.set(t!("error-capture-photo", error : e.to_string()));
+                                                    error.set(tid!("error-capture-photo", error : e.to_string()));
                                                 }
                                             }
                                         }
                                         #[cfg(not(target_os = "android"))]
                                         {
-                                            error.set(t!("error-android-only-camera"));
+                                            error.set(tid!("error-android-only-camera"));
                                         }
                                         uploading.set(false);
                                     });
@@ -528,7 +528,7 @@ pub fn EventEditScreen(
                                 "⏳"
                             } else {
                                 "📷 "
-                                {t!("action-photo")}
+                                {tid!("action-photo")}
                             }
                         }
                     }
@@ -541,10 +541,10 @@ pub fn EventEditScreen(
                         onclick: move |_| handle_save(),
                         if saving() {
                             "⏳ "
-                            {t!("action-saving")}
+                            {tid!("action-saving")}
                         } else {
                             "✓ "
-                            {t!("action-save")}
+                            {tid!("action-save")}
                         }
                     }
                     button {
@@ -554,18 +554,18 @@ pub fn EventEditScreen(
                             let quail_id_for_cancel = quail_id.clone();
                             move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
                         },
-                        {t!("action-cancel")}
+                        {tid!("action-cancel")}
                     }
                     button {
                         disabled: saving(),
                         style: "flex:1; padding:14px; background:#ffdddd; color:#cc0000; border-radius:8px; font-weight:600;",
                         onclick: move |_| handle_delete(),
                         "🗑️ "
-                        {t!("action-delete")}
+                        {tid!("action-delete")}
                     }
                 }
             } else {
-                div { style: "padding:40px; text-align:center; color:#666;", {t!("loading-event")} }
+                div { style: "padding:40px; text-align:center; color:#666;", {tid!("loading-event")} }
             }
         }
     }

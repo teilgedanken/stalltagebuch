@@ -18,9 +18,9 @@ Instructions:
 
 2) Apply dioxus-i18n
 - Import `dioxus_i18n::t`.
-- For RSX text nodes, wrap the translation call in braces: `h2 { { t!("key") } }`.
-- For attribute values, call `t!("key")` directly: `placeholder: t!("key")`.
-- Use parameters for interpolations: `t!("key-with-param", name: some_string.clone())`.
+- For RSX text nodes, wrap the translation call in braces: `h2 { { tid!("key") } }`.
+- For attribute values, call `tid!("key")` directly: `placeholder: tid!("key")`.
+- Use parameters for interpolations: `tid!("key-with-param", name: some_string.clone())`.
 - Keep emojis or icons as part of the localized string only if they are intended to be localized; otherwise keep them in code and concatenate the translated label.
 - add comments in the end of the line for context if needed: `// i18n: Button to save the event`
 
@@ -52,11 +52,11 @@ Instructions:
 - Provide the patched code snippets for the selected file(s).
 
 Example patterns (Dioxus 0.7):
-- Text node: `h2 { { t!("page-title") } }`
-- Attribute: `placeholder: t!("search-placeholder")`
-- Parameterized: `{ t!("greeting-user", name: user_name.clone()) }`
+- Text node: `h2 { { tid!("page-title") } }`
+- Attribute: `placeholder: tid!("search-placeholder")`
+- Parameterized: `{ tid!("greeting-user", name: user_name.clone()) }`
 - Select options with stable values:
-  - `option { value: "alive", { t!("status-alive") } }`
+  - `option { value: "alive", { tid!("status-alive") } }`
   - `onchange: move |e| set_status(Status::from_str(e.value().as_str()))`
 
 Please proceed to:

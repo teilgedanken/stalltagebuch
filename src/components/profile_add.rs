@@ -4,7 +4,7 @@ use crate::{
     spacetime,
 };
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use std::path::PathBuf;
 
 #[component]
@@ -29,12 +29,12 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
 
         let name_trimmed = name().trim().to_string();
         if name_trimmed.is_empty() {
-            error.set(Some(t!("error-name-required"))); // Name cannot be empty
+            error.set(Some(tid!("error-name-required"))); // Name cannot be empty
             return;
         }
 
         if connection().is_none() {
-            error.set(Some(t!("error", error: "SpacetimeDB not connected")));
+            error.set(Some(tid!("error", error: "SpacetimeDB not connected")));
             return;
         }
 
@@ -133,11 +133,11 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                     style: "margin-right: 12px; padding: 8px 16px;",
                     onclick: move |_| on_navigate.call(Screen::ProfileList),
                     "← "
-                    {t!("action-back")}
+                    {tid!("action-back")}
                 }
                 h1 {
                     style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
-                    {t!("profile-add-title")} // New profile page title
+                    {tid!("profile-add-title")} // New profile page title
                 }
             }
 
@@ -150,7 +150,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             if success() {
                 div { style: "background: #efe; border: 1px solid #cfc; color: #3a3; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
                     "✅ "
-                    {t!("profile-created-success")}
+                    {tid!("profile-created-success")}
                 }
             }
 
@@ -159,12 +159,12 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-name-label")} // Name field label with required marker
+                        {tid!("profile-name-label")} // Name field label with required marker
                     }
                     input {
                         r#type: "text",
                         class: "input",
-                        placeholder: t!("profile-name-placeholder"), // Example name placeholder
+                        placeholder: tid!("profile-name-placeholder"), // Example name placeholder
                         value: "{name}",
                         oninput: move |e| name.set(e.value()),
                         autofocus: true,
@@ -174,50 +174,50 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-gender-label")} // Gender field label
+                        {tid!("profile-gender-label")} // Gender field label
                     }
                     select {
                         class: "input",
                         value: "{gender}",
                         onchange: move |e| gender.set(e.value()),
-                        option { value: "unknown", {t!("gender-unknown")} } // Unknown gender option
-                        option { value: "female", {t!("gender-female")} } // Female gender option
-                        option { value: "male", {t!("gender-male")} } // Male gender option
+                        option { value: "unknown", {tid!("gender-unknown")} } // Unknown gender option
+                        option { value: "female", {tid!("gender-female")} } // Female gender option
+                        option { value: "male", {tid!("gender-male")} } // Male gender option
                     }
                 }
 
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-ring-color-label")} // Ring color field label
+                        {tid!("profile-ring-color-label")} // Ring color field label
                     }
                     select {
                         class: "input",
                         value: "{ring_color}",
                         onchange: move |e| ring_color.set(e.value()),
-                        option { value: "", {t!("ring-color-none")} } // No ring color option
-                        option { value: "lila", {t!("ring-color-purple")} } // Purple ring color
-                        option { value: "rosa", {t!("ring-color-pink")} } // Pink ring color
-                        option { value: "hellblau", {t!("ring-color-light-blue")} } // Light blue ring color
-                        option { value: "dunkelblau", {t!("ring-color-dark-blue")} } // Dark blue ring color
-                        option { value: "rot", {t!("ring-color-red")} } // Red ring color
-                        option { value: "orange", {t!("ring-color-orange")} } // Orange ring color
-                        option { value: "weiss", {t!("ring-color-white")} } // White ring color
-                        option { value: "gelb", {t!("ring-color-yellow")} } // Yellow ring color
-                        option { value: "schwarz", {t!("ring-color-black")} } // Black ring color
-                        option { value: "gruen", {t!("ring-color-green")} } // Green ring color
+                        option { value: "", {tid!("ring-color-none")} } // No ring color option
+                        option { value: "lila", {tid!("ring-color-purple")} } // Purple ring color
+                        option { value: "rosa", {tid!("ring-color-pink")} } // Pink ring color
+                        option { value: "hellblau", {tid!("ring-color-light-blue")} } // Light blue ring color
+                        option { value: "dunkelblau", {tid!("ring-color-dark-blue")} } // Dark blue ring color
+                        option { value: "rot", {tid!("ring-color-red")} } // Red ring color
+                        option { value: "orange", {tid!("ring-color-orange")} } // Orange ring color
+                        option { value: "weiss", {tid!("ring-color-white")} } // White ring color
+                        option { value: "gelb", {tid!("ring-color-yellow")} } // Yellow ring color
+                        option { value: "schwarz", {tid!("ring-color-black")} } // Black ring color
+                        option { value: "gruen", {tid!("ring-color-green")} } // Green ring color
                     }
                 }
 
                 div { style: "padding: 12px; background: #e3f2fd; border-radius: 8px; color: #0066cc; font-size: 13px; margin-bottom: 20px;",
                     "ℹ️ "
-                    {t!("profile-add-info")}
+                    {tid!("profile-add-info")}
                 }
 
                 div { style: "margin-bottom: 20px;",
                     label {
                         style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-photo-label")} // Photo field label
+                        {tid!("profile-photo-label")} // Photo field label
                     }
 
                     div { style: "margin-bottom: 12px;",
@@ -229,7 +229,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 div { style: "flex: 1;",
                                     div {
                                         style: "font-size: 14px; font-weight: 600; color: #333;",
-                                        {t!("photo-selected")} // Photo selected status message
+                                        {tid!("photo-selected")} // Photo selected status message
                                     }
                                     div { style: "font-size: 12px; color: #666; word-break: break-all;",
                                         "{path.file_name().and_then(|n| n.to_str()).unwrap_or(\"Unbekannt\")}"
@@ -245,7 +245,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                         } else {
                             div {
                                 style: "width: 100%; height: 120px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px;",
-                                {t!("photo-none-selected")} // No photo selected message
+                                {tid!("photo-none-selected")} // No photo selected message
                             }
                         }
                     }
@@ -263,22 +263,22 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     {
                                         match crate::camera::pick_image() {
                                             Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", t!("error"), e))),
+                                            Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
                                         }
                                     }
                                     #[cfg(not(target_os = "android"))]
                                     {
-                                        error.set(Some(t!("error-android-only")));
+                                        error.set(Some(tid!("error-android-only")));
                                     }
                                     uploading.set(false);
                                 });
                             },
                             if uploading() {
                                 "⏳ "
-                                {t!("action-loading")}
+                                {tid!("action-loading")}
                             } else {
                                 "🖼️ "
-                                {t!("action-gallery")}
+                                {tid!("action-gallery")}
                             }
                         }
                         button {
@@ -293,22 +293,22 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     {
                                         match crate::camera::capture_photo() {
                                             Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", t!("error"), e))),
+                                            Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
                                         }
                                     }
                                     #[cfg(not(target_os = "android"))]
                                     {
-                                        error.set(Some(t!("error-android-only")));
+                                        error.set(Some(tid!("error-android-only")));
                                     }
                                     uploading.set(false);
                                 });
                             },
                             if uploading() {
                                 "⏳ "
-                                {t!("action-loading")}
+                                {tid!("action-loading")}
                             } else {
                                 "📷 "
-                                {t!("action-camera")}
+                                {tid!("action-camera")}
                             }
                         }
                     }
@@ -322,10 +322,10 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                         onclick: move |_| handle_submit(),
                         if saving() {
                             "⏳ "
-                            {t!("action-saving")}
+                            {tid!("action-saving")}
                         } else {
                             "💾 "
-                            {t!("action-save")}
+                            {tid!("action-save")}
                         }
                     }
                     button {
@@ -334,7 +334,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                         disabled: saving(),
                         onclick: move |_| on_navigate.call(Screen::ProfileList),
                         "❌ "
-                        {t!("action-cancel")}
+                        {tid!("action-cancel")}
                     }
                 }
             }

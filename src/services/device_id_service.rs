@@ -7,8 +7,7 @@ use crate::error::StalltagebuchError;
 
 #[cfg(target_os = "android")]
 use jni::{
-    jni_sig, jni_str,
-    Env,
+    Env, jni_sig, jni_str,
     objects::{JObject, JString, JValue},
 };
 #[cfg(target_os = "android")]
@@ -119,9 +118,9 @@ fn get_android_id(
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast result: {}", e)))?;
 
     // Convert to Rust string
-    let device_id_jstring = env
-        .cast_local::<JString<'_>>(device_id_obj)
-        .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast result string: {}", e)))?;
+    let device_id_jstring = env.cast_local::<JString<'_>>(device_id_obj).map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to cast result string: {}", e))
+    })?;
     let device_id: String = device_id_jstring
         .try_to_string(env)
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?;
@@ -164,9 +163,9 @@ pub fn get_device_model() -> Result<String, StalltagebuchError> {
             .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast MODEL: {}", e)))?;
 
         // Convert to Rust string
-        let model_jstring = env
-            .cast_local::<JString<'_>>(model_field)
-            .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast MODEL string: {}", e)))?;
+        let model_jstring = env.cast_local::<JString<'_>>(model_field).map_err(|e| {
+            StalltagebuchError::JniError(format!("Failed to cast MODEL string: {}", e))
+        })?;
         let model: String = model_jstring
             .try_to_string(env)
             .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?;

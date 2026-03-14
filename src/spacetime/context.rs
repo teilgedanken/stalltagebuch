@@ -264,6 +264,7 @@ impl SpacetimeContext {
 }
 
 /// Convenience hook – reads the shared `SpacetimeContext` from Dioxus context.
+#[track_caller]
 pub fn use_spacetime() -> SpacetimeContext {
     use_context::<SpacetimeContext>()
 }

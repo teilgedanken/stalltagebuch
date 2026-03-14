@@ -1,6 +1,6 @@
 use crate::Screen;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[component]
 pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) -> Element {
@@ -17,7 +17,7 @@ pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) 
                     "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
                 },
                 onclick: move |_| on_navigate.call(Screen::Home),
-                {format!("🏠 {}", t!("nav-home"))} // Home / Startseite
+                {format!("🏠 {}", tid!("nav-home"))} // Home / Startseite
             }
 
             button {
@@ -27,7 +27,7 @@ pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) 
                     "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
                 },
                 onclick: move |_| on_navigate.call(Screen::ProfileList),
-                {format!("🐦 {}", t!("nav-profiles"))} // Profile
+                {format!("🐦 {}", tid!("nav-profiles"))} // Profile
             }
 
             button {
@@ -37,7 +37,7 @@ pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) 
                     "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
                 },
                 onclick: move |_| on_navigate.call(Screen::EggHistory),
-                {format!("🥚 {}", t!("nav-eggs"))} // Eier
+                {format!("🥚 {}", tid!("nav-eggs"))} // Eier
             }
 
             button {
@@ -47,7 +47,7 @@ pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) 
                     "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
                 },
                 onclick: move |_| on_navigate.call(Screen::Statistics),
-                {format!("📊 {}", t!("nav-statistics"))} // Statistik
+                {format!("📊 {}", tid!("nav-statistics"))} // Statistik
             }
         }
     }

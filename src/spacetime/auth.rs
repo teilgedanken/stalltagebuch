@@ -3,9 +3,9 @@
 //! This module handles saving and restoring the client identity token
 //! across app restarts, ensuring users maintain the same SpacetimeDB identity.
 
+use crate::dioxus_spacetime_module_bindings::dioxus::{ConnectionState, use_spacetimedb_context};
 use crate::services::device_id_service;
 use crate::services::spacetime_settings_service;
-use crate::spacetime_module_bindings::dioxus::{ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
 
 /// Load the saved SpacetimeDB authentication token from persistent storage.
@@ -29,6 +29,7 @@ pub fn load_saved_token() -> Option<String> {
 /// This ensures that the token is saved after each connection, allowing the app
 /// to reuse the same identity across restarts.
 #[must_use = "this hook must be called in a component to enable token persistence"]
+#[track_caller]
 pub fn use_persist_spacetime_token() {
     let ctx = use_spacetimedb_context();
     let connection_state = ctx.state;
@@ -59,11 +60,13 @@ pub fn use_persist_spacetime_token() {
 /// The device registration happens every time the app connects, ensuring the
 /// last_seen timestamp is kept up to date.
 #[must_use = "this hook must be called in a component to enable device registration"]
+#[track_caller]
 pub fn use_register_device() {
     let ctx = use_spacetimedb_context();
     let connection_state = ctx.state.clone();
-    let register_device = crate::spacetime_module_bindings::dioxus::use_reducer_register_device();
-    let devices = crate::spacetime_module_bindings::dioxus::use_table_devices();
+    let register_device =
+        crate::dioxus_spacetime_module_bindings::dioxus::use_reducer_register_device();
+    let devices = crate::dioxus_spacetime_module_bindings::dioxus::use_table_devices();
 
     use_effect(move || {
         // Read the connection state to make this effect reactive
@@ -128,7 +131,7 @@ pub fn use_register_device() {
                     device_id
                 );
                 register_device_fn(
-                    crate::spacetime_module_bindings::register_device_args_type::RegisterDeviceArgs {
+                    crate::dioxus_spacetime_module_bindings::register_device_args_type::RegisterDeviceArgs {
                         device_id: device_id.clone(),
                         name: device_name,
                         comment: None,

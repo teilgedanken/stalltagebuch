@@ -148,16 +148,12 @@ impl SpacetimeClient {
 
     /// Execute a SQL query and return the raw JSON rows.
     pub async fn sql(&self, query: &str) -> Result<Vec<SqlRow>, AppError> {
-        #[derive(Serialize)]
-        struct SqlBody<'a> {
-            sql: &'a str,
-        }
-
         let resp = self
             .http
             .post(self.sql_url())
             .bearer_auth(&self.token)
-            .json(&SqlBody { sql: query })
+            .header(reqwest::header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(query.to_string())
             .send()
             .await
             .map_err(|e| AppError::Other(format!("network error: {}", e)))?;

@@ -194,11 +194,9 @@ fn get_activity_instance<'a>(
             }
 
             // Try direct static `instance` field first
-            if let Ok(field) = env.get_static_field(
-                &cls,
-                jni_str!("instance"),
-                field_sig.field_signature(),
-            ) {
+            if let Ok(field) =
+                env.get_static_field(&cls, jni_str!("instance"), field_sig.field_signature())
+            {
                 let inst = field.l().map_err(|e| {
                     PickerError::PermissionDenied(format!("instance field invalid: {}", e))
                 })?;
@@ -211,10 +209,7 @@ fn get_activity_instance<'a>(
                         &comp_signature,
                     )
                     .map_err(|e| {
-                        PickerError::PermissionDenied(format!(
-                            "Invalid Companion signature: {}",
-                            e
-                        ))
+                        PickerError::PermissionDenied(format!("Invalid Companion signature: {}", e))
                     })?;
                     let comp_field = env
                         .get_static_field(
@@ -246,19 +241,19 @@ fn get_activity_instance<'a>(
                         method_sig.method_signature(),
                         &[],
                     )
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "Companion.getInstance() failed: {}",
-                                e
-                            ))
-                        })?
-                        .l()
-                        .map_err(|e| {
-                            PickerError::PermissionDenied(format!(
-                                "Companion.getInstance() returned invalid object: {}",
-                                e
-                            ))
-                        })?
+                    .map_err(|e| {
+                        PickerError::PermissionDenied(format!(
+                            "Companion.getInstance() failed: {}",
+                            e
+                        ))
+                    })?
+                    .l()
+                    .map_err(|e| {
+                        PickerError::PermissionDenied(format!(
+                            "Companion.getInstance() returned invalid object: {}",
+                            e
+                        ))
+                    })?
                 }
             } else {
                 // No instance field — fall back to Companion object access
@@ -298,19 +293,16 @@ fn get_activity_instance<'a>(
                     method_sig.method_signature(),
                     &[],
                 )
-                    .map_err(|e| {
-                        PickerError::PermissionDenied(format!(
-                            "Companion.getInstance() failed: {}",
-                            e
-                        ))
-                    })?
-                    .l()
-                    .map_err(|e| {
-                        PickerError::PermissionDenied(format!(
-                            "Companion.getInstance() returned invalid object: {}",
-                            e
-                        ))
-                    })?
+                .map_err(|e| {
+                    PickerError::PermissionDenied(format!("Companion.getInstance() failed: {}", e))
+                })?
+                .l()
+                .map_err(|e| {
+                    PickerError::PermissionDenied(format!(
+                        "Companion.getInstance() returned invalid object: {}",
+                        e
+                    ))
+                })?
             }
         }
     };
@@ -360,24 +352,25 @@ pub fn pick_image_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, P
             .map_err(|e| PickerError::PermissionDenied(format!("clearLastError failed: {}", e)))?;
 
         // Call launchImagePicker on the activity instance
-        env.call_method(&activity, jni_str!("launchImagePicker"), jni_sig!("()V"), &[])
-            .map_err(|e| {
-                PickerError::PermissionDenied(format!("launchImagePicker failed: {}", e))
-            })?;
+        env.call_method(
+            &activity,
+            jni_str!("launchImagePicker"),
+            jni_sig!("()V"),
+            &[],
+        )
+        .map_err(|e| PickerError::PermissionDenied(format!("launchImagePicker failed: {}", e)))?;
 
         // Poll for result (60 seconds timeout)
         for _ in 0..600 {
             std::thread::sleep(std::time::Duration::from_millis(100));
 
             // Check for photo path
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastPhotoPath"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastPhotoPath"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
@@ -398,14 +391,12 @@ pub fn pick_image_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, P
             }
 
             // Check for error
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastError"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastError"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
@@ -456,21 +447,19 @@ pub fn pick_images_with_config(config: &AndroidPickerConfig) -> Result<Vec<PathB
             jni_sig!("()V"),
             &[],
         )
-            .map_err(|e| {
-                PickerError::PermissionDenied(format!("launchImagePickerMulti failed: {}", e))
-            })?;
+        .map_err(|e| {
+            PickerError::PermissionDenied(format!("launchImagePickerMulti failed: {}", e))
+        })?;
 
         for _ in 0..600 {
             std::thread::sleep(std::time::Duration::from_millis(100));
 
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastPhotoPaths"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastPhotoPaths"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
@@ -497,14 +486,12 @@ pub fn pick_images_with_config(config: &AndroidPickerConfig) -> Result<Vec<PathB
                 }
             }
 
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastError"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastError"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
@@ -560,14 +547,12 @@ pub fn capture_photo_with_config(config: &AndroidPickerConfig) -> Result<PathBuf
             std::thread::sleep(std::time::Duration::from_millis(100));
 
             // Check for photo path
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastPhotoPath"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastPhotoPath"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
@@ -588,14 +573,12 @@ pub fn capture_photo_with_config(config: &AndroidPickerConfig) -> Result<PathBuf
             }
 
             // Check for error
-            if let Ok(result) =
-                env.call_static_method(
-                    &main_cls,
-                    jni_str!("getLastError"),
-                    jni_sig!("()Ljava/lang/String;"),
-                    &[],
-                )
-            {
+            if let Ok(result) = env.call_static_method(
+                &main_cls,
+                jni_str!("getLastError"),
+                jni_sig!("()Ljava/lang/String;"),
+                &[],
+            ) {
                 if let Ok(obj) = result.l() {
                     if !obj.is_null() {
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {

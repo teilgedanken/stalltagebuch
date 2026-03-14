@@ -2,7 +2,7 @@ use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use photo_gallery::ThumbnailImage;
 use spacetimedb_sdk::DbContext;
 
@@ -77,7 +77,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 8px;",
                 h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
                     "🐦 "
-                    {t!("profile-list-title")}
+                    {tid!("profile-list-title")}
                 }
                 div { style: "display: flex; gap: 8px; align-items: center;",
                     button {
@@ -97,7 +97,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                         style: "padding: 10px 16px; font-size: 16px; font-weight: 500;",
                         onclick: move |_| on_navigate.call(Screen::AddProfile),
                         "+ "
-                        {t!("action-new")}
+                        {tid!("action-new")}
                     }
                 }
             }
@@ -106,7 +106,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 input {
                     style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 10px; background: white; margin-bottom: 12px;",
                     r#type: "text",
-                    placeholder: "🔍 {t!(\"search-placeholder-name\")}",
+                    placeholder: "🔍 {tid!(\"search-placeholder-name\")}",
                     value: "{search_filter}",
                     oninput: move |e| search_filter.set(e.value()),
                 },
@@ -114,7 +114,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 
             if filtered_profiles().is_empty() {
                 div { style: "text-align: center; padding: 40px; color: #999;",
-                    {t!("profile-list-empty")}
+                    {tid!("profile-list-empty")}
                 }
             } else {
                 div { class: "profile-grid",

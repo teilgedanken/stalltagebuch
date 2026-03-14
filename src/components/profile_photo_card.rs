@@ -1,6 +1,6 @@
 use crate::spacetime;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use photo_gallery::CollectionFullscreen;
 
 #[component]
@@ -162,7 +162,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                     Err(err) => {
                                                         upload_error.set(format!(
                                                             "{}: {}",
-                                                            t!("error-selection-failed"),
+                                                            tid!("error-selection-failed"),
                                                             err
                                                         ));
                                                     }
@@ -171,13 +171,13 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                         }
                                     }
                                     Err(e) => {
-                                        upload_error.set(format!("{}: {}", t!("error-selection-failed"), e));
+                                        upload_error.set(format!("{}: {}", tid!("error-selection-failed"), e));
                                     }
                                 }
                             }
                             #[cfg(not(target_os = "android"))]
                             {
-                                upload_error.set(t!("error-multiselect-android-only"));
+                                upload_error.set(tid!("error-multiselect-android-only"));
                             }
 
                             uploading.set(false);
@@ -188,7 +188,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                     "⏳"
                 } else {
                     "🖼️ "
-                    {t!("action-gallery")}
+                    {tid!("action-gallery")}
                 }
             }
 
@@ -269,7 +269,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                 Err(err) => {
                                                     upload_error.set(format!(
                                                         "{}: {}",
-                                                        t!("error-capture-failed"),
+                                                        tid!("error-capture-failed"),
                                                         err
                                                     ));
                                                 }
@@ -277,13 +277,13 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                         }
                                     }
                                     Err(e) => {
-                                        upload_error.set(format!("{}: {}", t!("error-capture-failed"), e));
+                                        upload_error.set(format!("{}: {}", tid!("error-capture-failed"), e));
                                     }
                                 }
                             }
                             #[cfg(not(target_os = "android"))]
                             {
-                                upload_error.set(t!("error-camera-android-only"));
+                                upload_error.set(tid!("error-camera-android-only"));
                             }
 
                             uploading.set(false);
@@ -294,7 +294,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                     "⏳"
                 } else {
                     "📷 "
-                    {t!("action-photo")}
+                    {tid!("action-photo")}
                 }
             }
         }

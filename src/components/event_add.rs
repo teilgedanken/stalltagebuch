@@ -1,7 +1,7 @@
 use crate::{Screen, models::quail_event::EventType, spacetime};
 use chrono::NaiveDate;
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 
 #[component]
 pub fn EventAdd(
@@ -27,7 +27,7 @@ pub fn EventAdd(
     let on_save = move |_| {
         // Check if connected to Spacetime
         if connection().is_none() {
-            error_message.set(Some(t!("error-not-connected")));
+            error_message.set(Some(tid!("error-not-connected")));
             return;
         }
 
@@ -37,7 +37,7 @@ pub fn EventAdd(
         let parsed_date = match NaiveDate::parse_from_str(&event_date(), "%Y-%m-%d") {
             Ok(date) => date,
             Err(_) => {
-                error_message.set(Some(t!("error-invalid-date")));
+                error_message.set(Some(tid!("error-invalid-date")));
                 saving.set(false);
                 return;
             }
@@ -76,9 +76,9 @@ pub fn EventAdd(
     rsx! {
         div { class: "container", style: "padding: 20px;",
 
-            h2 { {t!("event-add-title")} }
+            h2 { {tid!("event-add-title")} }
             p { style: "color: #666; margin-bottom: 20px;",
-                {t!("event-add-for", name : quail_name.clone())}
+                {tid!("event-add-for", name : quail_name.clone())}
             }
 
             if let Some(error) = error_message() {
@@ -92,7 +92,7 @@ pub fn EventAdd(
             div { class: "form-group", style: "margin-bottom: 20px;",
 
                 label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {t!("field-event-type")}
+                    {tid!("field-event-type")}
                 }
                 select {
                     value: "{event_type().as_str()}",
@@ -102,20 +102,20 @@ pub fn EventAdd(
                         event_type.set(et);
                     },
                     style: "width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;",
-                    option { value: "born", {t!("event-type-born")} }
-                    option { value: "alive", {t!("event-type-alive")} }
-                    option { value: "sick", {t!("event-type-sick")} }
-                    option { value: "healthy", {t!("event-type-healthy")} }
-                    option { value: "marked_for_slaughter", {t!("event-type-marked")} }
-                    option { value: "slaughtered", {t!("event-type-slaughtered")} }
-                    option { value: "died", {t!("event-type-died")} }
+                    option { value: "born", {tid!("event-type-born")} }
+                    option { value: "alive", {tid!("event-type-alive")} }
+                    option { value: "sick", {tid!("event-type-sick")} }
+                    option { value: "healthy", {tid!("event-type-healthy")} }
+                    option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
+                    option { value: "slaughtered", {tid!("event-type-slaughtered")} }
+                    option { value: "died", {tid!("event-type-died")} }
                 }
             }
 
             div { class: "form-group", style: "margin-bottom: 20px;",
 
                 label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {t!("field-date")}
+                    {tid!("field-date")}
                 }
                 input {
                     r#type: "date",
@@ -128,13 +128,13 @@ pub fn EventAdd(
             div { class: "form-group", style: "margin-bottom: 20px;",
 
                 label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {t!("field-notes-optional")}
+                    {tid!("field-notes-optional")}
                 }
                 textarea {
                     value: "{notes}",
                     oninput: move |e| notes.set(e.value()),
                     style: "width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-height: 100px;",
-                    placeholder: t!("placeholder-event-notes"),
+                    placeholder: tid!("placeholder-event-notes"),
                 }
             }
 
@@ -146,9 +146,9 @@ pub fn EventAdd(
                     style: "flex: 1; padding: 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;",
                     if saving() {
                         "⏳ "
-                        {t!("action-saving")}
+                        {tid!("action-saving")}
                     } else {
-                        {t!("action-save")}
+                        {tid!("action-save")}
                     }
                 }
 
@@ -159,7 +159,7 @@ pub fn EventAdd(
                         move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
                     },
                     style: "flex: 1; padding: 12px; background-color: #f44336; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;",
-                    {t!("action-cancel")}
+                    {tid!("action-cancel")}
                 }
             }
         }

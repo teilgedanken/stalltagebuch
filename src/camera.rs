@@ -87,10 +87,10 @@ pub fn launch_document_picker() -> Result<(), AppError> {
             jni_sig!("()V"),
             &[],
         )
-            .map_err(|e| {
-                clear_pending_exception(env);
-                AppError::PermissionDenied(format!("launchDocumentPicker failed: {}", e))
-            })?;
+        .map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("launchDocumentPicker failed: {}", e))
+        })?;
 
         clear_pending_exception(env);
         Ok(())
@@ -207,7 +207,12 @@ fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
             .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?;
         let activity_class = load_main_activity_class(env)?;
         let result = env
-            .call_static_method(&activity_class, &method_name, method_sig.method_signature(), &[])
+            .call_static_method(
+                &activity_class,
+                &method_name,
+                method_sig.method_signature(),
+                &[],
+            )
             .map_err(|e| {
                 clear_pending_exception(env);
                 AppError::PermissionDenied(format!("{} failed: {}", method, e))
@@ -222,10 +227,12 @@ fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
             return Ok(None);
         }
 
-        let obj_str = env.cast_local::<jni::objects::JString<'_>>(obj).map_err(|e| {
-            clear_pending_exception(env);
-            AppError::PermissionDenied(format!("{} string cast failed: {}", method, e))
-        })?;
+        let obj_str = env
+            .cast_local::<jni::objects::JString<'_>>(obj)
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("{} string cast failed: {}", method, e))
+            })?;
 
         let s = obj_str.try_to_string(env).map_err(|e| {
             clear_pending_exception(env);
