@@ -18,48 +18,40 @@ pub enum ExportProgress {
     Complete,
 }
 
-/// Export all data to a timestamped ZIP file in the export storage directory
-///
-/// Returns the path to the created ZIP file and tracks progress via the signal callback.
-/// Progress callback is called for each major step.
-pub async fn export_to_zip(
-    mut progress_callback: impl FnMut(ExportProgress),
-) -> Result<PathBuf, AppError> {
-    progress_callback(ExportProgress::Starting);
+/// Summary of a completed export
+#[derive(Clone, Debug)]
+pub struct ExportStats {
+    pub path: PathBuf,
+    pub quails: usize,
+    pub events: usize,
+    pub egg_records: usize,
+    pub photos_meta: usize,
+    pub photos_files_included: usize,
+    pub photos_files_missing: usize,
+    pub zip_size_bytes: u64,
+}
 
-    // Get current device ID and owner
+pub fn build_export_metadata() -> Result<ExportMetadata, AppError> {
     let device_id = device_id_service::get_device_id()
         .map_err(|e| AppError::Other(format!("Failed to get device ID: {}", e)))?;
-    // Create metadata
     let now = Local::now();
-    let exported_at = now.to_rfc3339();
-    let app_version = env!("CARGO_PKG_VERSION").to_string();
-
-    let metadata = ExportMetadata {
+    Ok(ExportMetadata {
         format_version: 2,
-        exported_at,
-        app_version,
-        device_id: device_id.clone(),
-    };
+        exported_at: now.to_rfc3339(),
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        device_id,
+    })
+}
 
-    let export = ExportData::new(metadata);
-
-    // Read all data from SpacetimeDB
-    // Note: These are Dioxus hooks that must be called in a component context
-    // For now, we'll collect data synchronously - in real usage,
-    // this would be called from within a Dioxus component
-
-    log::info!("Starting export for device: {}", device_id);
-
-    // Collect devices
-    progress_callback(ExportProgress::ReadingQuails);
-    // Note: In actual implementation, hook calls would go here
-    // For now, we document the expected structure
-
-    // Create ZIP file
+/// Export the provided data to a timestamped ZIP file in the export storage directory.
+pub async fn export_to_zip(
+    export: ExportData,
+    include_photo_files: bool,
+    mut progress_callback: impl FnMut(ExportProgress),
+) -> Result<ExportStats, AppError> {
     progress_callback(ExportProgress::PackingZip);
 
-    let timestamp = now.format("%Y%m%d-%H%M%S").to_string();
+    let timestamp = Local::now().format("%Y%m%d-%H%M%S").to_string();
     let filename = format!("stalltagebuch-export-{}.zip", timestamp);
     let zip_path = super::sync_paths::export_storage_root().join(&filename);
 
@@ -97,46 +89,75 @@ pub async fn export_to_zip(
     zip.write_all(data_json.as_bytes())
         .map_err(|e| AppError::Other(format!("Failed to write data: {}", e)))?;
 
+    let mut photos_files_included = 0usize;
+    let mut photos_files_missing = 0usize;
+
+    if include_photo_files {
+        progress_callback(ExportProgress::ReadingPhotos);
+
+        for photo in &export.photos {
+            let relative_path = photo.relative_path.trim_start_matches('/');
+            if relative_path.is_empty() {
+                continue;
+            }
+
+            let absolute_path = crate::services::photo_paths::relative_to_absolute(relative_path);
+            if !absolute_path.exists() {
+                log::warn!(
+                    "Skipping missing photo file during export: {}",
+                    absolute_path.display()
+                );
+                photos_files_missing += 1;
+                continue;
+            }
+
+            let bytes = std::fs::read(&absolute_path).map_err(|e| {
+                AppError::Other(format!(
+                    "Failed to read photo file '{}' for export: {}",
+                    absolute_path.display(),
+                    e
+                ))
+            })?;
+
+            let zip_entry_path = format!("photos/{}", relative_path);
+            zip.start_file(zip_entry_path, zip::write::SimpleFileOptions::default())
+                .map_err(|e| AppError::Other(format!("Failed to add photo to ZIP: {}", e)))?;
+            zip.write_all(&bytes)
+                .map_err(|e| AppError::Other(format!("Failed to write photo to ZIP: {}", e)))?;
+            photos_files_included += 1;
+        }
+    }
+
     // Close ZIP file
     zip.finish()
         .map_err(|e| AppError::Other(format!("Failed to finalize ZIP: {}", e)))?;
 
+    let zip_size_bytes = std::fs::metadata(&zip_path).map(|m| m.len()).unwrap_or(0);
+
     progress_callback(ExportProgress::Complete);
 
-    log::info!("Export completed successfully: {}", zip_path.display());
+    log::info!(
+        "Export completed: {} ({} quails, {} events, {} egg records, {} photos, {} photo files, {} missing, {} bytes)",
+        zip_path.display(),
+        export.quails.len(),
+        export.quail_events.len(),
+        export.egg_records.len(),
+        export.photos.len(),
+        photos_files_included,
+        photos_files_missing,
+        zip_size_bytes
+    );
 
-    Ok(zip_path)
-}
-
-/// Collect all data from SpacetimeDB for export
-///
-/// This function should be called from within a Dioxus component context
-/// to have access to the generated hooks (use_table_*).
-#[cfg(target_arch = "wasm32")]
-pub fn collect_export_data() -> Result<ExportData, AppError> {
-    let device_id = crate::services::device_id_service::get_device_id()
-        .map_err(|e| AppError::Other(format!("Failed to get device ID: {}", e)))?;
-    let owner = device_id.clone();
-
-    let now = Local::now();
-    let metadata = ExportMetadata {
-        format_version: 2,
-        exported_at: now.to_rfc3339(),
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
-        device_id: device_id.clone(),
-    };
-
-    let mut export = ExportData::new(metadata);
-
-    // Collect devices
-    // let devices = use_table_devices();
-    // for device in devices().iter() {
-    //     export.devices.push(DeviceExport { ... });
-    // }
-
-    // similar for other tables...
-
-    Ok(export)
+    Ok(ExportStats {
+        path: zip_path,
+        quails: export.quails.len(),
+        events: export.quail_events.len(),
+        egg_records: export.egg_records.len(),
+        photos_meta: export.photos.len(),
+        photos_files_included,
+        photos_files_missing,
+        zip_size_bytes,
+    })
 }
 
 #[cfg(test)]

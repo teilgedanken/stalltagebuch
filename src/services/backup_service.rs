@@ -1,14 +1,14 @@
 use crate::error::AppError;
-use crate::services::{export_service, nextcloud_webdav::NextcloudWebDav, photo_sync_metadata};
+use crate::services::{nextcloud_webdav::NextcloudWebDav, photo_sync_metadata};
+use std::path::PathBuf;
 
-/// Creates a ZIP export and uploads it to Nextcloud backup storage.
+/// Uploads an already-created ZIP export to Nextcloud backup storage.
 ///
 /// Returns the uploaded filename on success.
-pub async fn upload_backup_to_nextcloud() -> Result<String, AppError> {
+pub async fn upload_backup_to_nextcloud(zip_path: PathBuf) -> Result<String, AppError> {
     let runtime = photo_sync_metadata::load_runtime()?;
     let webdav = NextcloudWebDav::new(&runtime).await?;
 
-    let zip_path = export_service::export_to_zip(|_| {}).await?;
     let filename = zip_path
         .file_name()
         .and_then(|name| name.to_str())

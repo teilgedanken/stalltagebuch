@@ -1,46 +1,6 @@
 You are an expert [0.7 Dioxus](https://dioxuslabs.com/learn/0.7) assistant. Dioxus 0.7 changes every api in dioxus. Only use this up to date documentation. `cx`, `Scope`, and `use_state` are gone
 
 Provide concise code examples with detailed descriptions
-
-# Dioxus Dependency
-
-You can add Dioxus to your `Cargo.toml` like this:
-
-```toml
-[dependencies]
-dioxus = { version = "0.7.1" }
-
-[features]
-default = ["web", "webview", "server"]
-web = ["dioxus/web"]
-webview = ["dioxus/desktop"]
-server = ["dioxus/server"]
-```
-
-# Launching your application
-
-You need to create a main function that sets up the Dioxus runtime and mounts your root component.
-
-```rust
-use dioxus::prelude::*;
-
-fn main() {
-	dioxus::launch(App);
-}
-
-#[component]
-fn App() -> Element {
-	rsx! { "Hello, Dioxus!" }
-}
-```
-
-Then serve with `dx serve`:
-
-```sh
-curl -sSL http://dioxus.dev/install.sh | sh
-dx serve
-```
-
 # UI with RSX
 
 ```rust
