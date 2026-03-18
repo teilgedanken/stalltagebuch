@@ -10,6 +10,32 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+detect_device_rust_target() {
+    if ! command -v adb >/dev/null 2>&1; then
+        return 1
+    fi
+
+    local abi
+    abi=$(adb shell getprop ro.product.cpu.abi 2>/dev/null | tr -d '\r' | tail -n1 || true)
+    case "$abi" in
+        arm64-v8a)
+            echo "aarch64-linux-android"
+            ;;
+        armeabi-v7a|armeabi)
+            echo "armv7-linux-androideabi"
+            ;;
+        x86)
+            echo "i686-linux-android"
+            ;;
+        x86_64)
+            echo "x86_64-linux-android"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 inject_rustls_android_helper_sources() {
     # The jni-0.22 branch currently doesn't ship populated Maven artifacts in git checkouts.
     # Copy the Kotlin helper directly from the crate checkout into the generated app sources.
@@ -59,11 +85,50 @@ if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
 fi
 
 # Determine build mode
-RELEASE_FLAG=""
 BUILD_TYPE="debug"
-if [[ "${1:-}" == "--release" ]]; then
-    RELEASE_FLAG="--release --codesign true"
-    BUILD_TYPE="release"
+RUST_TARGET=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --release)
+            BUILD_TYPE="release"
+            shift
+            ;;
+        --target)
+            if [[ $# -lt 2 ]]; then
+                echo "Missing value for --target"
+                exit 1
+            fi
+            RUST_TARGET="$2"
+            shift 2
+            ;;
+        --target=*)
+            RUST_TARGET="${1#*=}"
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            echo "Usage: $0 [--release] [--target <rust-target-triple>]"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$RUST_TARGET" ]]; then
+    if detected_target=$(detect_device_rust_target); then
+        RUST_TARGET="$detected_target"
+        echo "Detected device ABI target: $RUST_TARGET"
+    else
+        echo "No Android device ABI detected; using dx default target selection"
+    fi
+fi
+
+DX_BUILD_ARGS=(build --platform android)
+if [[ "$BUILD_TYPE" == "release" ]]; then
+    DX_BUILD_ARGS+=(--release --codesign true)
+fi
+if [[ -n "$RUST_TARGET" ]]; then
+    DX_BUILD_ARGS+=(--target "$RUST_TARGET")
 fi
 
 DX_APP_DIR="$ROOT_DIR/target/dx/stalltagebuch/$BUILD_TYPE/android/app"
@@ -129,10 +194,10 @@ find_build_tools() {
 prepare_android_overrides "[1/2]"
 
 # 2) Dioxus Build (capture lint failures so we can re-run Gradle without lint for release)
-echo "[2/2] Running dx build --platform android ${RELEASE_FLAG}"
+echo "[2/2] Running dx ${DX_BUILD_ARGS[*]}"
 DX_LOG=$(mktemp)
 set +e
-dx build --platform android ${RELEASE_FLAG} 2>&1 | tee "$DX_LOG"
+dx "${DX_BUILD_ARGS[@]}" 2>&1 | tee "$DX_LOG"
 DX_EXIT=${PIPESTATUS[0]}
 set -e
 

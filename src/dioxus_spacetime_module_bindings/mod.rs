@@ -8,6 +8,10 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 
 pub mod dioxus;
 
+pub mod backup_type;
+pub mod backups_table;
+pub mod create_backup_started_args_type;
+pub mod create_backup_started_reducer;
 pub mod create_event_args_type;
 pub mod create_event_reducer;
 pub mod create_photo_args_type;
@@ -26,6 +30,8 @@ pub mod device_type;
 pub mod devices_table;
 pub mod egg_record_type;
 pub mod egg_records_table;
+pub mod finish_backup_args_type;
+pub mod finish_backup_reducer;
 pub mod photo_collection_type;
 pub mod photo_collections_table;
 pub mod photo_type;
@@ -50,6 +56,10 @@ pub mod update_quail_reducer;
 pub mod upsert_egg_record_args_type;
 pub mod upsert_egg_record_reducer;
 
+pub use backup_type::Backup;
+pub use backups_table::*;
+pub use create_backup_started_args_type::CreateBackupStartedArgs;
+pub use create_backup_started_reducer::create_backup_started;
 pub use create_event_args_type::CreateEventArgs;
 pub use create_event_reducer::create_event;
 pub use create_photo_args_type::CreatePhotoArgs;
@@ -68,6 +78,8 @@ pub use device_type::Device;
 pub use devices_table::*;
 pub use egg_record_type::EggRecord;
 pub use egg_records_table::*;
+pub use finish_backup_args_type::FinishBackupArgs;
+pub use finish_backup_reducer::finish_backup;
 pub use photo_collection_type::PhotoCollection;
 pub use photo_collections_table::*;
 pub use photo_type::Photo;
@@ -100,6 +112,9 @@ pub use upsert_egg_record_reducer::upsert_egg_record;
 /// to indicate which reducer caused the event.
 
 pub enum Reducer {
+    CreateBackupStarted {
+        args: CreateBackupStartedArgs,
+    },
     CreateEvent {
         args: CreateEventArgs,
     },
@@ -129,6 +144,9 @@ pub enum Reducer {
     },
     DeleteQuail {
         uuid: String,
+    },
+    FinishBackup {
+        args: FinishBackupArgs,
     },
     RegisterDevice {
         args: RegisterDeviceArgs,
@@ -164,6 +182,7 @@ impl __sdk::InModule for Reducer {
 impl __sdk::Reducer for Reducer {
     fn reducer_name(&self) -> &'static str {
         match self {
+            Reducer::CreateBackupStarted { .. } => "create_backup_started",
             Reducer::CreateEvent { .. } => "create_event",
             Reducer::CreatePhoto { .. } => "create_photo",
             Reducer::CreatePhotoCollection { .. } => "create_photo_collection",
@@ -174,6 +193,7 @@ impl __sdk::Reducer for Reducer {
             Reducer::DeletePhoto { .. } => "delete_photo",
             Reducer::DeletePhotoCollection { .. } => "delete_photo_collection",
             Reducer::DeleteQuail { .. } => "delete_quail",
+            Reducer::FinishBackup { .. } => "finish_backup",
             Reducer::RegisterDevice { .. } => "register_device",
             Reducer::SetQuailPhoto { .. } => "set_quail_photo",
             Reducer::UpdateDevice { .. } => "update_device",
@@ -188,6 +208,11 @@ impl __sdk::Reducer for Reducer {
     #[allow(clippy::clone_on_copy)]
     fn args_bsatn(&self) -> Result<Vec<u8>, __sats::bsatn::EncodeError> {
         match self {
+            Reducer::CreateBackupStarted { args } => {
+                __sats::bsatn::to_vec(&create_backup_started_reducer::CreateBackupStartedArgs {
+                    args: args.clone(),
+                })
+            }
             Reducer::CreateEvent { args } => {
                 __sats::bsatn::to_vec(&create_event_reducer::CreateEventArgs { args: args.clone() })
             }
@@ -221,6 +246,11 @@ impl __sdk::Reducer for Reducer {
             ),
             Reducer::DeleteQuail { uuid } => {
                 __sats::bsatn::to_vec(&delete_quail_reducer::DeleteQuailArgs { uuid: uuid.clone() })
+            }
+            Reducer::FinishBackup { args } => {
+                __sats::bsatn::to_vec(&finish_backup_reducer::FinishBackupArgs {
+                    args: args.clone(),
+                })
             }
             Reducer::RegisterDevice { args } => {
                 __sats::bsatn::to_vec(&register_device_reducer::RegisterDeviceArgs {
@@ -265,6 +295,7 @@ impl __sdk::Reducer for Reducer {
 #[allow(non_snake_case)]
 #[doc(hidden)]
 pub struct DbUpdate {
+    backups: __sdk::TableUpdate<Backup>,
     devices: __sdk::TableUpdate<Device>,
     egg_records: __sdk::TableUpdate<EggRecord>,
     photo_collections: __sdk::TableUpdate<PhotoCollection>,
@@ -279,6 +310,9 @@ impl TryFrom<__ws::v2::TransactionUpdate> for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_update in __sdk::transaction_update_iter_table_updates(raw) {
             match &table_update.table_name[..] {
+                "backups" => db_update
+                    .backups
+                    .append(backups_table::parse_table_update(table_update)?),
                 "devices" => db_update
                     .devices
                     .append(devices_table::parse_table_update(table_update)?),
@@ -323,6 +357,9 @@ impl __sdk::DbUpdate for DbUpdate {
     ) -> AppliedDiff<'_> {
         let mut diff = AppliedDiff::default();
 
+        diff.backups = cache
+            .apply_diff_to_table::<Backup>("backups", &self.backups)
+            .with_updates_by_pk(|row| &row.backup_id);
         diff.devices = cache
             .apply_diff_to_table::<Device>("devices", &self.devices)
             .with_updates_by_pk(|row| &row.device_id);
@@ -348,6 +385,9 @@ impl __sdk::DbUpdate for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_rows in raw.tables {
             match &table_rows.table[..] {
+                "backups" => db_update
+                    .backups
+                    .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
                 "devices" => db_update
                     .devices
                     .append(__sdk::parse_row_list_as_inserts(table_rows.rows)?),
@@ -379,6 +419,9 @@ impl __sdk::DbUpdate for DbUpdate {
         let mut db_update = DbUpdate::default();
         for table_rows in raw.tables {
             match &table_rows.table[..] {
+                "backups" => db_update
+                    .backups
+                    .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
                 "devices" => db_update
                     .devices
                     .append(__sdk::parse_row_list_as_deletes(table_rows.rows)?),
@@ -412,6 +455,7 @@ impl __sdk::DbUpdate for DbUpdate {
 #[allow(non_snake_case)]
 #[doc(hidden)]
 pub struct AppliedDiff<'r> {
+    backups: __sdk::TableAppliedDiff<'r, Backup>,
     devices: __sdk::TableAppliedDiff<'r, Device>,
     egg_records: __sdk::TableAppliedDiff<'r, EggRecord>,
     photo_collections: __sdk::TableAppliedDiff<'r, PhotoCollection>,
@@ -431,6 +475,7 @@ impl<'r> __sdk::AppliedDiff<'r> for AppliedDiff<'r> {
         event: &EventContext,
         callbacks: &mut __sdk::DbCallbacks<RemoteModule>,
     ) {
+        callbacks.invoke_table_row_callbacks::<Backup>("backups", &self.backups, event);
         callbacks.invoke_table_row_callbacks::<Device>("devices", &self.devices, event);
         callbacks.invoke_table_row_callbacks::<EggRecord>("egg_records", &self.egg_records, event);
         callbacks.invoke_table_row_callbacks::<PhotoCollection>(
@@ -1089,6 +1134,7 @@ impl __sdk::SpacetimeModule for RemoteModule {
     type QueryBuilder = __sdk::QueryBuilder;
 
     fn register_tables(client_cache: &mut __sdk::ClientCache<Self>) {
+        backups_table::register_table(client_cache);
         devices_table::register_table(client_cache);
         egg_records_table::register_table(client_cache);
         photo_collections_table::register_table(client_cache);
@@ -1097,6 +1143,7 @@ impl __sdk::SpacetimeModule for RemoteModule {
         quails_table::register_table(client_cache);
     }
     const ALL_TABLE_NAMES: &'static [&'static str] = &[
+        "backups",
         "devices",
         "egg_records",
         "photo_collections",

@@ -142,6 +142,32 @@ pub struct Photo {
     pub updated_at: i64,
 }
 
+/// A tracked backup run and its final result.
+#[spacetimedb::table(accessor = backups, public)]
+#[index(columns = [created_at])]
+pub struct Backup {
+    #[primary_key]
+    pub backup_id: String,
+    /// "file" | "nextcloud"
+    pub kind: String,
+    /// "started" | "success" | "failed"
+    pub status: String,
+    pub include_images: bool,
+    pub local_path: Option<String>,
+    pub remote_filename: Option<String>,
+    pub zip_size_bytes: Option<i64>,
+    pub quails: i32,
+    pub events: i32,
+    pub egg_records: i32,
+    pub photos_meta: i32,
+    pub photos_files_included: i32,
+    pub photos_files_missing: i32,
+    pub error_message: Option<String>,
+    pub owner: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
 // ─── Reducer argument types ────────────────────────────────────────────────────
 
 #[derive(SpacetimeType)]
@@ -225,6 +251,30 @@ pub struct UpdatePhotoSyncStatusArgs {
     pub sync_error: Option<String>,
     pub last_sync_attempt: Option<i64>,
     pub retry_count: i32,
+}
+
+#[derive(SpacetimeType)]
+pub struct CreateBackupStartedArgs {
+    pub backup_id: String,
+    pub kind: String,
+    pub include_images: bool,
+    pub local_path: Option<String>,
+}
+
+#[derive(SpacetimeType)]
+pub struct FinishBackupArgs {
+    pub backup_id: String,
+    pub status: String,
+    pub local_path: Option<String>,
+    pub remote_filename: Option<String>,
+    pub zip_size_bytes: Option<i64>,
+    pub quails: i32,
+    pub events: i32,
+    pub egg_records: i32,
+    pub photos_meta: i32,
+    pub photos_files_included: i32,
+    pub photos_files_missing: i32,
+    pub error_message: Option<String>,
 }
 
 // ─── Reducers ─────────────────────────────────────────────────────────────────
@@ -469,6 +519,64 @@ pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
         created_at: now,
         updated_at: now,
     });
+}
+
+/// Create a backup tracking entry with status "started".
+#[reducer]
+pub fn create_backup_started(ctx: &ReducerContext, args: CreateBackupStartedArgs) {
+    let now = ctx
+        .timestamp
+        .duration_since(Timestamp::UNIX_EPOCH)
+        .expect("timestamp should be after UNIX_EPOCH")
+        .as_secs() as i64;
+
+    ctx.db.backups().insert(Backup {
+        backup_id: args.backup_id,
+        kind: args.kind,
+        status: "started".to_string(),
+        include_images: args.include_images,
+        local_path: args.local_path,
+        remote_filename: None,
+        zip_size_bytes: None,
+        quails: 0,
+        events: 0,
+        egg_records: 0,
+        photos_meta: 0,
+        photos_files_included: 0,
+        photos_files_missing: 0,
+        error_message: None,
+        owner: ctx.sender().to_string(),
+        created_at: now,
+        updated_at: now,
+    });
+}
+
+/// Finish a backup entry with status "success" or "failed" (owner-only).
+#[reducer]
+pub fn finish_backup(ctx: &ReducerContext, args: FinishBackupArgs) {
+    if let Some(mut existing) = ctx.db.backups().iter().find(|b| b.backup_id == args.backup_id) {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        existing.status = args.status;
+        existing.local_path = args.local_path;
+        existing.remote_filename = args.remote_filename;
+        existing.zip_size_bytes = args.zip_size_bytes;
+        existing.quails = args.quails;
+        existing.events = args.events;
+        existing.egg_records = args.egg_records;
+        existing.photos_meta = args.photos_meta;
+        existing.photos_files_included = args.photos_files_included;
+        existing.photos_files_missing = args.photos_files_missing;
+        existing.error_message = args.error_message;
+        let now = ctx
+            .timestamp
+            .duration_since(Timestamp::UNIX_EPOCH)
+            .expect("timestamp should be after UNIX_EPOCH")
+            .as_secs() as i64;
+        existing.updated_at = now;
+        ctx.db.backups().backup_id().update(existing);
+    }
 }
 
 /// Update photo sync status (owner-only).

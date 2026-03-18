@@ -19,6 +19,7 @@ pub type SharedConnection = Arc<DbConnection>;
 /// Container for all table signals, created at root level.
 #[derive(Clone)]
 pub struct TableSignals {
+    pub backups: SyncSignal<Vec<Backup>>,
     pub devices: SyncSignal<Vec<Device>>,
     pub egg_records: SyncSignal<Vec<EggRecord>>,
     pub photo_collections: SyncSignal<Vec<PhotoCollection>>,
@@ -78,6 +79,7 @@ pub fn use_spacetimedb_context_provider(
     let error: SyncSignal<Option<String>> = use_signal_sync(|| None);
 
     let mut table_signals = TableSignals {
+        backups: use_signal_sync(Vec::new),
         devices: use_signal_sync(Vec::new),
         egg_records: use_signal_sync(Vec::new),
         photo_collections: use_signal_sync(Vec::new),
@@ -112,6 +114,23 @@ pub fn use_spacetimedb_context_provider(
                 .with_database_name(&module_name)
                 .with_token(token)
                 .on_connect(move |conn, identity, token| {
+                    // Populate initial rows for backups
+                    let current: Vec<Backup> = conn.db.backups().iter().collect();
+                    table_signals.backups.set(current);
+
+                    // Keep signal in sync on changes
+                    conn.db.backups().on_insert(move |ctx, _row| {
+                        let updated: Vec<Backup> = ctx.db.backups().iter().collect();
+                        table_signals.backups.set(updated);
+                    });
+                    conn.db.backups().on_update(move |ctx, _old, _new| {
+                        let updated: Vec<Backup> = ctx.db.backups().iter().collect();
+                        table_signals.backups.set(updated);
+                    });
+                    conn.db.backups().on_delete(move |ctx, _row| {
+                        let updated: Vec<Backup> = ctx.db.backups().iter().collect();
+                        table_signals.backups.set(updated);
+                    });
                     // Populate initial rows for devices
                     let current: Vec<Device> = conn.db.devices().iter().collect();
                     table_signals.devices.set(current);
@@ -267,22 +286,66 @@ pub fn use_connection() -> SyncSignal<Option<SharedConnection>> {
 }
 
 /// Subscribe to a set of SQL queries.
+///
+/// Re-subscribes automatically whenever the connection instance changes
+/// (initial connect, or reconnect after a network interruption).
+/// Avoids duplicate subscriptions while the connection is stable.
+/// Subscription errors are printed to stderr for diagnosis.
 pub fn use_subscription(queries: &[&str]) {
     let queries: Vec<String> = queries.iter().map(|s| s.to_string()).collect();
     let conn_signal = use_connection();
 
+    // Stores the Arc pointer of the last successfully-subscribed connection.
+    // Using peek() inside the effect keeps this read non-reactive (no infinite loop).
+    let last_conn: SyncSignal<Option<SharedConnection>> = use_signal_sync(|| None);
+
     use_effect(move || {
-        let queries = queries.clone();
-        if let Some(conn) = conn_signal.read().as_ref() {
-            conn.subscription_builder()
-                .on_applied(|_ctx| {})
-                .on_error(|_ctx, _err| {})
-                .subscribe(queries);
+        // transition (None->Some on connect, Some->None on disconnect, Some(a)->Some(b) on reconnect).
+        let current = conn_signal();
+        let mut last = last_conn;
+
+        match current.as_ref() {
+            None => {
+                // Connection lost: clear the tracker so the next connection
+                // instance will trigger a fresh subscribe.
+                // peek() avoids creating a reactive dependency that would loop.
+                if last.peek().is_some() {
+                    last.set(None);
+                }
+            }
+            Some(conn) => {
+                // peek() reads last without subscribing to it reactively.
+                if last
+                    .peek()
+                    .as_ref()
+                    .map(|prev| Arc::ptr_eq(prev, conn))
+                    .unwrap_or(false)
+                {
+                    // Same connection instance – already subscribed, nothing to do.
+                    return;
+                }
+                // New or reconnected instance – store it and subscribe.
+                last.set(Some(conn.clone()));
+                let queries = queries.clone();
+                conn.subscription_builder()
+                    .on_applied(|_ctx| {})
+                    .on_error(|_ctx, err| {
+                        eprintln!("[spacetimedb] subscription error: {err}");
+                    })
+                    .subscribe(queries);
+            }
         }
     });
 }
 
 // --- Table hooks ---
+
+/// Get a reactive signal containing all rows of the `backups` table.
+#[must_use]
+pub fn use_table_backups() -> SyncSignal<Vec<Backup>> {
+    let ctx = use_spacetimedb_context();
+    ctx.tables.backups
+}
 
 /// Get a reactive signal containing all rows of the `devices` table.
 #[must_use]
@@ -328,6 +391,19 @@ pub fn use_table_quails() -> SyncSignal<Vec<Quail>> {
 
 // --- Reducer hooks ---
 
+/// Get a callback to invoke the `create_backup_started` reducer.
+#[must_use]
+pub fn use_reducer_create_backup_started()
+-> impl Fn(create_backup_started_args_type::CreateBackupStartedArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: create_backup_started_args_type::CreateBackupStartedArgs| {
+        if let Some(conn) = conn_signal().as_ref() {
+            let _ = conn.reducers.create_backup_started(args);
+        }
+    }
+}
+
 /// Get a callback to invoke the `create_event` reducer.
 #[must_use]
 pub fn use_reducer_create_event()
@@ -335,7 +411,7 @@ pub fn use_reducer_create_event()
     let conn_signal = use_connection();
 
     move |args: create_event_args_type::CreateEventArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.create_event(args);
         }
     }
@@ -348,7 +424,7 @@ pub fn use_reducer_create_photo()
     let conn_signal = use_connection();
 
     move |args: create_photo_args_type::CreatePhotoArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.create_photo(args);
         }
     }
@@ -361,7 +437,7 @@ pub fn use_reducer_create_photo_collection()
     let conn_signal = use_connection();
 
     move |args: create_photo_collection_args_type::CreatePhotoCollectionArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.create_photo_collection(args);
         }
     }
@@ -374,7 +450,7 @@ pub fn use_reducer_create_quail()
     let conn_signal = use_connection();
 
     move |args: create_quail_args_type::CreateQuailArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.create_quail(args);
         }
     }
@@ -386,7 +462,7 @@ pub fn use_reducer_delete_device() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |device_id: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_device(device_id);
         }
     }
@@ -398,7 +474,7 @@ pub fn use_reducer_delete_egg_record() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_egg_record(uuid);
         }
     }
@@ -410,7 +486,7 @@ pub fn use_reducer_delete_event() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_event(uuid);
         }
     }
@@ -422,7 +498,7 @@ pub fn use_reducer_delete_photo() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_photo(uuid);
         }
     }
@@ -434,7 +510,7 @@ pub fn use_reducer_delete_photo_collection() -> impl Fn(String) + Clone + 'stati
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_photo_collection(uuid);
         }
     }
@@ -446,8 +522,21 @@ pub fn use_reducer_delete_quail() -> impl Fn(String) + Clone + 'static {
     let conn_signal = use_connection();
 
     move |uuid: String| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.delete_quail(uuid);
+        }
+    }
+}
+
+/// Get a callback to invoke the `finish_backup` reducer.
+#[must_use]
+pub fn use_reducer_finish_backup()
+-> impl Fn(finish_backup_args_type::FinishBackupArgs) + Clone + 'static {
+    let conn_signal = use_connection();
+
+    move |args: finish_backup_args_type::FinishBackupArgs| {
+        if let Some(conn) = conn_signal().as_ref() {
+            let _ = conn.reducers.finish_backup(args);
         }
     }
 }
@@ -459,7 +548,7 @@ pub fn use_reducer_register_device()
     let conn_signal = use_connection();
 
     move |args: register_device_args_type::RegisterDeviceArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.register_device(args);
         }
     }
@@ -471,7 +560,7 @@ pub fn use_reducer_set_quail_photo() -> impl Fn(String, Option<String>) + Clone 
     let conn_signal = use_connection();
 
     move |quail_uuid: String, photo_uuid: Option<String>| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.set_quail_photo(quail_uuid, photo_uuid);
         }
     }
@@ -484,7 +573,7 @@ pub fn use_reducer_update_device()
     let conn_signal = use_connection();
 
     move |args: update_device_args_type::UpdateDeviceArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.update_device(args);
         }
     }
@@ -497,7 +586,7 @@ pub fn use_reducer_update_event()
     let conn_signal = use_connection();
 
     move |args: update_event_args_type::UpdateEventArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.update_event(args);
         }
     }
@@ -510,7 +599,7 @@ pub fn use_reducer_update_photo_collection()
     let conn_signal = use_connection();
 
     move |args: update_photo_collection_args_type::UpdatePhotoCollectionArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.update_photo_collection(args);
         }
     }
@@ -523,7 +612,7 @@ pub fn use_reducer_update_photo_sync_status()
     let conn_signal = use_connection();
 
     move |args: update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.update_photo_sync_status(args);
         }
     }
@@ -536,7 +625,7 @@ pub fn use_reducer_update_quail()
     let conn_signal = use_connection();
 
     move |args: update_quail_args_type::UpdateQuailArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.update_quail(args);
         }
     }
@@ -549,7 +638,7 @@ pub fn use_reducer_upsert_egg_record()
     let conn_signal = use_connection();
 
     move |args: upsert_egg_record_args_type::UpsertEggRecordArgs| {
-        if let Some(conn) = conn_signal.read().as_ref() {
+        if let Some(conn) = conn_signal().as_ref() {
             let _ = conn.reducers.upsert_egg_record(args);
         }
     }

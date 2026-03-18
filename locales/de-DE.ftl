@@ -1,5 +1,5 @@
 # Generated translation template by dx-i18n
-# Contains 260 translation keys
+# Contains 324 translation keys
 
 # Add event
 # Source: ./src/components/profile_detail.rs:339
@@ -43,7 +43,7 @@ action-new = Neu
 # Source: ./src/components/event_edit.rs:531
 action-photo = Foto
 
-# Source: ./src/components/settings.rs:371
+# Source: ./src/components/settings/network_check_card.rs:132
 action-retry = Erneut versuchen
 
 # Source: ./src/components/egg_tracking.rs:231
@@ -58,10 +58,122 @@ action-update = Aktualisieren
 # Source: ./src/components/home.rs:25
 app-title = Wachtel-Stallbuch
 
-# Source: ./src/components/settings.rs:1187
+# Source: ./src/components/settings/backup_card.rs:440
+backup-card-actions-description = Backup-Aktionen: Die Option "Bilddateien im Backup enthalten" gilt für beide Buttons.
+
+# Source: ./src/components/settings/backup_card.rs:459
+backup-card-button-file = 💾 Backup in Datei
+
+# Source: ./src/components/settings/backup_card.rs:459
+backup-card-button-file-running = ⏳ Backup-Datei…
+
+# Source: ./src/components/settings/backup_card.rs:470
+backup-card-button-nextcloud = ☁️ Backup zu Nextcloud
+
+# Source: ./src/components/settings/backup_card.rs:500
+backup-card-history-empty = Noch keine Backups protokolliert.
+
+# Source: ./src/components/settings/backup_card.rs:578
+# Parameters: $error
+backup-card-history-error = Fehler: { $error }
+
+# Source: ./src/components/settings/backup_card.rs:563
+# Parameters: $path
+backup-card-history-file = Datei: { $path }
+
+# Source: ./src/components/settings/backup_card.rs:559
+# Parameters: $include_images
+backup-card-history-include-images = Mit Bildern: { $include_images }
+
+# Source: ./src/components/settings/backup_card.rs:572
+# Parameters: $quails, $egg_records, $events
+backup-card-history-items = Items: { $quails } Wachteln, { $events } Ereignisse, { $egg_records } Eiereinträge
+
+# Source: ./src/components/settings/backup_card.rs:591
+# Parameters: $count
+backup-card-history-more = Mehr ({ $count })
+
+# Source: ./src/components/settings/backup_card.rs:566
+# Parameters: $name
+backup-card-history-nextcloud = Nextcloud: { $name }
+
+# Source: ./src/components/settings/backup_card.rs:575
+# Parameters: $photos_files_missing, $photos_files_included, $photos_meta
+backup-card-history-photos = Fotos: { $photos_meta } Einträge, { $photos_files_included } Dateien enthalten, { $photos_files_missing } fehlend
+
+# Source: ./src/components/settings/backup_card.rs:569
+# Parameters: $size
+backup-card-history-size = Größe: { $size } B
+
+# Source: ./src/components/settings/backup_card.rs:549
+# Parameters: $status
+backup-card-history-status = Status: { $status }
+
+# Source: ./src/components/settings/backup_card.rs:497
+backup-card-history-title = Backup-Historie
+
+# Source: ./src/components/settings/backup_card.rs:613
+backup-card-import-button = 📥 Import
+
+# Source: ./src/components/settings/backup_card.rs:613
+backup-card-import-button-running = ⏳ Import läuft…
+
+# Source: ./src/components/settings/backup_card.rs:599
+backup-card-import-title = 📥 Import
+
+# Source: ./src/components/settings/backup_card.rs:450
+backup-card-include-photo-files = Bilddateien im Backup enthalten
+
+# Source: ./src/components/settings/backup_card.rs:477
+backup-card-nextcloud-not-connected = Nextcloud nicht verbunden
+
+# Source: ./src/components/settings/backup_card.rs:557
+backup-card-no = Nein
+
+# Source: ./src/components/settings/backup_card.rs:490
+backup-card-progress-complete = ✅ Fertig!
+
+# Source: ./src/components/settings/backup_card.rs:489
+backup-card-progress-packing-zip = 📦 Erstelle ZIP…
+
+# Source: ./src/components/settings/backup_card.rs:487
+backup-card-progress-reading-egg-records = 🥚 Lese Eier-Einträge…
+
+# Source: ./src/components/settings/backup_card.rs:486
+backup-card-progress-reading-events = 📅 Lese Ereignisse…
+
+# Source: ./src/components/settings/backup_card.rs:488
+backup-card-progress-reading-photos = 📷 Lese Fotos…
+
+# Source: ./src/components/settings/backup_card.rs:485
+backup-card-progress-reading-quails = 📚 Lese Wachteln…
+
+# Source: ./src/components/settings/backup_card.rs:484
+backup-card-progress-starting = 🔄 Initialisiere…
+
+# Source: ./src/components/settings/backup_card.rs:546
+backup-card-status-failed = Fehlgeschlagen
+
+# Source: ./src/components/settings/backup_card.rs:547
+backup-card-status-pending = Ausstehend
+
+# Source: ./src/components/settings/backup_card.rs:545
+backup-card-status-success = Erfolgreich
+
+# Source: ./src/components/settings/backup_card.rs:436
+backup-card-title = 💾 Backup
+
+# Source: ./src/components/settings/backup_card.rs:534
+backup-card-unknown = unbekannt
+
+# Source: ./src/components/settings/backup_card.rs:555
+backup-card-yes = Ja
+
+# Source: ./src/components/settings/nextcloud_card.rs:451
 backup-cleanup-button = 🧹 Verwaiste Fotos löschen
 
 # Source: ./src/components/settings.rs:1173
+# UNUSED: This key is no longer used in the code
 backup-cleanup-description = Entfernt Fotos ohne gültige Wachtel- oder Ereigniszuordnung.
 
 # Source: ./src/components/settings.rs:1050
@@ -75,9 +187,10 @@ backup-cleanup-error = ❌ Fehler beim Bereinigen: { $error }
 backup-cleanup-success = ✅ { $count } verwaiste Fotos gelöscht
 
 # Source: ./src/components/settings.rs:1170
+# UNUSED: This key is no longer used in the code
 backup-cleanup-title = 🧹 Speicherbereinigung
 
-# Source: ./src/components/settings.rs:1183
+# Source: ./src/components/settings/nextcloud_card.rs:449
 # Parameters: $error
 backup-db-error = ❌ Datenbankfehler: { $error }
 
@@ -86,6 +199,7 @@ backup-db-error = ❌ Datenbankfehler: { $error }
 backup-export-button = 📤 Daten exportieren
 
 # Source: ./src/components/settings.rs:1197
+# UNUSED: This key is no longer used in the code
 backup-export-description = Erstellt eine ZIP-Sicherung mit Wachteln, Ereignissen, Eiern und Fotos und kann diese wieder importieren.
 
 # Source: ./src/components/settings.rs:1100
@@ -99,9 +213,14 @@ backup-export-error = ❌ Fehler beim Export: { $error }
 backup-export-success = ✅ Export erzeugt: { $path }
 
 # Source: ./src/components/settings.rs:1194
+# UNUSED: This key is no longer used in the code
 backup-export-title = 📦 Daten sichern & wiederherstellen
 
+# Source: ./src/components/settings/backup_card.rs:320
+backup-import-android-only = ⚠️ Dateiauswahl ist nur auf Android verfügbar
+
 # Source: ./src/components/settings.rs:1267
+# UNUSED: This key is no longer used in the code
 backup-import-button = 📥 Daten aus import.zip einspielen
 
 # Source: ./src/components/settings.rs:1158
@@ -111,27 +230,36 @@ backup-import-error = ❌ Fehler beim Import: { $error }
 
 # Source: ./src/components/settings.rs:1257
 # Parameters: $path
+# UNUSED: This key is no longer used in the code
 backup-import-missing = ❌ Importdatei nicht gefunden: { $path }
+
+# Source: ./src/components/settings/backup_card.rs:313
+backup-import-no-file-selected = ❌ Keine Datei ausgewählt
 
 # Source: ./src/components/settings.rs:1151
 # Parameters: $path
 # UNUSED: This key is no longer used in the code
 backup-import-success = ✅ Import erfolgreich aus { $path }
 
+# Source: ./src/components/settings/backup_card.rs:297
+# Parameters: $count, $photos
+backup-import-success-with-counts = ✅ { $count } Einträge und { $photos } Fotos importiert
+
 # Source: ./src/components/settings.rs:1235
+# UNUSED: This key is no longer used in the code
 backup-upload-button = ☁️ Backup zu Nextcloud hochladen
 
-# Source: ./src/components/settings.rs:1233
+# Source: ./src/components/settings/backup_card.rs:468
 backup-upload-button-running = ⏳ Backup-Upload läuft...
 
-# Source: ./src/components/settings.rs:1223
+# Source: ./src/components/settings/backup_card.rs:405
 # Parameters: $error
 backup-upload-failed = ❌ Backup-Upload fehlgeschlagen: { $error }
 
-# Source: ./src/components/settings.rs:1212
+# Source: ./src/components/settings/backup_card.rs:340
 backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
 
-# Source: ./src/components/settings.rs:1217
+# Source: ./src/components/settings/backup_card.rs:386
 # Parameters: $filename
 backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
 
@@ -195,14 +323,14 @@ error-capture-failed = Fehler bei Aufnahme
 # Parameters: $error
 error-capture-photo = Aufnahmefehler: { $error }
 
-# Source: ./src/components/settings.rs:292
+# Source: ./src/components/settings/network_check_card.rs:15
 error-client = Client-Fehler
 
 # Source: ./src/components/profile_detail.rs:296
 # UNUSED: This key is no longer used in the code
 error-collection-failed = Fehler beim Laden der Bildersammlung
 
-# Source: ./src/components/settings.rs:967
+# Source: ./src/components/settings/nextcloud_login_card.rs:295
 error-connection = Verbindungsfehler
 
 # Database connection error
@@ -259,7 +387,7 @@ error-invalid-date = Ungültiges Datumsformat
 # Source: ./src/components/event_edit.rs:425
 error-invalid-event-id = Ungueltige Ereignis-ID
 
-# Source: ./src/components/settings.rs:858
+# Source: ./src/components/settings/nextcloud_login_card.rs:220
 error-json = JSON-Fehler
 
 # Failed to load events
@@ -286,7 +414,7 @@ error-load-profiles-failed = Profile laden fehlgeschlagen
 # UNUSED: This key is no longer used in the code
 error-loading = Fehler beim Laden: { $error }
 
-# Source: ./src/components/settings.rs:935
+# Source: ./src/components/settings/nextcloud_login_card.rs:272
 error-login-timeout = Timeout: Keine Anmeldung innerhalb von 5 Minuten
 
 # Source: ./src/components/profile_photo_card.rs:180
@@ -296,7 +424,7 @@ error-multiselect-android-only = Mehrfach-Auswahl nur auf Android verfügbar
 # Source: ./src/components/profile_add.rs:32
 error-name-required = Name darf nicht leer sein
 
-# Source: ./src/components/settings.rs:283
+# Source: ./src/components/settings/network_check_card.rs:14
 error-network = Fehler
 
 # Source: ./src/components/egg_tracking.rs:52
@@ -322,7 +450,7 @@ error-save-failed = Fehler beim Speichern
 # Source: ./src/components/profile_photo_card.rs:165
 error-selection-failed = Fehler bei Auswahl
 
-# Source: ./src/components/settings.rs:958
+# Source: ./src/components/settings/nextcloud_login_card.rs:287
 error-server = Server-Fehler
 
 # Error message when loading trend data fails
@@ -330,10 +458,10 @@ error-server = Server-Fehler
 # UNUSED: This key is no longer used in the code
 error-trend-load = Fehler beim Laden des Trends
 
-# Source: ./src/components/settings.rs:872
+# Source: ./src/components/settings/nextcloud_login_card.rs:230
 error-unexpected-status = Unerwarteter Status
 
-# Source: ./src/components/settings.rs:817
+# Source: ./src/components/settings/nextcloud_login_card.rs:186
 error-webdav-client = WebDAV-Client-Fehler
 
 # Source: ./src/components/event_add.rs:81
@@ -378,19 +506,21 @@ events-empty = Keine Ereignisse vorhanden
 # Source: ./src/components/profile_detail.rs:325
 events-timeline-title = Ereignisse
 
-# Source: ./src/components/settings.rs:428
+# Source: ./src/components/settings/export_import_cards.rs:54
+# UNUSED: This key is no longer used in the code
 export-description = Erstelle eine Sicherung aller Wachteldaten und Fotos als ZIP-Datei.
 
-# Source: ./src/components/settings.rs:415
+# Source: ./src/components/settings/backup_card.rs:244
 export-failed = Fehler beim Exportieren
 
-# Source: ./src/components/settings.rs:395
+# Source: ./src/components/settings/backup_card.rs:182
 export-in-progress = Export läuft...
 
-# Source: ./src/components/settings.rs:410
+# Source: ./src/components/settings/backup_card.rs:225
 export-success = Datensicherung erfolgreich erstellt
 
-# Source: ./src/components/settings.rs:425
+# Source: ./src/components/settings/export_import_cards.rs:51
+# UNUSED: This key is no longer used in the code
 export-title = Daten exportieren
 
 # Source: ./src/components/event_add.rs:118
@@ -455,19 +585,21 @@ gender-male = Männlich
 # Source: ./src/components/profile_add.rs:183
 gender-unknown = Unbekannt
 
-# Source: ./src/components/settings.rs:550
+# Source: ./src/components/settings/backup_card.rs:600
 import-description = Importiere Daten aus einer ZIP-Sicherungsdatei (v1 oder v2 Format).
 
-# Source: ./src/components/settings.rs:481
+# Source: ./src/components/settings/backup_card.rs:262
 import-failed = Fehler beim Importieren
 
-# Source: ./src/components/settings.rs:503
+# Source: ./src/components/settings/backup_card.rs:283
 import-in-progress = Import läuft...
 
-# Source: ./src/components/settings.rs:518
+# Source: ./src/components/settings/export_import_cards.rs:144
+# UNUSED: This key is no longer used in the code
 import-success = Daten erfolgreich importiert
 
-# Source: ./src/components/settings.rs:547
+# Source: ./src/components/settings/export_import_cards.rs:173
+# UNUSED: This key is no longer used in the code
 import-title = Daten importieren
 
 # DB: {path}
@@ -524,11 +656,11 @@ nav-profiles = Profile
 nav-statistics = Statistik
 
 # Network connectivity check in progress
-# Source: ./src/components/settings.rs:350
+# Source: ./src/components/settings/network_check_card.rs:111
 network-checking = Netzwerkverbindung prüfen...
 
 # No internet connection message
-# Source: ./src/components/settings.rs:364
+# Source: ./src/components/settings/network_check_card.rs:125
 network-offline = Keine Internet-Verbindung
 
 # Source: ./src/components/statistics.rs:146
@@ -660,6 +792,94 @@ search-placeholder-name = Suche...
 # Source: ./src/components/home.rs:65
 settings-title = Einstellungen
 
+# Source: ./src/components/settings/spacetime_db_card.rs:149
+spacetime-card-connected-button = SpacetimeDB verbunden
+
+# Source: ./src/components/settings/spacetime_db_card.rs:33
+spacetime-card-connection-connected = Verbunden
+
+# Source: ./src/components/settings/spacetime_db_card.rs:32
+spacetime-card-connection-connecting = Verbindung wird aufgebaut
+
+# Source: ./src/components/settings/spacetime_db_card.rs:31
+spacetime-card-connection-disconnected = Nicht verbunden
+
+# Source: ./src/components/settings/spacetime_db_card.rs:34
+spacetime-card-connection-error = Verbindungsfehler
+
+# Source: ./src/components/settings/spacetime_db_card.rs:162
+spacetime-card-connection-info = Verbindungsinfo
+
+# Source: ./src/components/settings/spacetime_db_card.rs:116
+spacetime-card-database-hint = Entspricht dem Modulnamen aus spacetime publish
+
+# Source: ./src/components/settings/spacetime_db_card.rs:105
+spacetime-card-database-label = Datenbankname
+
+# Source: ./src/components/settings/spacetime_db_card.rs:164
+# Parameters: $value
+spacetime-card-database-value = Datenbank: { $value }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:176
+spacetime-card-edit-credentials = Zugangsdaten bearbeiten
+
+# Source: ./src/components/settings/spacetime_db_card.rs:43
+spacetime-card-fill-required = Bitte Server-URL, Datenbankname und Auth-Token ausfuellen
+
+# Source: ./src/components/settings/spacetime_db_card.rs:152
+spacetime-card-hide-details = Details ausblenden
+
+# Source: ./src/components/settings/spacetime_db_card.rs:167
+spacetime-card-live-stats = Live-Statistiken
+
+# Source: ./src/components/settings/spacetime_db_card.rs:142
+spacetime-card-login-button = Speichern und einloggen
+
+# Source: ./src/components/settings/spacetime_db_card.rs:63
+# Parameters: $error
+spacetime-card-save-failed = Speichern fehlgeschlagen: { $error }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:55
+spacetime-card-saved = SpacetimeDB-Zugang gespeichert
+
+# Source: ./src/components/settings/spacetime_db_card.rs:98
+spacetime-card-server-hint = Deine SpacetimeDB Instanz-URL, z. B. testnet oder self-hosted
+
+# Source: ./src/components/settings/spacetime_db_card.rs:87
+spacetime-card-server-label = Server URL
+
+# Source: ./src/components/settings/spacetime_db_card.rs:163
+# Parameters: $value
+spacetime-card-server-value = Server: { $value }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:154
+spacetime-card-show-details = Details anzeigen
+
+# Source: ./src/components/settings/spacetime_db_card.rs:170
+# Parameters: $count
+spacetime-card-stats-egg-records = Eier-Eintraege: { $count }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:169
+# Parameters: $count
+spacetime-card-stats-events = Ereignisse: { $count }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:168
+# Parameters: $count
+spacetime-card-stats-quails = Wachteln: { $count }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:165
+# Parameters: $value
+spacetime-card-status-value = Status: { $value }
+
+# Source: ./src/components/settings/spacetime_db_card.rs:81
+spacetime-card-title = SpacetimeDB
+
+# Source: ./src/components/settings/spacetime_db_card.rs:134
+spacetime-card-token-hint = Nur lokal gespeichert und fuer Reconnect wiederverwendet
+
+# Source: ./src/components/settings/spacetime_db_card.rs:123
+spacetime-card-token-label = Auth-Token
+
 # Source: ./src/components/statistics.rs:277
 stats-add-entry = Eier eintragen
 
@@ -743,130 +963,119 @@ status-slaughtered = Geschlachtet
 success-profile-updated = Profil erfolgreich aktualisiert!
 
 # Source: ./src/components/settings.rs:1039
+# UNUSED: This key is no longer used in the code
 sync-configured = Synchronisierung konfiguriert
 
-# Source: ./src/components/settings.rs:1332
+# Source: ./src/components/settings/nextcloud_login_card.rs:359
 sync-connecting = Verbinde mit Server...
 
-# Source: ./src/components/settings.rs:1093
+# Source: ./src/components/settings/nextcloud_card.rs:408
 sync-delete-config = Konfiguration löschen
 
-# Source: ./src/components/settings.rs:1368
+# Source: ./src/components/settings/nextcloud_login_card.rs:395
 sync-error = Fehler bei der Anmeldung
 
-# Source: ./src/components/settings.rs:1080
+# Source: ./src/components/settings/nextcloud_card.rs:358
 sync-failed = Sync fehlgeschlagen
 
 # Source: ./src/components/settings.rs:1088
 # UNUSED: This key is no longer used in the code
 sync-last-sync = Letzte Sync
 
-# Source: ./src/components/settings.rs:1326
+# Source: ./src/components/settings/nextcloud_login_card.rs:353
 sync-login = Mit Nextcloud anmelden
 
-# Source: ./src/components/settings.rs:1353
+# Source: ./src/components/settings/nextcloud_login_card.rs:380
 sync-login-browser = Im Browser öffnen
 
-# Source: ./src/components/settings.rs:1385
+# Source: ./src/components/settings/nextcloud_login_card.rs:411
 sync-login-info-title = Wie funktioniert die Anmeldung?
 
-# Login instructions
-# Source: ./src/components/settings.rs:1347
+# Source: ./src/components/settings/nextcloud_login_card.rs:374
 sync-login-instructions = Bitte öffnen Sie diesen Link in Ihrem Browser und melden Sie sich an:
 
-# Step 1: Click login button
-# Source: ./src/components/settings.rs:1389
+# Source: ./src/components/settings/nextcloud_login_card.rs:415
 sync-login-step1 = Klicken Sie auf 'Mit Nextcloud anmelden'
 
-# Step 2: Open browser link
-# Source: ./src/components/settings.rs:1390
+# Source: ./src/components/settings/nextcloud_login_card.rs:416
 sync-login-step2 = Öffnen Sie den Link im Browser
 
-# Step 3: Login to Nextcloud
-# Source: ./src/components/settings.rs:1391
+# Source: ./src/components/settings/nextcloud_login_card.rs:417
 sync-login-step3 = Melden Sie sich bei Ihrer Nextcloud an
 
-# Step 4: Confirm access
-# Source: ./src/components/settings.rs:1392
+# Source: ./src/components/settings/nextcloud_login_card.rs:418
 sync-login-step4 = Bestätigen Sie den Zugriff für diese App
 
-# Step 5: Return to app
-# Source: ./src/components/settings.rs:1393
+# Source: ./src/components/settings/nextcloud_login_card.rs:419
 sync-login-step5 = Kehren Sie zur App zurück und klicken Sie 'Weiter'
 
-# Source: ./src/components/settings.rs:1361
+# Source: ./src/components/settings/nextcloud_login_card.rs:388
 sync-login-success = Anmeldung erfolgreich!
 
-# Source: ./src/components/settings.rs:843
+# Source: ./src/components/settings/nextcloud_login_card.rs:212
 sync-login-success-folder = Anmeldung erfolgreich! Ordner erstellt.
 
 # Source: ./src/components/settings.rs:435
 # UNUSED: This key is no longer used in the code
 sync-not-configured = Noch keine Synchronisierung konfiguriert
 
-# Source: ./src/components/settings.rs:1086
+# Source: ./src/components/settings/nextcloud_card.rs:401
 sync-now = Jetzt synchronisieren
 
-# Source: ./src/components/settings.rs:1057
+# Source: ./src/components/settings/nextcloud_card.rs:389
 sync-path = Pfad
 
-# Remote path hint text
-# Source: ./src/components/settings.rs:1314
+# Source: ./src/components/settings/nextcloud_login_card.rs:342
 sync-path-hint = Ordner auf dem Server, in dem die Fotos gespeichert werden
 
-# Remote path input label
-# Source: ./src/components/settings.rs:1303
+# Source: ./src/components/settings/nextcloud_login_card.rs:331
 sync-path-label = Speicherpfad
 
-# Source: ./src/components/settings.rs:1108
+# Source: ./src/components/settings/nextcloud_card.rs:415
 # Parameters: $count
 sync-photo-status-active = Aktiv: { $count }
 
-# Source: ./src/components/settings.rs:1117
+# Source: ./src/components/settings/nextcloud_card.rs:418
 # Parameters: $count
 sync-photo-status-error = Fehler: { $count }
 
-# Source: ./src/components/settings.rs:1104
+# Source: ./src/components/settings/nextcloud_card.rs:414
 # Parameters: $count
 sync-photo-status-pending = Ausstehend: { $count }
 
-# Source: ./src/components/settings.rs:1112
+# Source: ./src/components/settings/nextcloud_card.rs:416
 # Parameters: $count
 sync-photo-status-synced = Synchronisiert: { $count }
 
-# Source: ./src/components/settings.rs:1100
+# Source: ./src/components/settings/nextcloud_card.rs:413
 sync-photo-status-title = 📷 Foto-Sync Status
 
-# Polling in background message
-# Source: ./src/components/settings.rs:1343
+# Source: ./src/components/settings/nextcloud_login_card.rs:370
 sync-polling-background = Polling läuft im Hintergrund (max. 5 Minuten)
 
 # Source: ./src/components/settings.rs:572
 # UNUSED: This key is no longer used in the code
 sync-running = Vollständige synchronisierung läuft
 
-# Source: ./src/components/settings.rs:1043
+# Source: ./src/components/settings/nextcloud_card.rs:381
 sync-server = Server
 
-# Server URL hint text
-# Source: ./src/components/settings.rs:1295
+# Source: ./src/components/settings/nextcloud_login_card.rs:324
 sync-server-hint = Die vollständige URL zu Ihrer Nextcloud-Instanz
 
-# Server URL input label
-# Source: ./src/components/settings.rs:1284
+# Source: ./src/components/settings/nextcloud_login_card.rs:313
 sync-server-url = Nextcloud Server URL
 
-# Source: ./src/components/settings.rs:987
+# Source: ./src/components/settings/nextcloud_card.rs:343
 sync-settings-deleted = Einstellungen gelöscht
 
-# Setup sync heading
-# Source: ./src/components/settings.rs:1277
+# Source: ./src/components/settings/nextcloud_login_card.rs:307
 sync-setup-title = Nextcloud Synchronisierung einrichten
 
-# Source: ./src/components/settings.rs:1070
+# Source: ./src/components/settings/nextcloud_card.rs:349
 sync-status-running-full = 🔄 Vollständige Synchronisation...
 
-# Source: ./src/components/settings.rs:1074
+# Source: ./src/components/settings/nextcloud_card.rs:353
 # Parameters: $count
 sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 
@@ -875,18 +1084,17 @@ sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 # UNUSED: This key is no longer used in the code
 sync-success = Synchronisierung abgeschlossen: { $quails } Wachteln, { $events } Ereignisse, { $eggs } Eier-Einträge, { $photos } Fotos
 
-# Source: ./src/components/settings.rs:1153
+# Source: ./src/components/settings/nextcloud_card.rs:433
 # Parameters: $current, $percent, $total
 sync-upload-progress-detail = { $current } von { $total } Fotos hochgeladen ({ $percent }%)
 
-# Source: ./src/components/settings.rs:1150
+# Source: ./src/components/settings/nextcloud_card.rs:432
 sync-upload-progress-title = Fotos werden hochgeladen...
 
-# Source: ./src/components/settings.rs:1050
+# Source: ./src/components/settings/nextcloud_card.rs:385
 sync-username = Benutzer
 
-# Waiting for login message
-# Source: ./src/components/settings.rs:1341
+# Source: ./src/components/settings/nextcloud_login_card.rs:368
 sync-waiting = Warte auf Anmeldung...
 
 # Source: ./src/components/event_edit.rs:300
