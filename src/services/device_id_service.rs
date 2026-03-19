@@ -195,12 +195,12 @@ pub fn get_device_id() -> Result<String, StalltagebuchError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_device_id_non_android() {
         #[cfg(not(target_os = "android"))]
         {
+            use super::*;
             let device_id = get_device_id().unwrap();
             assert!(device_id.starts_with("desktop-"));
         }

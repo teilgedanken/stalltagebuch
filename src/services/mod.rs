@@ -3,7 +3,9 @@ pub mod backup_service;
 pub mod device_id_service;
 pub mod download_service;
 pub mod export_service;
+#[cfg(target_os = "android")]
 pub mod import_service;
+#[cfg(target_os = "android")]
 pub mod import_v1_service;
 pub mod nextcloud_webdav;
 pub mod photo_paths;

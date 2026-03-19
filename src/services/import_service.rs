@@ -118,13 +118,3 @@ async fn import_v2_from_zip(
     log::warn!("V2 import not yet implemented");
     Err(AppError::Other("V2 import not yet implemented".to_string()))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_format_detection() {
-        // This will be tested with actual ZIP files
-    }
-}

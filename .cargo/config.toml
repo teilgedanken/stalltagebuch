@@ -1,5 +1,18 @@
 [build]
 # Android targets for different CPU architectures
+target = "aarch64-linux-android"
+
+[env]
+ANDROID_NDK_ROOT = "/home/dietrich/Android/Sdk/ndk/29.0.14206865"
+# Tell cc-crate / openssl-sys which compiler to use per target (no unversioned wrapper needed)
+CC_aarch64_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang"
+AR_aarch64_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+CC_armv7_linux_androideabi = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi28-clang"
+AR_armv7_linux_androideabi = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+CC_i686_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android28-clang"
+AR_i686_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+CC_x86_64_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android28-clang"
+AR_x86_64_linux_android = "/home/dietrich/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
 
 [target.aarch64-linux-android]
 # ARM64-v8a (64-bit ARM) - used by most modern Android devices
