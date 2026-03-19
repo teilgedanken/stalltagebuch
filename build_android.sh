@@ -87,6 +87,7 @@ fi
 # Determine build mode
 BUILD_TYPE="debug"
 RUST_TARGET=""
+DX_VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -106,9 +107,13 @@ while [[ $# -gt 0 ]]; do
             RUST_TARGET="${1#*=}"
             shift
             ;;
+        --verbose)
+            DX_VERBOSE=true
+            shift
+            ;;
         *)
             echo "Unknown argument: $1"
-            echo "Usage: $0 [--release] [--target <rust-target-triple>]"
+            echo "Usage: $0 [--release] [--target <rust-target-triple>] [--verbose]"
             exit 1
             ;;
     esac
@@ -197,7 +202,22 @@ prepare_android_overrides "[1/2]"
 echo "[2/2] Running dx ${DX_BUILD_ARGS[*]}"
 DX_LOG=$(mktemp)
 set +e
-dx "${DX_BUILD_ARGS[@]}" 2>&1 | tee "$DX_LOG"
+if [[ "$DX_VERBOSE" == true ]]; then
+    dx "${DX_BUILD_ARGS[@]}" 2>&1 | tee "$DX_LOG"
+else
+    dx "${DX_BUILD_ARGS[@]}" 2>&1 \
+        | tee "$DX_LOG" \
+        | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' \
+        | awk '
+            # Hide repetitive dx progress spam; warnings/errors are still shown.
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Compiled[[:space:]]+\[/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Building project\.\.\.$/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Bundling app\.\.\.$/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Copying asset[[:space:]]+\([0-9]+\/[0-9]+\):/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Finished Build process$/ { next }
+            { print }
+        '
+fi
 DX_EXIT=${PIPESTATUS[0]}
 set -e
 
@@ -237,12 +257,50 @@ if [[ "$BUILD_TYPE" == "release" ]]; then
     echo "[3/3] Running Gradle assembleRelease with lint disabled"
     pushd "$DX_APP_DIR" >/dev/null
     chmod +x ./gradlew
-    ./gradlew \
-        -x lintVitalAnalyzeRelease \
-        -x lintVitalReportRelease \
-        -x lintReportRelease \
-        -x lintVitalRelease \
-        assembleRelease
+    GRADLE_LOG=$(mktemp)
+    set +e
+    if [[ "$DX_VERBOSE" == true ]]; then
+        ./gradlew \
+            -x lintVitalAnalyzeRelease \
+            -x lintVitalReportRelease \
+            -x lintReportRelease \
+            -x lintVitalRelease \
+            assembleRelease 2>&1 | tee "$GRADLE_LOG"
+    else
+        ./gradlew \
+            -x lintVitalAnalyzeRelease \
+            -x lintVitalReportRelease \
+            -x lintReportRelease \
+            -x lintVitalRelease \
+            assembleRelease 2>&1 \
+            | tee "$GRADLE_LOG" \
+            | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' \
+            | awk '
+                /^> Task / { next }
+                /^> Configure project :app$/ { next }
+                /^WARNING: The option setting .*android\.defaults\.buildfeatures\.buildconfig=true.*deprecated\.$/ { next }
+                /^The current default is .*$/ { next }
+                /^It will be removed in version .*$/ { next }
+                /^To keep using this feature, add the following to your module-level build\.gradle files:$/ { next }
+                /^[[:space:]]+android\.buildFeatures\.buildConfig = true$/ { next }
+                /^or from Android Studio, click: .*$/ { next }
+                /^\[Incubating\] Problems report is available at: .*$/ { next }
+                /^Deprecated Gradle features were used in this build, making it incompatible with Gradle .*\.$/ { next }
+                /^[[:space:]]*You can use .*--warning-mode all.*$/ { next }
+                /^[[:space:]]*For more on this, please refer to .*$/ { next }
+                /^[[:space:]]*BUILD SUCCESSFUL in .*$/ { next }
+                /^[[:space:]]*[0-9]+ actionable tasks: .*$/ { next }
+                /^[[:space:]]*Consider enabling configuration cache to speed up this build: .*$/ { next }
+                { print }
+            '
+    fi
+    GRADLE_EXIT=${PIPESTATUS[0]}
+    set -e
+    rm -f "$GRADLE_LOG"
+    if [[ $GRADLE_EXIT -ne 0 ]]; then
+        popd >/dev/null
+        exit $GRADLE_EXIT
+    fi
     popd >/dev/null
 fi
 
