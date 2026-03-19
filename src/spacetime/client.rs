@@ -10,8 +10,7 @@
 //! - `POST /v1/database/{name}/sql`             – execute a SQL query
 
 use crate::error::AppError;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde::{ Serialize};
 
 /// Thin async wrapper around the SpacetimeDB HTTP API.
 ///
@@ -28,15 +27,7 @@ pub struct SpacetimeClient {
     pub token: String,
 }
 
-/// A single row returned by a SQL query.
-pub type SqlRow = Value;
 
-/// Result of a SQL query (`POST /v1/database/{db}/sql`).
-#[derive(Debug, Deserialize)]
-pub struct SqlResult {
-    pub schema: Option<Value>,
-    pub rows: Vec<SqlRow>,
-}
 
 impl SpacetimeClient {
     /// Build a new client.  All fields are required.
@@ -61,10 +52,6 @@ impl SpacetimeClient {
         }
     }
 
-    /// Return `true` if this client looks correctly configured (non-empty fields).
-    pub fn is_configured(&self) -> bool {
-        !self.base_url.is_empty() && !self.database.is_empty() && !self.token.is_empty()
-    }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -77,13 +64,7 @@ impl SpacetimeClient {
         )
     }
 
-    fn sql_url(&self) -> String {
-        format!(
-            "{}/v1/database/{}/sql",
-            self.base_url.trim_end_matches('/'),
-            self.database
-        )
-    }
+
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -146,101 +127,6 @@ impl SpacetimeClient {
         Ok(())
     }
 
-    /// Execute a SQL query and return the raw JSON rows.
-    pub async fn sql(&self, query: &str) -> Result<Vec<SqlRow>, AppError> {
-        let resp = self
-            .http
-            .post(self.sql_url())
-            .bearer_auth(&self.token)
-            .header(reqwest::header::CONTENT_TYPE, "text/plain; charset=utf-8")
-            .body(query.to_string())
-            .send()
-            .await
-            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
 
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::Other(format!(
-                "SQL query failed ({status}): {text}"
-            )));
-        }
 
-        // SpacetimeDB returns either a direct array or {"rows": [...]}
-        let json: Value = resp
-            .json()
-            .await
-            .map_err(|e| AppError::Other(format!("parse SQL response: {e}")))?;
-
-        let rows = if let Some(arr) = json.as_array() {
-            arr.clone()
-        } else if let Some(arr) = json.get("rows").and_then(|v| v.as_array()) {
-            arr.clone()
-        } else {
-            vec![]
-        };
-
-        Ok(rows)
-    }
-
-    /// Verify the connection by executing a simple query.
-    pub async fn ping(&self) -> Result<(), AppError> {
-        self.sql("SELECT 1").await?;
-        Ok(())
-    }
-}
-
-// ── Reducer argument types ─────────────────────────────────────────────────────
-// These mirror the `*Args` types in the server module and are used to build
-// the JSON body for reducer calls.
-
-#[derive(Serialize)]
-pub struct CreateQuailArgs {
-    pub uuid: String,
-    pub name: String,
-    pub gender: String,
-    pub ring_color: Option<String>,
-    pub profile_photo: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct UpdateQuailArgs {
-    pub uuid: String,
-    pub name: String,
-    pub gender: String,
-    pub ring_color: Option<String>,
-    pub profile_photo: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct CreateEventArgs {
-    pub uuid: String,
-    pub quail_uuid: String,
-    pub event_type: String,
-    pub event_date: String,
-    pub notes: Option<String>,
-    pub photos: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct UpdateEventArgs {
-    pub uuid: String,
-    pub event_type: String,
-    pub event_date: String,
-    pub notes: Option<String>,
-    pub photos: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct UpsertEggRecordArgs {
-    pub uuid: String,
-    pub record_date: String,
-    pub total_eggs: i32,
-    pub notes: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct SetQuailPhotoArgs {
-    pub quail_uuid: String,
-    pub photo_uuid: Option<String>,
 }

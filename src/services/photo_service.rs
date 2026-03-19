@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService, PhotoSize};
+use photo_gallery::{PhotoGalleryConfig, PhotoGalleryService};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -30,11 +30,6 @@ pub fn get_storage_path() -> String {
     {
         "./photos".to_string()
     }
-}
-
-/// Returns the absolute path to a photo (for UI display)
-pub fn get_absolute_photo_path(relative_path: &str) -> String {
-    init_photo_service().get_absolute_photo_path(relative_path)
 }
 
 /// Adapter function to convert PhotoGalleryError to AppError
@@ -80,10 +75,4 @@ pub async fn process_photo(path: String) -> Result<(String, String, String), App
         .process_photo(process_input)
         .await
         .map_err(convert_photo_error)
-}
-
-/// Get photo file path for a given size
-pub fn get_photo_file_path(relative_path: &str, size: PhotoSize) -> Option<String> {
-    let service = init_photo_service();
-    service.get_photo_file_path(relative_path, size)
 }

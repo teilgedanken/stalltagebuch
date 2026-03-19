@@ -1,13 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// V1 legacy export format metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExportMetadataV1 {
-    pub format_version: u32,
-    pub exported_at: String,
-    pub app_version: String,
-}
-
 /// V1 Quail format (using DateTime strings)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuailV1 {

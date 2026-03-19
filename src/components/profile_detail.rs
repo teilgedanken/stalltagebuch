@@ -264,7 +264,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                             let mut show_fullscreen = use_signal(|| false);
                             let mut selected_photos = use_signal(Vec::<String>::new);
                             let mut selected_index = use_signal(|| 0usize);
-                            let mut photo_refresh = use_signal(|| 0u32);
+                            let photo_refresh = use_signal(|| 0u32);
                             let all_paths: Vec<String> = photo_items
                                 .iter()
                                 .map(|(_, path, _)| path.clone())

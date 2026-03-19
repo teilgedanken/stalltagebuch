@@ -4,17 +4,6 @@ use std::io::BufReader;
 use std::path::Path;
 use zip::ZipArchive;
 
-/// Signal for tracking import progress
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ImportProgress {
-    Starting,
-    ReadingZip,
-    DetectingFormat,
-    ImportingData,
-    ImportingPhotos,
-    Complete,
-}
-
 /// Import data from a ZIP file, detecting format version automatically
 ///
 /// Supports both v1 (legacy SQLite export) and v2 (SpacetimeDB export) formats.

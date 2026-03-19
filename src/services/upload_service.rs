@@ -71,8 +71,3 @@ where
 
     Ok(uploaded)
 }
-
-/// Uploads photos that are missing on the remote
-pub async fn upload_photos_batch() -> Result<usize, AppError> {
-    upload_photos_batch_with_progress(|_, _| {}).await
-}

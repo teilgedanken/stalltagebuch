@@ -99,17 +99,3 @@ pub struct PhotoCollectionExport {
     pub created_at: i64,
     pub updated_at: i64,
 }
-
-impl ExportData {
-    pub fn new(metadata: ExportMetadata) -> Self {
-        Self {
-            metadata,
-            devices: Vec::new(),
-            quails: Vec::new(),
-            quail_events: Vec::new(),
-            egg_records: Vec::new(),
-            photos: Vec::new(),
-            photo_collections: Vec::new(),
-        }
-    }
-}

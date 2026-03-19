@@ -67,7 +67,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                         }
                     });
                 },
-                if let Some(photo_uuid_str) = profile_photo.as_ref() {
+                if let Some(_photo_uuid_str) = profile_photo.as_ref() {
                     if let Some(photo_path) = effective_photo_path() {
                         photo_gallery::PreviewImage {
                             key: "{photo_path}",
