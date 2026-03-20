@@ -1,11 +1,11 @@
 use super::profile_photo_card::ProfilePhotoCard;
+use super::synced_photo::{SyncedCollectionFullscreen, SyncedThumbnailImage};
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
 use crate::Screen;
 use crate::models::{EventType, Gender};
 use crate::spacetime;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
-use photo_gallery::{CollectionFullscreen, ThumbnailImage};
 use spacetimedb_sdk::DbContext;
 
 /// Helper function to resolve photo path to absolute path
@@ -262,12 +262,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         let photo_items = filtered_photo_items();
                         if !photo_items.is_empty() {
                             let mut show_fullscreen = use_signal(|| false);
-                            let mut selected_photos = use_signal(Vec::<String>::new);
+                            let mut selected_photo_items = use_signal(Vec::<(String, String)>::new);
                             let mut selected_index = use_signal(|| 0usize);
-                            let photo_refresh = use_signal(|| 0u32);
-                            let all_paths: Vec<String> = photo_items
+                            let all_photo_items: Vec<(String, String)> = photo_items
                                 .iter()
-                                .map(|(_, path, _)| path.clone())
+                                .map(|(uuid, path, _)| (uuid.clone(), path.clone()))
                                 .collect();
 
                             rsx! {
@@ -282,28 +281,29 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     div { style: "display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:12px;",
                                         for (idx, (photo_uuid, photo_path, _created_at)) in photo_items.iter().enumerate() {
                                             div {
-                                                key: "{photo_uuid}-{photo_refresh()}",
+                                                key: "{photo_uuid}",
                                                 style: "cursor: pointer; position: relative;",
                                                 onclick: {
-                                                    let all_paths_click = all_paths.clone();
+                                                    let all_photo_items_click = all_photo_items.clone();
                                                     move |_| {
-                                                        if !all_paths_click.is_empty() {
-                                                            selected_photos.set(all_paths_click.clone());
+                                                        if !all_photo_items_click.is_empty() {
+                                                            selected_photo_items.set(all_photo_items_click.clone());
                                                             selected_index.set(idx);
                                                             show_fullscreen.set(true);
                                                         }
                                                     }
                                                 },
-                                                ThumbnailImage {
+                                                SyncedThumbnailImage {
+                                                    photo_uuid: Some(photo_uuid.clone()),
                                                     relative_path: photo_path.clone(),
                                                 }
                                             }
                                         }
                                     }
 
-                                    if show_fullscreen() && !selected_photos().is_empty() {
-                                        CollectionFullscreen {
-                                            photo_paths: selected_photos(),
+                                    if show_fullscreen() && !selected_photo_items().is_empty() {
+                                        SyncedCollectionFullscreen {
+                                            photo_items: selected_photo_items(),
                                             initial_index: selected_index(),
                                             on_close: move |_| show_fullscreen.set(false),
                                         }

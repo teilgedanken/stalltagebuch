@@ -142,16 +142,18 @@ fn load_photo(ctx: PhotoGalleryContext, relative_path: String, size: PhotoSize) 
 pub fn ThumbnailImage(
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
+    #[props(default = 0u32)] refresh_token: u32,
 ) -> Element {
     let context = use_context::<PhotoGalleryContext>();
 
     // Track relative_path changes with memo for reactive dependency tracking
-    let path_key = use_memo(move || relative_path.clone());
+    let path_for_key = relative_path.clone();
+    let path_key = use_memo(move || (path_for_key.clone(), refresh_token));
 
     // Use resource for async photo loading instead of blocking in effect
     let photo_resource = use_resource(move || {
         let ctx = context.clone();
-        let path = path_key();
+        let (path, _refresh_token) = path_key();
         async move {
             // Simulate async by spawning off-thread would be ideal, but for now
             // we'll do the synchronous load in the resource which is better than
@@ -193,16 +195,18 @@ pub fn ThumbnailImage(
 pub fn PreviewImage(
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
+    #[props(default = 0u32)] refresh_token: u32,
 ) -> Element {
     let context = use_context::<PhotoGalleryContext>();
 
     // Track relative_path changes with memo for reactive dependency tracking
-    let path_key = use_memo(move || relative_path.clone());
+    let path_for_key = relative_path.clone();
+    let path_key = use_memo(move || (path_for_key.clone(), refresh_token));
 
     // Use resource for async photo loading instead of blocking in effect
     let photo_resource = use_resource(move || {
         let ctx = context.clone();
-        let path = path_key();
+        let (path, _refresh_token) = path_key();
         async move { load_photo(ctx, path, PhotoSize::Medium) }
     });
 
@@ -240,7 +244,8 @@ pub fn FullscreenImage(relative_path: String, on_close: EventHandler<()>) -> Ele
     let context = use_context::<PhotoGalleryContext>();
 
     // Track relative_path changes with memo for reactive dependency tracking
-    let path_key = use_memo(move || relative_path.clone());
+    let path_for_key = relative_path.clone();
+    let path_key = use_memo(move || path_for_key.clone());
 
     // Use resource for async photo loading instead of blocking in effect
     let photo_resource = use_resource(move || {

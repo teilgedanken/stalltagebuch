@@ -1,7 +1,7 @@
 use crate::spacetime;
+use super::synced_photo::{SyncedCollectionFullscreen, SyncedPreviewImage};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
-use photo_gallery::CollectionFullscreen;
 
 #[component]
 pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Element {
@@ -11,7 +11,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
     let photos_table = spacetime::use_table_photos();
     let photo_collections_table = spacetime::use_table_photo_collections();
 
-    let fullscreen_paths = use_signal(Vec::<String>::new);
+    let fullscreen_photo_items = use_signal(Vec::<(String, String)>::new);
     let current_photo_index = use_signal(|| 0usize);
     let mut show_fullscreen = use_signal(|| false);
     let mut uploading = use_signal(|| false);
@@ -40,7 +40,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
             div {
                 style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer;",
                 onclick: move |_| {
-                    let mut fullscreen_paths_sig = fullscreen_paths.clone();
+                    let mut fullscreen_photo_items_sig = fullscreen_photo_items.clone();
                     let mut current_idx_sig = current_photo_index.clone();
                     let mut show_fullscreen_sig = show_fullscreen.clone();
                     let quail_id_open = quail_id_open.clone();
@@ -54,14 +54,14 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                             .collect();
 
                         // Get all photos from those collections
-                        let paths: Vec<String> = photos_table()
+                        let photo_items: Vec<(String, String)> = photos_table()
                             .iter()
                             .filter(|p| collection_ids.contains(&p.collection_uuid))
-                            .map(|p| p.relative_path.clone())
+                            .map(|p| (p.uuid.clone(), p.relative_path.clone()))
                             .collect();
 
-                        if !paths.is_empty() {
-                            fullscreen_paths_sig.set(paths);
+                        if !photo_items.is_empty() {
+                            fullscreen_photo_items_sig.set(photo_items);
                             current_idx_sig.set(0);
                             show_fullscreen_sig.set(true);
                         }
@@ -69,8 +69,8 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                 },
                 if let Some(_photo_uuid_str) = profile_photo.as_ref() {
                     if let Some(photo_path) = effective_photo_path() {
-                        photo_gallery::PreviewImage {
-                            key: "{photo_path}",
+                        SyncedPreviewImage {
+                            photo_uuid: profile_photo.clone(),
                             relative_path: photo_path,
                             alt: "Profile Photo".to_string(),
                         }
@@ -306,9 +306,9 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
             }
         }
 
-        if show_fullscreen() && !fullscreen_paths().is_empty() {
-            CollectionFullscreen {
-                photo_paths: fullscreen_paths(),
+        if show_fullscreen() && !fullscreen_photo_items().is_empty() {
+            SyncedCollectionFullscreen {
+                photo_items: fullscreen_photo_items(),
                 initial_index: current_photo_index(),
                 on_close: move |_| show_fullscreen.set(false),
             }

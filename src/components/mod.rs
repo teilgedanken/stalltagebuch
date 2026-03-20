@@ -11,6 +11,7 @@ pub mod profile_list;
 pub mod profile_photo_card;
 pub mod settings;
 pub mod statistics;
+pub mod synced_photo;
 
 pub use egg_history::EggHistoryScreen;
 pub use egg_tracking::EggTrackingScreen;

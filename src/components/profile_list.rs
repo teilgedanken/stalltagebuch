@@ -1,9 +1,9 @@
 use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
+use super::synced_photo::SyncedThumbnailImage;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
-use photo_gallery::ThumbnailImage;
 use spacetimedb_sdk::DbContext;
 
 #[component]
@@ -147,18 +147,6 @@ pub fn ProfileCard(
 
     // Clone UUID for use in memo
     let photo_uuid_for_lookup = profile_photo_uuid.clone();
-    let photo_uuid_for_download = profile_photo_uuid.clone();
-
-    // Trigger photo download when UUID is available
-    use_effect(move || {
-        if let Some(uuid) = &photo_uuid_for_download {
-            let uuid_clone = uuid.clone();
-            spawn(async move {
-                let _ =
-                    crate::services::download_service::ensure_photo_downloaded(&uuid_clone).await;
-            });
-        }
-    });
 
     let overlay_bg = if let Some(ring_color) = &profile.ring_color {
         get_light_color_for(ring_color)
@@ -185,8 +173,8 @@ pub fn ProfileCard(
         div { class: "profile-card", onclick: move |_| on_click.call(()),
             div { class: "profile-image",
                 if let Some(photo_path) = effective_photo_path() {
-                    ThumbnailImage {
-                        key: "{photo_path}",
+                    SyncedThumbnailImage {
+                        photo_uuid: profile_photo_uuid.clone(),
                         relative_path: photo_path,
                         alt: profile.name.clone(),
                     }

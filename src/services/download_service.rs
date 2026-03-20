@@ -9,17 +9,28 @@ const MAX_DOWNLOAD_RETRIES: i32 = 5;
 pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
     photo_paths::ensure_photo_storage_dir()?;
 
-    let local_original = photo_paths::original_absolute_path(uuid);
-    if local_original.exists() {
-        return Ok(local_original);
-    }
-
     let runtime = load_runtime()?;
     let metadata_client = SpacetimePhotoMetadataClient::new(&runtime).await?;
     let photo = metadata_client
         .query_photo_by_uuid(uuid)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("photo {uuid}")))?;
+
+    let expected_local = photo_paths::relative_to_absolute(&photo.relative_path);
+    if expected_local.exists() {
+        return Ok(expected_local);
+    }
+
+    // Legacy fallback: older code stored downloaded files as <uuid>.jpg.
+    // If that file exists, mirror it into the DB-defined relative path location.
+    let legacy_local = photo_paths::original_absolute_path(uuid);
+    if legacy_local.exists() {
+        if let Some(parent) = expected_local.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::copy(&legacy_local, &expected_local)?;
+        return Ok(expected_local);
+    }
 
     metadata_client
         .update_photo_sync_status(uuid, "downloading", None, photo.retry_count)
@@ -28,7 +39,7 @@ pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
     let webdav = NextcloudWebDav::new(&runtime).await?;
 
     let download = webdav
-        .download_original(&photo.relative_path, &local_original)
+        .download_original(&photo.relative_path, &expected_local)
         .await;
 
     match download {
@@ -36,7 +47,7 @@ pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
             metadata_client
                 .update_photo_sync_status(uuid, "synced", None, 0)
                 .await?;
-            Ok(local_original)
+            Ok(expected_local)
         }
         Err(err) => {
             metadata_client
