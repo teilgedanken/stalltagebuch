@@ -147,20 +147,22 @@ pub fn ThumbnailImage(
 ) -> Element {
     let context = use_context::<PhotoGalleryContext>();
 
-    // Track relative_path changes with memo for reactive dependency tracking
-    let path_for_key = relative_path.clone();
-    let path_key = use_memo(move || (path_for_key.clone(), refresh_token));
+    // Use signals so use_resource re-runs whenever props change (e.g. after photo download).
+    // use_memo without signal dependencies only runs once and would not react to prop updates.
+    let mut path_signal = use_signal(|| relative_path.clone());
+    if path_signal.peek().as_str() != relative_path.as_str() {
+        path_signal.set(relative_path.clone());
+    }
+    let mut refresh_signal = use_signal(|| refresh_token);
+    if *refresh_signal.peek() != refresh_token {
+        refresh_signal.set(refresh_token);
+    }
 
-    // Use resource for async photo loading instead of blocking in effect
     let photo_resource = use_resource(move || {
         let ctx = context.clone();
-        let (path, _refresh_token) = path_key();
-        async move {
-            // Simulate async by spawning off-thread would be ideal, but for now
-            // we'll do the synchronous load in the resource which is better than
-            // doing it in an effect since it can show loading state properly
-            load_photo(ctx, path, PhotoSize::Small)
-        }
+        let path = path_signal();
+        let _refresh = refresh_signal(); // reactive dep — reruns when refresh_token changes
+        async move { load_photo(ctx, path, PhotoSize::Small) }
     });
 
     let container_style = if fill {
@@ -211,14 +213,20 @@ pub fn PreviewImage(
 ) -> Element {
     let context = use_context::<PhotoGalleryContext>();
 
-    // Track relative_path changes with memo for reactive dependency tracking
-    let path_for_key = relative_path.clone();
-    let path_key = use_memo(move || (path_for_key.clone(), refresh_token));
+    // Use signals so use_resource re-runs whenever props change (e.g. after photo download).
+    let mut path_signal = use_signal(|| relative_path.clone());
+    if path_signal.peek().as_str() != relative_path.as_str() {
+        path_signal.set(relative_path.clone());
+    }
+    let mut refresh_signal = use_signal(|| refresh_token);
+    if *refresh_signal.peek() != refresh_token {
+        refresh_signal.set(refresh_token);
+    }
 
-    // Use resource for async photo loading instead of blocking in effect
     let photo_resource = use_resource(move || {
         let ctx = context.clone();
-        let (path, _refresh_token) = path_key();
+        let path = path_signal();
+        let _refresh = refresh_signal();
         async move { load_photo(ctx, path, PhotoSize::Medium) }
     });
 

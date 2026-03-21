@@ -44,6 +44,15 @@ pub async fn ensure_photo_downloaded(uuid: &str) -> Result<PathBuf, AppError> {
 
     match download {
         Ok(()) => {
+            // Proactively generate thumbnails so they exist when the UI re-renders.
+            // This avoids a synchronous thumbnail-generation block in the render path.
+            let thumb_path = expected_local.to_string_lossy().to_string();
+            let thumb_uuid = uuid.to_string();
+            let _ = tokio::task::spawn_blocking(move || {
+                photo_gallery::create_thumbnails(&thumb_path, &thumb_uuid, 400, 512)
+            })
+            .await;
+
             metadata_client
                 .update_photo_sync_status(uuid, "synced", None, 0)
                 .await?;
