@@ -6,6 +6,7 @@ pub fn SyncedThumbnailImage(
     photo_uuid: Option<String>,
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
+    #[props(default = false)] fill: bool,
 ) -> Element {
     let rerender_tick = use_signal(|| 0u32);
     let mut is_downloading = use_signal(|| false);
@@ -43,11 +44,18 @@ pub fn SyncedThumbnailImage(
         });
     });
 
+    let wrapper_style = if fill {
+        "position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+    } else {
+        "position: relative; display: inline-block;"
+    };
+
     rsx! {
-        div { style: "position: relative; display: inline-block;",
+        div { style: "{wrapper_style}",
             ThumbnailImage {
                 relative_path,
                 alt,
+                fill,
                 refresh_token: rerender_tick(),
             }
 

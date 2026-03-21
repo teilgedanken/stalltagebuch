@@ -114,7 +114,7 @@ impl PhotoGalleryContext {
         let _ = crate::thumbnail::create_thumbnails(
             original_path.to_string_lossy().as_ref(),
             stem,
-            128,
+            400,
             512,
         );
     }
@@ -143,6 +143,7 @@ pub fn ThumbnailImage(
     relative_path: String,
     #[props(default = "Photo".to_string())] alt: String,
     #[props(default = 0u32)] refresh_token: u32,
+    #[props(default = false)] fill: bool,
 ) -> Element {
     let context = use_context::<PhotoGalleryContext>();
 
@@ -162,11 +163,22 @@ pub fn ThumbnailImage(
         }
     });
 
+    let container_style = if fill {
+        "position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f0f0;"
+    } else {
+        "width: 128px; height: 128px; border-radius: 8px; overflow: hidden; background: #f0f0f0;"
+    };
+    let img_style = if fill {
+        "width: 100%; height: 100%; object-fit: cover;"
+    } else {
+        "width: 100%; height: 100%; object-fit: cover;"
+    };
+
     rsx! {
-        div { style: "width: 128px; height: 128px; border-radius: 8px; overflow: hidden; background: #f0f0f0;",
+        div { style: "{container_style}",
             match photo_resource() {
                 None => rsx! {
-                    div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999;",
+                    div { style: "display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #999;",
                         "⏳"
                     }
                 },
@@ -174,11 +186,11 @@ pub fn ThumbnailImage(
                     img {
                         src: "{url}",
                         alt: "{alt}",
-                        style: "width: 100%; height: 100%; object-fit: cover;",
+                        style: "{img_style}",
                     }
                 },
                 Some(None) => rsx! {
-                    div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999;",
+                    div { style: "display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #999;",
                         "📷"
                     }
                 },

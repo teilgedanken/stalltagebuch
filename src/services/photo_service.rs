@@ -12,7 +12,7 @@ pub fn init_photo_service() -> &'static PhotoGalleryService {
         let config = PhotoGalleryConfig {
             storage_path: get_storage_path(),
             enable_thumbnails: true,
-            thumbnail_small_size: 128,
+            thumbnail_small_size: 400,
             thumbnail_medium_size: 512,
         };
         PhotoGalleryService::new(config)

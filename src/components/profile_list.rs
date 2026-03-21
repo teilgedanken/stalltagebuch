@@ -177,6 +177,7 @@ pub fn ProfileCard(
                         photo_uuid: profile_photo_uuid.clone(),
                         relative_path: photo_path,
                         alt: profile.name.clone(),
+                        fill: true,
                     }
                 } else {
                     div { class: "profile-image-placeholder", "🐦" }
