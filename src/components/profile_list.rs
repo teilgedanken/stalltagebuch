@@ -1,7 +1,7 @@
+use super::synced_photo::SyncedThumbnailImage;
 use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
-use super::synced_photo::SyncedThumbnailImage;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;

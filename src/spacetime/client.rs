@@ -10,7 +10,7 @@
 //! - `POST /v1/database/{name}/sql`             – execute a SQL query
 
 use crate::error::AppError;
-use serde::{ Serialize};
+use serde::Serialize;
 
 /// Thin async wrapper around the SpacetimeDB HTTP API.
 ///
@@ -26,8 +26,6 @@ pub struct SpacetimeClient {
     /// settings screen.
     pub token: String,
 }
-
-
 
 impl SpacetimeClient {
     /// Build a new client.  All fields are required.
@@ -52,7 +50,6 @@ impl SpacetimeClient {
         }
     }
 
-
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fn reducer_url(&self, reducer: &str) -> String {
@@ -63,8 +60,6 @@ impl SpacetimeClient {
             reducer
         )
     }
-
-
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -126,7 +121,4 @@ impl SpacetimeClient {
         }
         Ok(())
     }
-
-
-
 }

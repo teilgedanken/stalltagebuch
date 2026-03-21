@@ -130,17 +130,24 @@ pub fn use_register_device() {
                     "Device registration: calling register_device reducer for device {}",
                     device_id
                 );
-                register_device_fn(
+                if let Err(err) = register_device_fn(
                     crate::dioxus_spacetime_module_bindings::register_device_args_type::RegisterDeviceArgs {
                         device_id: device_id.clone(),
                         name: device_name,
                         comment: None,
                     },
-                );
-                log::info!(
-                    "Device registration: register_device reducer called for device {}",
-                    device_id
-                );
+                ) {
+                    log::warn!(
+                        "Device registration: register_device reducer failed for device {}: {}",
+                        device_id,
+                        err
+                    );
+                } else {
+                    log::info!(
+                        "Device registration: register_device reducer called for device {}",
+                        device_id
+                    );
+                }
             });
         } else {
             log::info!("Device registration: not connected, skipping registration");

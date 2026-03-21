@@ -100,6 +100,7 @@ pub fn EventEditScreen(
     #[cfg(target_os = "android")]
     let create_photo = spacetime::use_reducer_create_photo();
     let delete_photo_reducer = spacetime::use_reducer_delete_photo();
+    let delete_photo_gallery = delete_photo_reducer.clone();
 
     // Subscribe to quail_events and photos tables
     spacetime::use_subscription(&[
@@ -239,13 +240,17 @@ pub fn EventEditScreen(
         spawn(async move {
             if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
                 // Call the reducer to update the event
-                update_reducer(spacetime::UpdateEventArgs {
+                if let Err(err) = update_reducer(spacetime::UpdateEventArgs {
                     uuid: e_uuid.to_string(),
                     event_type: event_type_val.as_str().to_string(),
                     event_date: parsed_date.format("%Y-%m-%d").to_string(),
                     notes: notes_val,
                     photos: None,
-                });
+                }) {
+                    error.set(err.to_string());
+                    saving.set(false);
+                    return;
+                }
 
                 success.set(true);
                 saving.set(false);
@@ -271,7 +276,11 @@ pub fn EventEditScreen(
 
         spawn(async move {
             if let Ok(e_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                delete_reducer_call(e_uuid.to_string());
+                if let Err(err) = delete_reducer_call(e_uuid.to_string()) {
+                    error.set(err.to_string());
+                    return;
+                }
+
                 on_navigate_delete.call(Screen::ProfileDetail(quail_id_clone.clone()));
             }
         });
@@ -353,7 +362,11 @@ pub fn EventEditScreen(
                     EventPhotoGallery {
                         event_id: event_id.clone(),
                         photos: photos.clone(),
-                        delete_photo_fn: delete_photo_reducer.clone(),
+                        delete_photo_fn: move |photo_id: String| {
+                            if let Err(err) = delete_photo_gallery(photo_id) {
+                                log::error!("Failed to delete photo via SpacetimeDB reducer: {err}");
+                            }
+                        },
                     }
                     // Add buttons (always visible)
                     div { style: "display:flex; gap:12px;",
@@ -385,7 +398,7 @@ pub fn EventEditScreen(
                                                     if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
                                                         let collection_uuid = event_uuid.to_string();
 
-                                                        create_photo_collection_gallery_call(spacetime::CreatePhotoCollectionArgs {
+                                                        if let Err(err) = create_photo_collection_gallery_call(spacetime::CreatePhotoCollectionArgs {
                                                             uuid: collection_uuid.clone(),
                                                             quail_uuid: None,
                                                             event_uuid: Some(event_uuid.to_string()),
@@ -394,7 +407,15 @@ pub fn EventEditScreen(
                                                                 event_uuid.to_string().chars().take(8).collect::<String>()
                                                             ),
                                                             device_id: device_id.clone(),
-                                                        });
+                                                        }) {
+                                                            error.set(format!(
+                                                                "{}: {}",
+                                                                tid!("error-pick-images", error: ""),
+                                                                err
+                                                            ));
+                                                            uploading.set(false);
+                                                            return;
+                                                        }
 
                                                         for picked_path in paths {
                                                             let source = picked_path.to_string_lossy().to_string();
@@ -404,12 +425,18 @@ pub fn EventEditScreen(
                                                                         .file_stem()
                                                                         .and_then(|s| s.to_str())
                                                                     {
-                                                                        create_photo_gallery_call(spacetime::CreatePhotoArgs {
+                                                                        if let Err(err) = create_photo_gallery_call(spacetime::CreatePhotoArgs {
                                                                             uuid: photo_uuid.to_string(),
                                                                             collection_uuid: collection_uuid.clone(),
                                                                             relative_path: relative_original,
                                                                             device_id: device_id.clone(),
-                                                                        });
+                                                                        }) {
+                                                                            error.set(format!(
+                                                                                "{}: {}",
+                                                                                tid!("error-pick-images", error: ""),
+                                                                                err
+                                                                            ));
+                                                                        }
                                                                     }
                                                                 }
                                                                 Err(err) => {
@@ -473,7 +500,7 @@ pub fn EventEditScreen(
                                                     if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
                                                         let collection_uuid = event_uuid.to_string();
 
-                                                        create_photo_collection_camera_call(spacetime::CreatePhotoCollectionArgs {
+                                                        if let Err(err) = create_photo_collection_camera_call(spacetime::CreatePhotoCollectionArgs {
                                                             uuid: collection_uuid.clone(),
                                                             quail_uuid: None,
                                                             event_uuid: Some(event_uuid.to_string()),
@@ -482,7 +509,15 @@ pub fn EventEditScreen(
                                                                 event_uuid.to_string().chars().take(8).collect::<String>()
                                                             ),
                                                             device_id: device_id.clone(),
-                                                        });
+                                                        }) {
+                                                            error.set(format!(
+                                                                "{}: {}",
+                                                                tid!("error-capture-photo", error: ""),
+                                                                err
+                                                            ));
+                                                            uploading.set(false);
+                                                            return;
+                                                        }
 
                                                         let source = path.to_string_lossy().to_string();
                                                         match crate::services::photo_service::process_photo(source).await {
@@ -491,12 +526,18 @@ pub fn EventEditScreen(
                                                                     .file_stem()
                                                                     .and_then(|s| s.to_str())
                                                                 {
-                                                                    create_photo_camera_call(spacetime::CreatePhotoArgs {
+                                                                    if let Err(err) = create_photo_camera_call(spacetime::CreatePhotoArgs {
                                                                         uuid: photo_uuid.to_string(),
                                                                         collection_uuid,
                                                                         relative_path: relative_original,
                                                                         device_id,
-                                                                    });
+                                                                    }) {
+                                                                        error.set(format!(
+                                                                            "{}: {}",
+                                                                            tid!("error-capture-photo", error: ""),
+                                                                            err
+                                                                        ));
+                                                                    }
                                                                 }
                                                             }
                                                             Err(err) => {

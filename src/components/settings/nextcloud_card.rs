@@ -2,46 +2,12 @@ use crate::models::SpacetimeSettings;
 use crate::services::spacetime_settings_service;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LoginFlowInit {
-    poll: PollInfo,
-    login: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct PollInfo {
-    token: String,
-    endpoint: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LoginFlowResult {
-    server: String,
-    #[serde(rename = "loginName")]
-    login_name: String,
-    #[serde(rename = "appPassword")]
-    app_password: String,
-}
-
-#[derive(Clone, PartialEq)]
-enum LoginState {
-    NotStarted,
-    InitiatingFlow,
-    WaitingForUser {
-        poll_url: String,
-        token: String,
-        login_url: String,
-    },
-    Error(String),
-}
+use nextcloud_auth::{AuthLabels, NextcloudAuthComponent, NextcloudCredentials};
 
 #[component]
 pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
     let mut server_url = use_signal_sync(|| String::from("https://"));
     let mut remote_path = use_signal_sync(|| String::from("/Stalltagebuch"));
-    let mut login_state = use_signal_sync(|| LoginState::NotStarted);
     let mut current_settings = use_signal_sync(|| None::<SpacetimeSettings>);
     let mut details_expanded = use_signal_sync(|| false);
     let mut is_syncing = use_signal_sync(|| false);
@@ -102,229 +68,61 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
         }
     });
 
-    let start_login = move |_| {
-        let server = server_url();
+    let on_auth_success = move |credentials: NextcloudCredentials| {
         let remote_path_value = remote_path();
-        login_state.set(LoginState::InitiatingFlow);
+        let server_url_value = credentials.server_url;
+        let username_value = credentials.username;
+        let app_password_value = credentials.app_password;
 
         spawn(async move {
-            let url = format!("{}/index.php/login/v2", server.trim_end_matches('/'));
+            let webdav_url = format!(
+                "{}/remote.php/dav/files/{}",
+                server_url_value.trim_end_matches('/'),
+                username_value
+            );
 
-            let client = match reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
-                .connect_timeout(std::time::Duration::from_secs(10))
-                .tcp_keepalive(std::time::Duration::from_secs(30))
-                .user_agent("Stalltagebuch/0.1.0")
+            match reqwest_dav::ClientBuilder::new()
+                .set_host(webdav_url)
+                .set_auth(reqwest_dav::Auth::Basic(
+                    username_value.clone(),
+                    app_password_value.clone(),
+                ))
                 .build()
             {
-                Ok(client) => client,
-                Err(e) => {
-                    login_state.set(LoginState::Error(format!(
-                        "{}: {:?}",
-                        tid!("error-client"),
-                        e
-                    )));
-                    return;
-                }
-            };
-
-            match client.post(&url).send().await {
-                Ok(response) => {
-                    if response.status().is_success() {
-                        match response.json::<LoginFlowInit>().await {
-                            Ok(flow) => {
-                                let poll_url = flow.poll.endpoint.clone();
-                                let token = flow.poll.token.clone();
-                                let login_url = flow.login.clone();
-
-                                login_state.set(LoginState::WaitingForUser {
-                                    poll_url: poll_url.clone(),
-                                    token: token.clone(),
-                                    login_url,
-                                });
-
-                                spawn(async move {
-                                    let poll_client = match reqwest::Client::builder()
-                                        .timeout(std::time::Duration::from_secs(30))
-                                        .connect_timeout(std::time::Duration::from_secs(10))
-                                        .tcp_keepalive(std::time::Duration::from_secs(30))
-                                        .user_agent("Stalltagebuch/0.1.0")
-                                        .pool_idle_timeout(std::time::Duration::from_secs(90))
-                                        .pool_max_idle_per_host(4)
-                                        .build()
-                                    {
-                                        Ok(client) => client,
-                                        Err(e) => {
-                                            login_state.set(LoginState::Error(format!(
-                                                "{}: {:?}",
-                                                tid!("error-client"),
-                                                e
-                                            )));
-                                            return;
-                                        }
-                                    };
-
-                                    #[cfg(not(target_arch = "wasm32"))]
-                                    {
-                                        tokio::time::sleep(std::time::Duration::from_millis(500))
-                                            .await;
-                                    }
-                                    #[cfg(target_arch = "wasm32")]
-                                    gloo_timers::future::sleep(std::time::Duration::from_millis(
-                                        500,
-                                    ))
-                                    .await;
-
-                                    let mut consecutive_errors: u32 = 0;
-                                    for _attempt in 0..60 {
-                                        #[allow(unused_assignments)]
-                                        let mut wait_after_secs: u64 = 5;
-
-                                        match poll_client
-                                            .post(&poll_url)
-                                            .form(&[("token", &token)])
-                                            .header("User-Agent", "Stalltagebuch/0.1.0")
-                                            .header("Accept", "application/json")
-                                            .send()
-                                            .await
-                                        {
-                                            Ok(response) => {
-                                                if response.status().as_u16() == 200 {
-                                                    match response.json::<LoginFlowResult>().await {
-                                                        Ok(result) => {
-                                                            let webdav_url = format!(
-                                                                "{}/remote.php/dav/files/{}",
-                                                                result.server.trim_end_matches('/'),
-                                                                result.login_name
-                                                            );
-
-                                                            match reqwest_dav::ClientBuilder::new()
-                                                                .set_host(webdav_url)
-                                                                .set_auth(reqwest_dav::Auth::Basic(
-                                                                    result.login_name.clone(),
-                                                                    result.app_password.clone(),
-                                                                ))
-                                                                .build()
-                                                            {
-                                                                Ok(client) => {
-                                                                    let _ = client
-                                                                        .mkcol(&remote_path_value)
-                                                                        .await;
-                                                                }
-                                                                Err(e) => {
-                                                                    login_state.set(LoginState::Error(format!(
-                                                                        "{}: {:?}",
-                                                                        tid!("error-webdav-client"),
-                                                                        e
-                                                                    )));
-                                                                    return;
-                                                                }
-                                                            }
-
-                                                            let mut st_settings = spacetime_settings_service::load_spacetime_settings()
-                                                                .unwrap_or_default();
-                                                            st_settings.nextcloud_url =
-                                                                result.server;
-                                                            st_settings.nextcloud_username =
-                                                                result.login_name;
-                                                            st_settings.nextcloud_app_password =
-                                                                result.app_password;
-                                                            st_settings.nextcloud_remote_path =
-                                                                remote_path_value.clone();
-
-                                                            if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
-                                                                log::error!("Failed to persist Nextcloud settings: {}", e);
-                                                            }
-
-                                                            current_settings.set(Some(st_settings));
-                                                            details_expanded.set(false);
-                                                            login_state.set(LoginState::NotStarted);
-                                                            on_status_message.call(format!(
-                                                                "✅ {}",
-                                                                tid!("sync-login-success-folder")
-                                                            ));
-                                                            return;
-                                                        }
-                                                        Err(e) => {
-                                                            login_state.set(LoginState::Error(
-                                                                format!(
-                                                                    "{}: {}",
-                                                                    tid!("error-json"),
-                                                                    e
-                                                                ),
-                                                            ));
-                                                            return;
-                                                        }
-                                                    }
-                                                } else if response.status().as_u16() != 404 {
-                                                    login_state.set(LoginState::Error(format!(
-                                                        "{}: {}",
-                                                        tid!("error-unexpected-status"),
-                                                        response.status()
-                                                    )));
-                                                    return;
-                                                }
-
-                                                consecutive_errors = 0;
-                                                wait_after_secs = 5;
-                                            }
-                                            Err(_) => {
-                                                consecutive_errors =
-                                                    consecutive_errors.saturating_add(1);
-                                                let backoff = 5u64.saturating_mul(
-                                                    1u64 << (consecutive_errors
-                                                        .saturating_sub(1)
-                                                        .min(2))
-                                                        as u32,
-                                                );
-                                                wait_after_secs = backoff.min(30);
-                                            }
-                                        }
-
-                                        #[cfg(not(target_arch = "wasm32"))]
-                                        {
-                                            tokio::time::sleep(std::time::Duration::from_secs(
-                                                wait_after_secs,
-                                            ))
-                                            .await;
-                                        }
-                                        #[cfg(target_arch = "wasm32")]
-                                        gloo_timers::future::sleep(std::time::Duration::from_secs(
-                                            wait_after_secs,
-                                        ))
-                                        .await;
-                                    }
-
-                                    login_state.set(LoginState::Error(
-                                        tid!("error-login-timeout").to_string(),
-                                    ));
-                                });
-                            }
-                            Err(e) => {
-                                login_state.set(LoginState::Error(format!(
-                                    "{}: {}",
-                                    tid!("error-json"),
-                                    e
-                                )));
-                            }
-                        }
-                    } else {
-                        login_state.set(LoginState::Error(format!(
-                            "{}: {}",
-                            tid!("error-server"),
-                            response.status()
-                        )));
+                Ok(client) => {
+                    if let Err(e) = client.mkcol(&remote_path_value).await {
+                        log::warn!(
+                            "Failed to ensure Nextcloud folder '{}' exists: {}",
+                            remote_path_value,
+                            e
+                        );
                     }
                 }
                 Err(e) => {
-                    login_state.set(LoginState::Error(format!(
-                        "{}: {}",
-                        tid!("error-connection"),
-                        e
-                    )));
+                    log::warn!("Failed to build WebDAV client after successful auth: {}", e);
                 }
             }
+
+            let mut st_settings =
+                spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
+            st_settings.nextcloud_url = server_url_value.clone();
+            st_settings.nextcloud_username = username_value;
+            st_settings.nextcloud_app_password = app_password_value;
+            st_settings.nextcloud_remote_path = remote_path_value;
+
+            if let Err(e) = spacetime_settings_service::save_spacetime_settings(&st_settings) {
+                log::error!("Failed to persist Nextcloud settings: {}", e);
+            }
+
+            server_url.set(server_url_value);
+            current_settings.set(Some(st_settings));
+            details_expanded.set(false);
+            on_status_message.call(format!("✅ {}", tid!("sync-login-success-folder")));
         });
+    };
+
+    let on_auth_error = move |error_message: String| {
+        on_status_message.call(format!("❌ {}: {}", tid!("sync-error"), error_message));
     };
 
     let delete_settings = move |_| {
@@ -339,7 +137,6 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
         }
         current_settings.set(None);
         details_expanded.set(false);
-        login_state.set(LoginState::NotStarted);
         on_status_message.call(format!("✅ {}", tid!("sync-settings-deleted")));
     };
 
@@ -482,47 +279,40 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
                     }
                 }
 
-                match login_state() {
-                    LoginState::NotStarted => rsx! {
-                        button {
-                            class: "btn-primary",
-                            onclick: start_login,
-                            disabled: server_url().trim().is_empty() || !server_url().starts_with("http"),
-                            "🔐 "
-                            {tid!("sync-login")}
-                        }
-                    },
-                    LoginState::InitiatingFlow => rsx! {
-                        div { style: "padding: 12px; background: #fff3cd; border-radius: 4px; text-align: center;",
-                            "🔄 "
-                            {tid!("sync-connecting")}
-                        }
-                    },
-                    LoginState::WaitingForUser { login_url, poll_url: _, token: _ } => {
-                        rsx! {
-                            div { style: "padding: 12px; background: #d1ecf1; border-radius: 4px;",
-                                p { style: "margin: 0 0 12px 0; font-size: 14px;", {tid!("sync-login-instructions")} }
-                                a {
-                                    href: "{login_url}",
-                                    target: "_blank",
-                                    style: "display: block; padding: 12px; background: #0066cc; color: white; text-decoration: none; border-radius: 4px; text-align: center; font-weight: 600;",
-                                    "🌐 "
-                                    {tid!("sync-login-browser")}
-                                }
-                            }
-                        }
+                if server_url().trim().is_empty() || !server_url().starts_with("http") {
+                    button {
+                        class: "btn-primary",
+                        disabled: true,
+                        "🔐 "
+                        {tid!("sync-login")}
                     }
-                    LoginState::Error(error) => rsx! {
-                        div { style: "padding: 12px; background: #f8d7da; border-radius: 4px; color: #721c24;",
-                            p { style: "margin: 0; font-size: 14px;", "{error}" }
-                            button {
-                                class: "btn-primary",
-                                style: "margin-top: 12px;",
-                                onclick: move |_| login_state.set(LoginState::NotStarted),
-                                "🔄 Erneut versuchen"
-                            }
-                        }
-                    },
+                } else {
+                    NextcloudAuthComponent {
+                        server_url: server_url(),
+                        on_success: on_auth_success,
+                        on_error: on_auth_error,
+                        show_info_box: false,
+                        show_success_state: false,
+                        labels: Some(AuthLabels {
+                            login_button: format!("🔐 {}", tid!("sync-login")),
+                            connecting: format!("🔄 {}", tid!("sync-connecting")),
+                            waiting: tid!("sync-waiting").to_string(),
+                            polling_background: tid!("sync-polling-background").to_string(),
+                            instructions: tid!("sync-login-instructions").to_string(),
+                            open_browser: format!("🌐 {}", tid!("sync-login-browser")),
+                            login_success: format!("✅ {}", tid!("sync-login-success")),
+                            error_title: format!("❌ {}", tid!("sync-error")),
+                            retry_button: format!("🔄 {}", tid!("action-retry")),
+                            info_title: tid!("sync-login-info-title").to_string(),
+                            step1: tid!("sync-login-step1").to_string(),
+                            step2: tid!("sync-login-step2").to_string(),
+                            step3: tid!("sync-login-step3").to_string(),
+                            step4: tid!("sync-login-step4").to_string(),
+                            step5: tid!("sync-login-step5").to_string(),
+                            next_check_in: tid!("sync-next-check-in").to_string(),
+                            waiting_icon: "🔄".to_string(),
+                        }),
+                    }
                 }
             }
         }

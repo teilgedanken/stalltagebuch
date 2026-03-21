@@ -184,12 +184,23 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
 
         let include_images = include_photo_files();
         let tracking_id = ulid::Ulid::new().to_string();
-        create_backup_started_for_export(crate::spacetime::CreateBackupStartedArgs {
-            backup_id: tracking_id.clone(),
-            kind: "file".to_string(),
-            include_images,
-            local_path: None,
-        });
+        if let Err(err) =
+            create_backup_started_for_export(crate::spacetime::CreateBackupStartedArgs {
+                backup_id: tracking_id.clone(),
+                kind: "file".to_string(),
+                include_images,
+                local_path: None,
+            })
+        {
+            log::warn!(
+                "Failed to record export backup start in SpacetimeDB: {}",
+                err
+            );
+            export_status.set(format!("❌ {}: {}", tid!("export-failed"), err));
+            export_progress.set(None);
+            is_exporting.set(false);
+            return;
+        }
         let finish_backup_reducer = finish_backup_for_export.clone();
 
         spawn(async move {
@@ -207,7 +218,7 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
             {
                 Ok(stats) => {
                     let path_str = stats.path.display().to_string();
-                    finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
                         backup_id: tracking_id.clone(),
                         status: "success".to_string(),
                         local_path: Some(path_str.clone()),
@@ -220,14 +231,20 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                         photos_files_included: stats.photos_files_included as i32,
                         photos_files_missing: stats.photos_files_missing as i32,
                         error_message: None,
-                    });
+                    }) {
+                        log::warn!(
+                            "Failed to record successful export backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
                     status_sig.with_mut(|s| {
                         *s = format!("✅ {}\n📁 {}", tid!("export-success"), path_str)
                     });
                     progress_sig.with_mut(|s| *s = Some(ExportProgress::Complete));
                 }
                 Err(e) => {
-                    finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
                         backup_id: tracking_id.clone(),
                         status: "failed".to_string(),
                         local_path: None,
@@ -240,7 +257,13 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                         photos_files_included: 0,
                         photos_files_missing: 0,
                         error_message: Some(e.to_string()),
-                    });
+                    }) {
+                        log::warn!(
+                            "Failed to record failed export backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
                     status_sig.with_mut(|s| *s = format!("❌ {}: {}", tid!("export-failed"), e));
                     progress_sig.with_mut(|s| *s = None);
                 }
@@ -342,12 +365,24 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
 
         let include_images = include_photo_files();
         let tracking_id = ulid::Ulid::new().to_string();
-        create_backup_started_for_upload(crate::spacetime::CreateBackupStartedArgs {
-            backup_id: tracking_id.clone(),
-            kind: "nextcloud".to_string(),
-            include_images,
-            local_path: None,
-        });
+        if let Err(err) =
+            create_backup_started_for_upload(crate::spacetime::CreateBackupStartedArgs {
+                backup_id: tracking_id.clone(),
+                kind: "nextcloud".to_string(),
+                include_images,
+                local_path: None,
+            })
+        {
+            log::warn!(
+                "Failed to record upload backup start in SpacetimeDB: {}",
+                err
+            );
+            export_progress.set(None);
+            is_backup_uploading.set(false);
+            on_status_message
+                .call(tid!("backup-upload-failed", error : err.to_string()).to_string());
+            return;
+        }
         let finish_backup_reducer = finish_backup_for_upload.clone();
 
         spawn(async move {
@@ -368,39 +403,55 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                         .await
                     {
                         Ok(filename) => {
-                            finish_backup_reducer(crate::spacetime::FinishBackupArgs {
-                                backup_id: tracking_id.clone(),
-                                status: "success".to_string(),
-                                local_path: Some(local_path),
-                                remote_filename: Some(filename.clone()),
-                                zip_size_bytes: Some(stats.zip_size_bytes as i64),
-                                quails: stats.quails as i32,
-                                events: stats.events as i32,
-                                egg_records: stats.egg_records as i32,
-                                photos_meta: stats.photos_meta as i32,
-                                photos_files_included: stats.photos_files_included as i32,
-                                photos_files_missing: stats.photos_files_missing as i32,
-                                error_message: None,
-                            });
+                            if let Err(err) =
+                                finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                                    backup_id: tracking_id.clone(),
+                                    status: "success".to_string(),
+                                    local_path: Some(local_path),
+                                    remote_filename: Some(filename.clone()),
+                                    zip_size_bytes: Some(stats.zip_size_bytes as i64),
+                                    quails: stats.quails as i32,
+                                    events: stats.events as i32,
+                                    egg_records: stats.egg_records as i32,
+                                    photos_meta: stats.photos_meta as i32,
+                                    photos_files_included: stats.photos_files_included as i32,
+                                    photos_files_missing: stats.photos_files_missing as i32,
+                                    error_message: None,
+                                })
+                            {
+                                log::warn!(
+                                    "Failed to record successful uploaded backup {} in SpacetimeDB: {}",
+                                    tracking_id,
+                                    err
+                                );
+                            }
                             on_status_message.call(
                                 tid!("backup-upload-success", filename : filename).to_string(),
                             );
                         }
                         Err(error) => {
-                            finish_backup_reducer(crate::spacetime::FinishBackupArgs {
-                                backup_id: tracking_id.clone(),
-                                status: "failed".to_string(),
-                                local_path: None,
-                                remote_filename: None,
-                                zip_size_bytes: None,
-                                quails: 0,
-                                events: 0,
-                                egg_records: 0,
-                                photos_meta: 0,
-                                photos_files_included: 0,
-                                photos_files_missing: 0,
-                                error_message: Some(error.to_string()),
-                            });
+                            if let Err(err) =
+                                finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                                    backup_id: tracking_id.clone(),
+                                    status: "failed".to_string(),
+                                    local_path: None,
+                                    remote_filename: None,
+                                    zip_size_bytes: None,
+                                    quails: 0,
+                                    events: 0,
+                                    egg_records: 0,
+                                    photos_meta: 0,
+                                    photos_files_included: 0,
+                                    photos_files_missing: 0,
+                                    error_message: Some(error.to_string()),
+                                })
+                            {
+                                log::warn!(
+                                    "Failed to record failed uploaded backup {} in SpacetimeDB: {}",
+                                    tracking_id,
+                                    err
+                                );
+                            }
                             on_status_message.call(
                                 tid!("backup-upload-failed", error : error.to_string()).to_string(),
                             );
@@ -408,7 +459,7 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                     }
                 }
                 Err(error) => {
-                    finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
                         backup_id: tracking_id.clone(),
                         status: "failed".to_string(),
                         local_path: None,
@@ -421,7 +472,13 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                         photos_files_included: 0,
                         photos_files_missing: 0,
                         error_message: Some(error.to_string()),
-                    });
+                    }) {
+                        log::warn!(
+                            "Failed to record export/upload preparation failure for backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
                     on_status_message
                         .call(tid!("backup-upload-failed", error : error.to_string()).to_string());
                 }

@@ -117,16 +117,22 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
         spawn(async move {
             if eggs_count == 0 {
                 if let Some(uuid) = current_uuid {
-                    delete_reducer(uuid);
+                    if let Err(err) = delete_reducer(uuid) {
+                        error.set(Some(err.to_string()));
+                        return;
+                    }
                 }
             } else {
-                upsert_reducer(spacetime::UpsertEggRecordArgs {
+                if let Err(err) = upsert_reducer(spacetime::UpsertEggRecordArgs {
                     uuid: record_uuid,
                     record_date: record_timestamp,
                     total_eggs: eggs_count,
                     notes: notes_opt,
                     device_id,
-                });
+                }) {
+                    error.set(Some(err.to_string()));
+                    return;
+                }
             }
 
             success.set(true);

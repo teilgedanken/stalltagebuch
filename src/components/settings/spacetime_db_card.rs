@@ -8,9 +8,10 @@ use dioxus_i18n::tid;
 
 /// Card component that displays connection status and allows configuring
 /// SpacetimeDB connection settings.
-/// Note: Full integration with the generated SDK hooks is in progress.
+/// The save action notifies the app root so the Spacetime session can be
+/// re-initialized immediately with the new credentials.
 #[component]
-pub fn SpacetimeDbCard() -> Element {
+pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettings>) -> Element {
     let ctx = use_spacetimedb_context();
 
     // Load persisted settings on mount.
@@ -23,15 +24,96 @@ pub fn SpacetimeDbCard() -> Element {
     let mut status_msg = use_signal(|| String::new());
 
     let conn_state = ctx.state;
+    let connection = ctx.connection;
     let quails = ctx.tables.quails;
     let events = ctx.tables.quail_events;
     let egg_records = ctx.tables.egg_records;
 
-    let connection_label = move || match conn_state() {
-        ConnectionState::Disconnected => tid!("spacetime-card-connection-disconnected").to_string(),
-        ConnectionState::Connecting => tid!("spacetime-card-connection-connecting").to_string(),
-        ConnectionState::Connected(_, _) => tid!("spacetime-card-connection-connected").to_string(),
-        ConnectionState::Error => tid!("spacetime-card-connection-error").to_string(),
+    let connection_label = move || {
+        let state = conn_state();
+        let has_connection = connection().is_some();
+
+        if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
+            return tid!("spacetime-card-connection-disconnected").to_string();
+        }
+
+        match state {
+            ConnectionState::Disconnected => {
+                tid!("spacetime-card-connection-disconnected").to_string()
+            }
+            ConnectionState::Connecting => tid!("spacetime-card-connection-connecting").to_string(),
+            ConnectionState::Reconnecting { .. } => {
+                tid!("spacetime-card-connection-connecting").to_string()
+            }
+            ConnectionState::Connected(_, _) => {
+                tid!("spacetime-card-connection-connected").to_string()
+            }
+            ConnectionState::Error => tid!("spacetime-card-connection-error").to_string(),
+        }
+    };
+
+    let connection_icon = move || {
+        let state = conn_state();
+        let has_connection = connection().is_some();
+
+        if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
+            return "⚪";
+        }
+
+        match state {
+            ConnectionState::Connected(_, _) => "🟢",
+            ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => "🟡",
+            ConnectionState::Error => "🔴",
+            ConnectionState::Disconnected => "⚪",
+        }
+    };
+
+    let status_button_style = move || {
+        let state = conn_state();
+        let has_connection = connection().is_some();
+
+        if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
+            return "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #6c757d; color: #fff; cursor: pointer; text-align: left;";
+        }
+
+        match state {
+            ConnectionState::Connected(_, _) => {
+                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #28a745; color: #fff; cursor: pointer; text-align: left;"
+            }
+            ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => {
+                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #fd7e14; color: #fff; cursor: pointer; text-align: left;"
+            }
+            ConnectionState::Error => {
+                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #dc3545; color: #fff; cursor: pointer; text-align: left;"
+            }
+            ConnectionState::Disconnected => {
+                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #6c757d; color: #fff; cursor: pointer; text-align: left;"
+            }
+        }
+    };
+
+    let details_panel_style = move || {
+        let state = conn_state();
+        let has_connection = connection().is_some();
+
+        if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
+            return "margin-top: 12px; padding: 12px; background: #f1f3f5; border-radius: 4px; color: #495057;";
+        }
+
+        match state {
+            ConnectionState::Connected(_, _) => {
+                "margin-top: 12px; padding: 12px; background: #d4edda; border-radius: 4px; color: #155724;"
+            }
+            ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => {
+                "margin-top: 12px; padding: 12px; background: #fff3cd; border-radius: 4px; color: #856404;"
+            }
+            ConnectionState::Error => {
+                "margin-top: 12px; padding: 12px; background: #f8d7da; border-radius: 4px; color: #721c24;"
+            }
+            ConnectionState::Disconnected => {
+                "margin-top: 12px; padding: 12px; background: #f1f3f5; border-radius: 4px; color: #495057;"
+            }
+        }
     };
 
     let save_and_connect = move |_| {
@@ -55,7 +137,7 @@ pub fn SpacetimeDbCard() -> Element {
                 status_msg.set(format!("✅ {}", tid!("spacetime-card-saved")));
                 is_logged_in.set(true);
                 show_details.set(false);
-                // TODO: Trigger reconnection with new settings via generated SDK hooks
+                on_spacetime_settings_saved.call(settings);
             }
             Err(e) => {
                 status_msg.set(format!(
@@ -144,9 +226,9 @@ pub fn SpacetimeDbCard() -> Element {
             } else {
                 button {
                     onclick: toggle_details,
-                    style: "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #28a745; color: #fff; cursor: pointer; text-align: left;",
+                    style: "{status_button_style()}",
                     div { style: "display: flex; align-items: center; justify-content: space-between; gap: 12px;",
-                        span { "✅ {tid!(\"spacetime-card-connected-button\")}" }
+                        span { "{connection_icon()} {connection_label()}" }
                         span { style: "font-size: 13px; opacity: 0.95;",
                             {if show_details() {
                                 tid!("spacetime-card-hide-details")
@@ -158,7 +240,7 @@ pub fn SpacetimeDbCard() -> Element {
                 }
 
                 if show_details() {
-                    div { style: "margin-top: 12px; padding: 12px; background: #d4edda; border-radius: 4px; color: #155724;",
+                    div { style: "{details_panel_style()}",
                         p { style: "margin: 0 0 8px 0; font-weight: 600;", {tid!("spacetime-card-connection-info")} }
                         p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-server-value", value: server_url())} }
                         p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-database-value", value: database_name())} }

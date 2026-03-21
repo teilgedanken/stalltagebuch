@@ -135,7 +135,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
             spawn(async move {
                 // Create reducer call for update
-                update_reducer(spacetime::UpdateQuailArgs {
+                if let Err(err) = update_reducer(spacetime::UpdateQuailArgs {
                     uuid: quail_uuid.clone(),
                     name: updated_name,
                     gender: updated_gender,
@@ -146,7 +146,11 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     },
                     profile_photo: selected_photo,
                     birthday: birthday(),
-                });
+                }) {
+                    error.set(err.to_string());
+                    saving.set(false);
+                    return;
+                }
 
                 success.set(true);
                 saving.set(false);
@@ -170,7 +174,11 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
         spawn(async move {
             if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                delete_reducer_call(uuid.to_string());
+                if let Err(err) = delete_reducer_call(uuid.to_string()) {
+                    error.set(err.to_string());
+                    return;
+                }
+
                 on_navigate_delete.call(Screen::ProfileList);
             }
         });
@@ -344,7 +352,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                 on_delete: move |photo_id: String| {
                                     let delete_photo_fn = delete_photo.clone();
                                     // Delete photo via SpacetimeDB reducer
-                                    delete_photo_fn(photo_id);
+                                    if let Err(err) = delete_photo_fn(photo_id) {
+                                        error.set(err.to_string());
+                                    }
                                     // Photo list will auto-update via subscriptions
                                 },
                                 on_select: move |photo_id: String| {

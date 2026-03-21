@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
+use models::SpacetimeSettings;
 use photo_gallery::PhotoGalleryContext;
 
 mod camera;
@@ -129,6 +130,37 @@ pub enum Screen {
     Settings,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+struct SpacetimeRuntimeConfig {
+    uri: String,
+    module: String,
+    token: Option<String>,
+}
+
+impl SpacetimeRuntimeConfig {
+    fn from_settings(settings: &SpacetimeSettings) -> Self {
+        let uri = if !settings.server_url.is_empty() {
+            settings.server_url.clone()
+        } else {
+            "http://127.0.0.1:3000".to_string()
+        };
+
+        let module = if !settings.database_name.is_empty() {
+            settings.database_name.clone()
+        } else {
+            "stalltagebuch-server".to_string()
+        };
+
+        let token = if settings.token.trim().is_empty() {
+            None
+        } else {
+            Some(settings.token.clone())
+        };
+
+        Self { uri, module, token }
+    }
+}
+
 #[component]
 fn PhotoSyncManager() -> Element {
     spacetime::use_subscription(&["SELECT * FROM photos"]);
@@ -183,30 +215,13 @@ fn PhotoSyncManager() -> Element {
 }
 
 #[component]
-fn App() -> Element {
-    let mut current_screen = use_signal(|| Screen::Home);
-    use_init_i18n(i18n::init_i18n);
-
-    // Provide PhotoGalleryContext to photo-gallery components (storage path from service)
-    use_context_provider(|| PhotoGalleryContext::new(services::photo_service::get_storage_path()));
-
-    // Load saved SpacetimeDB authentication token from persistent storage
-    let saved_settings =
-        services::spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
-    let spacetime_uri = if !saved_settings.server_url.is_empty() {
-        saved_settings.server_url.clone()
-    } else {
-        "http://127.0.0.1:3000".to_string()
-    };
-    let spacetime_module = if !saved_settings.database_name.is_empty() {
-        saved_settings.database_name.clone()
-    } else {
-        "stalltagebuch-server".to_string()
-    };
-
-    // Load the saved authentication token to maintain SpacetimeDB client identity across restarts
-    let saved_token = spacetime::load_saved_token();
-
+fn SpacetimeSession(
+    mut current_screen: Signal<Screen>,
+    spacetime_uri: String,
+    spacetime_module: String,
+    saved_token: Option<String>,
+    on_spacetime_settings_saved: EventHandler<SpacetimeSettings>,
+) -> Element {
     // Provide the generated SpacetimeDB context tree-wide.
     // Pass the saved token so we reconnect as the same client identity.
     let _spacetime_ctx =
@@ -219,61 +234,134 @@ fn App() -> Element {
     let _device_registration = spacetime::use_register_device();
 
     rsx! {
+        PhotoSyncManager {}
+
+        // Main Content
+        div { style: "flex: 1; overflow-y: auto;",
+            match current_screen() {
+                Screen::Home => rsx! {
+                    HomeScreen { on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::ProfileList => rsx! {
+                    ProfileListScreen { on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::ProfileDetail(id) => rsx! {
+                    ProfileDetailScreen { quail_id: id, on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::ProfileEdit(id) => rsx! {
+                    ProfileEditScreen { quail_id: id, on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::AddProfile => rsx! {
+                    AddProfileScreen { on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::EventAdd { quail_id, quail_name } => {
+                    rsx! {
+                        EventAdd {
+                            quail_id,
+                            quail_name,
+                            on_navigate: move |s| current_screen.set(s),
+                        }
+                    }
+                }
+                Screen::EventEdit { event_id, quail_id } => rsx! {
+                    EventEditScreen { event_id, quail_id, on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::EggTracking(date_opt) => rsx! {
+                    EggTrackingScreen { date: date_opt, on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::EggHistory => rsx! {
+                    EggHistoryScreen { on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::Statistics => rsx! {
+                    StatisticsScreen { on_navigate: move |s| current_screen.set(s) }
+                },
+                Screen::Settings => rsx! {
+                    SettingsScreen {
+                        on_navigate: move |s| current_screen.set(s),
+                        on_spacetime_settings_saved,
+                    }
+                },
+            }
+        }
+
+        // Bottom Navigation Bar
+        NavigationBar {
+            current_screen: current_screen(),
+            on_navigate: move |screen| current_screen.set(screen),
+        }
+    }
+}
+
+#[component]
+fn App() -> Element {
+    use_init_i18n(i18n::init_i18n);
+
+    // Provide PhotoGalleryContext to photo-gallery components (storage path from service)
+    use_context_provider(|| PhotoGalleryContext::new(services::photo_service::get_storage_path()));
+
+    let saved_settings =
+        services::spacetime_settings_service::load_spacetime_settings().unwrap_or_default();
+    let is_configured = saved_settings.is_spacetime_configured();
+
+    // Prefer the persisted token helper so we keep identity semantics unchanged.
+    let mut settings_for_runtime = saved_settings.clone();
+    if let Some(saved_token) = spacetime::load_saved_token() {
+        settings_for_runtime.token = saved_token;
+    }
+
+    let mut runtime_config =
+        use_signal(move || SpacetimeRuntimeConfig::from_settings(&settings_for_runtime));
+    let mut session_generation = use_signal_sync(|| 0_u64);
+
+    // Navigate directly to Settings on first launch (no SpacetimeDB config yet)
+    let current_screen = use_signal(move || {
+        if is_configured {
+            Screen::Home
+        } else {
+            Screen::Settings
+        }
+    });
+
+    let on_spacetime_settings_saved = move |settings: SpacetimeSettings| {
+        runtime_config.set(SpacetimeRuntimeConfig::from_settings(&settings));
+        session_generation.with_mut(|generation| {
+            *generation = generation.saturating_add(1);
+        });
+        log::info!(
+            "SpacetimeDB settings updated, restarting connection session (generation={})",
+            session_generation()
+        );
+    };
+
+    let runtime = runtime_config();
+
+    rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
         div { style: "display: flex; flex-direction: column; height: 100vh; font-family: sans-serif;",
-            PhotoSyncManager {}
-
-            // Main Content
-            div { style: "flex: 1; overflow-y: auto;",
-                match current_screen() {
-                    Screen::Home => rsx! {
-                        HomeScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::ProfileList => rsx! {
-                        ProfileListScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::ProfileDetail(id) => rsx! {
-                        ProfileDetailScreen { quail_id: id, on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::ProfileEdit(id) => rsx! {
-                        ProfileEditScreen { quail_id: id, on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::AddProfile => rsx! {
-                        AddProfileScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::EventAdd { quail_id, quail_name } => {
-                        rsx! {
-                            EventAdd {
-                                quail_id,
-                                quail_name,
-                                on_navigate: move |s| current_screen.set(s),
-                            }
-                        }
+            // We intentionally swap wrapper element types to force a hard subtree remount.
+            // This reliably restarts the Spacetime provider effect after credentials are saved.
+            if session_generation() % 2 == 0 {
+                div {
+                    SpacetimeSession {
+                        current_screen,
+                        spacetime_uri: runtime.uri,
+                        spacetime_module: runtime.module,
+                        saved_token: runtime.token,
+                        on_spacetime_settings_saved,
                     }
-                    Screen::EventEdit { event_id, quail_id } => rsx! {
-                        EventEditScreen { event_id, quail_id, on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::EggTracking(date_opt) => rsx! {
-                        EggTrackingScreen { date: date_opt, on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::EggHistory => rsx! {
-                        EggHistoryScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::Statistics => rsx! {
-                        StatisticsScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
-                    Screen::Settings => rsx! {
-                        SettingsScreen { on_navigate: move |s| current_screen.set(s) }
-                    },
                 }
-            }
-
-            // Bottom Navigation Bar
-            NavigationBar {
-                current_screen: current_screen(),
-                on_navigate: move |screen| current_screen.set(screen),
+            } else {
+                section {
+                    SpacetimeSession {
+                        current_screen,
+                        spacetime_uri: runtime.uri,
+                        spacetime_module: runtime.module,
+                        saved_token: runtime.token,
+                        on_spacetime_settings_saved,
+                    }
+                }
             }
         }
     }

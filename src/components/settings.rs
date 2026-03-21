@@ -5,6 +5,7 @@ mod nextcloud_card;
 mod spacetime_db_card;
 
 use crate::Screen;
+use crate::models::SpacetimeSettings;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
@@ -15,7 +16,10 @@ use nextcloud_card::NextcloudCard;
 use spacetime_db_card::SpacetimeDbCard;
 
 #[component]
-pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
+pub fn SettingsScreen(
+    on_navigate: EventHandler<Screen>,
+    on_spacetime_settings_saved: EventHandler<SpacetimeSettings>,
+) -> Element {
     let mut status_message = use_signal_sync(|| String::new());
 
     rsx! {
@@ -41,7 +45,7 @@ pub fn SettingsScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             NetworkCheckCard {}
-            SpacetimeDbCard {}
+            SpacetimeDbCard { on_spacetime_settings_saved }
             DevicesCard {}
             BackupCard {
                 on_status_message: move |message| status_message.set(message),

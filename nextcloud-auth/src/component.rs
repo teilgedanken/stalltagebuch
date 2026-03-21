@@ -15,6 +15,12 @@ pub struct NextcloudAuthProps {
     /// Custom labels for UI elements (optional)
     #[props(default)]
     pub labels: Option<AuthLabels>,
+    /// Show the informational step list below the auth panel
+    #[props(default = true)]
+    pub show_info_box: bool,
+    /// Show the transient success box before the host switches UI
+    #[props(default = true)]
+    pub show_success_state: bool,
 }
 
 /// Custom labels for the authentication UI
@@ -35,6 +41,20 @@ pub struct AuthLabels {
     pub step3: String,
     pub step4: String,
     pub step5: String,
+    pub next_check_in: String,
+    pub waiting_icon: String,
+}
+
+async fn sleep_for(duration: std::time::Duration) {
+    tokio::time::sleep(duration).await;
+}
+
+fn format_next_check(template: &str, seconds: u64) -> String {
+    let seconds_str = seconds.to_string();
+    template
+        .replace("{ $seconds }", &seconds_str)
+        .replace("{$seconds}", &seconds_str)
+        .replace("{seconds}", &seconds_str)
 }
 
 /// Nextcloud authentication component
@@ -59,6 +79,7 @@ pub struct AuthLabels {
 #[component]
 pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
     let mut login_state = use_signal(|| LoginState::NotStarted);
+    let mut next_poll_in_seconds = use_signal(|| None::<u64>);
 
     let labels = props.labels.clone().unwrap_or_else(|| AuthLabels {
         login_button: "🔐 Login to Nextcloud".to_string(),
@@ -76,6 +97,8 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
         step3: "Login to your Nextcloud instance".to_string(),
         step4: "Authorize access".to_string(),
         step5: "Return to the app".to_string(),
+        next_check_in: "Next check in {seconds} s".to_string(),
+        waiting_icon: "🔄".to_string(),
     });
 
     let start_login = {
@@ -84,6 +107,7 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
         let on_error = props.on_error.clone();
 
         move |_| {
+            next_poll_in_seconds.set(None);
             login_state.set(LoginState::InitiatingFlow);
             let server_url = server_url.clone();
             let on_success = on_success.clone();
@@ -104,14 +128,16 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                             poll_url: poll_url.clone(),
                             token: token.clone(),
                         });
+                        next_poll_in_seconds.set(Some(1));
 
                         // Start polling in background
                         spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                            sleep_for(std::time::Duration::from_millis(500)).await;
 
                             let mut consecutive_errors = 0;
                             for attempt in 0..60 {
                                 log::debug!("Login polling attempt {}", attempt + 1);
+                                next_poll_in_seconds.set(None);
 
                                 let wait_secs = match auth_service
                                     .poll_login(&poll_url, &token)
@@ -119,6 +145,7 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                                 {
                                     Ok(Some(credentials)) => {
                                         log::info!("Login successful!");
+                                        next_poll_in_seconds.set(None);
                                         login_state.set(LoginState::Success(credentials.clone()));
                                         on_success.call(credentials);
                                         return;
@@ -141,12 +168,17 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                                     }
                                 };
 
-                                tokio::time::sleep(std::time::Duration::from_secs(wait_secs)).await;
+                                next_poll_in_seconds.set(Some(wait_secs));
+                                for remaining in (1..=wait_secs).rev() {
+                                    sleep_for(std::time::Duration::from_secs(1)).await;
+                                    next_poll_in_seconds.set(Some(remaining.saturating_sub(1)));
+                                }
                             }
 
                             let error_msg =
                                 "Login timeout - no response after 5 minutes".to_string();
                             log::error!("Login timeout");
+                            next_poll_in_seconds.set(None);
                             login_state.set(LoginState::Error(error_msg.clone()));
                             if let Some(handler) = on_error {
                                 handler.call(error_msg);
@@ -154,6 +186,7 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                         });
                     }
                     Err(e) => {
+                        next_poll_in_seconds.set(None);
                         let error_msg = format!("Failed to initiate login: {}", e);
                         log::error!("{}", error_msg);
                         login_state.set(LoginState::Error(error_msg.clone()));
@@ -188,8 +221,8 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                         div {
                             style: "display: flex; align-items: center; gap: 12px; margin-bottom: 12px;",
                             div {
-                                style: "font-size: 32px; animation: spin 2s linear infinite;",
-                                "💠"
+                                style: "font-size: 28px; animation: spin 1.4s linear infinite;",
+                                "{labels.waiting_icon}"
                             }
                             div {
                                 p {
@@ -199,6 +232,14 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                                 p {
                                     style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
                                     "{labels.polling_background}"
+                                }
+                                if let Some(next_check_in) = next_poll_in_seconds() {
+                                    if next_check_in > 0 {
+                                        p {
+                                            style: "margin: 4px 0 0 0; font-size: 12px; color: #345;",
+                                            "{format_next_check(&labels.next_check_in, next_check_in)}"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -214,10 +255,16 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                         }
                     }
                 },
-                LoginState::Success(_) => rsx! {
-                    div {
-                        style: "padding: 12px; background: #d4edda; border-radius: 4px; text-align: center; color: #155724;",
-                        "{labels.login_success}"
+                LoginState::Success(_) => {
+                    if props.show_success_state {
+                        rsx! {
+                            div {
+                                style: "padding: 12px; background: #d4edda; border-radius: 4px; text-align: center; color: #155724;",
+                                "{labels.login_success}"
+                            }
+                        }
+                    } else {
+                        rsx! {}
                     }
                 },
                 LoginState::Error(error) => rsx! {
@@ -238,20 +285,22 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                 },
             }
 
-            // Info box
-            div {
-                style: "margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #0066cc;",
-                p {
-                    style: "margin: 0 0 8px 0; font-size: 14px; font-weight: 600;",
-                    "{labels.info_title}"
-                }
-                ul {
-                    style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
-                    li { "{labels.step1}" }
-                    li { "{labels.step2}" }
-                    li { "{labels.step3}" }
-                    li { "{labels.step4}" }
-                    li { "{labels.step5}" }
+            if props.show_info_box {
+                // Info box
+                div {
+                    style: "margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #0066cc;",
+                    p {
+                        style: "margin: 0 0 8px 0; font-size: 14px; font-weight: 600;",
+                        "{labels.info_title}"
+                    }
+                    ul {
+                        style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
+                        li { "{labels.step1}" }
+                        li { "{labels.step2}" }
+                        li { "{labels.step3}" }
+                        li { "{labels.step4}" }
+                        li { "{labels.step5}" }
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-use std::path::{ PathBuf};
+use std::path::PathBuf;
 
 pub fn photo_storage_root() -> PathBuf {
     #[cfg(target_os = "android")]

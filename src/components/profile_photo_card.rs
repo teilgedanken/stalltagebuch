@@ -1,5 +1,5 @@
-use crate::spacetime;
 use super::synced_photo::{SyncedCollectionFullscreen, SyncedPreviewImage};
+use crate::spacetime;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
@@ -123,7 +123,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                     Ok(paths) => {
                                         if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_for_gallery) {
                                             let collection_uuid = quail_uuid;
-                                            create_photo_collection_gallery(spacetime::CreatePhotoCollectionArgs {
+                                            if let Err(err) = create_photo_collection_gallery(spacetime::CreatePhotoCollectionArgs {
                                                 uuid: collection_uuid.to_string(),
                                                 quail_uuid: Some(quail_uuid.to_string()),
                                                 event_uuid: None,
@@ -132,7 +132,15 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                     quail_uuid.to_string().chars().take(8).collect::<String>()
                                                 ),
                                                 device_id: device_id.clone(),
-                                            });
+                                            }) {
+                                                upload_error.set(format!(
+                                                    "{}: {}",
+                                                    tid!("error-selection-failed"),
+                                                    err
+                                                ));
+                                                uploading.set(false);
+                                                return;
+                                            }
 
                                             let mut profile_photo_set = false;
                                             for picked_path in paths {
@@ -143,19 +151,33 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                             .file_stem()
                                                             .and_then(|s| s.to_str())
                                                         {
-                                                            create_photo_gallery(spacetime::CreatePhotoArgs {
+                                                            if let Err(err) = create_photo_gallery(spacetime::CreatePhotoArgs {
                                                                 uuid: photo_uuid.to_string(),
                                                                 collection_uuid: collection_uuid.to_string(),
                                                                 relative_path: relative_original.clone(),
                                                                 device_id: device_id.clone(),
-                                                            });
+                                                            }) {
+                                                                upload_error.set(format!(
+                                                                    "{}: {}",
+                                                                    tid!("error-selection-failed"),
+                                                                    err
+                                                                ));
+                                                                continue;
+                                                            }
 
                                                             if needs_profile_photo && !profile_photo_set {
-                                                                set_quail_photo_gallery(
+                                                                if let Err(err) = set_quail_photo_gallery(
                                                                     quail_uuid.to_string(),
                                                                     Some(photo_uuid.to_string()),
-                                                                );
-                                                                profile_photo_set = true;
+                                                                ) {
+                                                                    upload_error.set(format!(
+                                                                        "{}: {}",
+                                                                        tid!("error-selection-failed"),
+                                                                        err
+                                                                    ));
+                                                                } else {
+                                                                    profile_photo_set = true;
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -234,7 +256,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                         let source = path.to_string_lossy().to_string();
                                         if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_for_camera) {
                                             let collection_uuid = quail_uuid;
-                                            create_photo_collection_camera(spacetime::CreatePhotoCollectionArgs {
+                                            if let Err(err) = create_photo_collection_camera(spacetime::CreatePhotoCollectionArgs {
                                                 uuid: collection_uuid.to_string(),
                                                 quail_uuid: Some(quail_uuid.to_string()),
                                                 event_uuid: None,
@@ -243,7 +265,15 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                     quail_uuid.to_string().chars().take(8).collect::<String>()
                                                 ),
                                                 device_id: device_id.clone(),
-                                            });
+                                            }) {
+                                                upload_error.set(format!(
+                                                    "{}: {}",
+                                                    tid!("error-capture-failed"),
+                                                    err
+                                                ));
+                                                uploading.set(false);
+                                                return;
+                                            }
 
                                             match crate::services::photo_service::process_photo(source).await {
                                                 Ok((relative_original, _, _)) => {
@@ -251,18 +281,32 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                         .file_stem()
                                                         .and_then(|s| s.to_str())
                                                     {
-                                                        create_photo_camera(spacetime::CreatePhotoArgs {
+                                                        if let Err(err) = create_photo_camera(spacetime::CreatePhotoArgs {
                                                             uuid: photo_uuid.to_string(),
                                                             collection_uuid: collection_uuid.to_string(),
                                                             relative_path: relative_original.clone(),
                                                             device_id,
-                                                        });
+                                                        }) {
+                                                            upload_error.set(format!(
+                                                                "{}: {}",
+                                                                tid!("error-capture-failed"),
+                                                                err
+                                                            ));
+                                                            uploading.set(false);
+                                                            return;
+                                                        }
 
                                                         if needs_profile_photo {
-                                                            set_quail_photo_camera(
+                                                            if let Err(err) = set_quail_photo_camera(
                                                                 quail_uuid.to_string(),
                                                                 Some(photo_uuid.to_string()),
-                                                            );
+                                                            ) {
+                                                                upload_error.set(format!(
+                                                                    "{}: {}",
+                                                                    tid!("error-capture-failed"),
+                                                                    err
+                                                                ));
+                                                            }
                                                         }
                                                     }
                                                 }

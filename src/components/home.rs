@@ -84,6 +84,9 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 tid!("info-spacetimedb-disconnected").to_string()
                             }
                             ConnectionState::Connecting => tid!("info-spacetimedb-connecting").to_string(),
+                            ConnectionState::Reconnecting { .. } => {
+                                tid!("info-spacetimedb-connecting").to_string()
+                            }
                             ConnectionState::Connected(_, _) => {
                                 tid!("info-spacetimedb-connected").to_string()
                             }

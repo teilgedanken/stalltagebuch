@@ -61,7 +61,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
         let selected_photo_path = photo_path();
         let photo_name_for_display = name_trimmed.clone();
 
-        create_quail(spacetime::CreateQuailArgs {
+        if let Err(err) = create_quail(spacetime::CreateQuailArgs {
             uuid: quail_uuid.clone(),
             name: name_trimmed.to_string(),
             gender: gender_value.as_str().to_string(),
@@ -69,7 +69,11 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             profile_photo: None,
             birthday: None,
             device_id: device_id.clone(),
-        });
+        }) {
+            error.set(Some(err.to_string()));
+            saving.set(false);
+            return;
+        }
 
         let on_navigate_submit = on_navigate.clone();
         let create_photo_collection_reducer = create_photo_collection.clone();
@@ -81,39 +85,59 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                 let collection_uuid = quail_uuid.clone();
 
                 // Create photo collection in Spacetime
-                create_photo_collection_reducer(spacetime::CreatePhotoCollectionArgs {
-                    uuid: collection_uuid.clone(),
-                    quail_uuid: Some(quail_uuid.clone()),
-                    event_uuid: None,
-                    name: format!("Fotos für {}", photo_name_for_display),
-                    device_id: device_id.clone(),
-                });
-
-                // Process the selected photo
-                let source = path.to_string_lossy().to_string();
-                match crate::services::photo_service::process_photo(source).await {
-                    Ok((relative_original, _, _)) => {
-                        if let Some(photo_uuid) = std::path::Path::new(&relative_original)
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                        {
-                            // Create photo record in Spacetime
-                            create_photo_reducer(spacetime::CreatePhotoArgs {
-                                uuid: photo_uuid.to_string(),
-                                collection_uuid: collection_uuid.clone(),
-                                relative_path: relative_original.clone(),
-                                device_id: device_id.clone(),
-                            });
-
-                            // Set this photo as the quail's profile photo
-                            set_quail_photo_reducer(
-                                quail_uuid.to_string(),
-                                Some(photo_uuid.to_string()),
-                            );
+                if let Err(err) =
+                    create_photo_collection_reducer(spacetime::CreatePhotoCollectionArgs {
+                        uuid: collection_uuid.clone(),
+                        quail_uuid: Some(quail_uuid.clone()),
+                        event_uuid: None,
+                        name: format!("Fotos für {}", photo_name_for_display),
+                        device_id: device_id.clone(),
+                    })
+                {
+                    log::warn!(
+                        "Failed to create photo collection for new quail {}: {}",
+                        quail_uuid,
+                        err
+                    );
+                } else {
+                    // Process the selected photo
+                    let source = path.to_string_lossy().to_string();
+                    match crate::services::photo_service::process_photo(source).await {
+                        Ok((relative_original, _, _)) => {
+                            if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                .file_stem()
+                                .and_then(|s| s.to_str())
+                            {
+                                // Create photo record in Spacetime
+                                if let Err(err) = create_photo_reducer(spacetime::CreatePhotoArgs {
+                                    uuid: photo_uuid.to_string(),
+                                    collection_uuid: collection_uuid.clone(),
+                                    relative_path: relative_original.clone(),
+                                    device_id: device_id.clone(),
+                                }) {
+                                    log::warn!(
+                                        "Failed to create photo {} for new quail {}: {}",
+                                        photo_uuid,
+                                        quail_uuid,
+                                        err
+                                    );
+                                } else if let Err(err) = set_quail_photo_reducer(
+                                    quail_uuid.to_string(),
+                                    Some(photo_uuid.to_string()),
+                                ) {
+                                    // The profile already exists; keep the flow successful and log the partial failure.
+                                    log::warn!(
+                                        "Failed to set profile photo {} for new quail {}: {}",
+                                        photo_uuid,
+                                        quail_uuid,
+                                        err
+                                    );
+                                }
+                            }
                         }
-                    }
-                    Err(err) => {
-                        log::warn!("Failed to process photo in AddProfileScreen: {}", err);
+                        Err(err) => {
+                            log::warn!("Failed to process photo in AddProfileScreen: {}", err);
+                        }
                     }
                 }
             }

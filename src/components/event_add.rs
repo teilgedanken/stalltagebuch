@@ -58,7 +58,7 @@ pub fn EventAdd(
             .unwrap_or_else(|_| "unknown-device".to_string());
 
         spawn(async move {
-            create_reducer(spacetime::CreateEventArgs {
+            if let Err(err) = create_reducer(spacetime::CreateEventArgs {
                 uuid: event_uuid,
                 quail_uuid: quail_id_clone.clone(),
                 event_type: event_type_value.as_str().to_string(),
@@ -66,7 +66,11 @@ pub fn EventAdd(
                 notes: notes_value,
                 photos: None,
                 device_id,
-            });
+            }) {
+                error_message.set(Some(err.to_string()));
+                saving.set(false);
+                return;
+            }
 
             saving.set(false);
             on_navigate_save.call(Screen::ProfileDetail(quail_id_clone));

@@ -376,15 +376,12 @@ pub fn pick_image_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, P
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let path: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let path: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         return Ok(PathBuf::from(path));
                     }
                 }
@@ -402,15 +399,12 @@ pub fn pick_image_with_config(config: &AndroidPickerConfig) -> Result<PathBuf, P
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let err: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let err: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         return Err(PickerError::PermissionDenied(err));
                     }
                 }
@@ -465,15 +459,12 @@ pub fn pick_images_with_config(config: &AndroidPickerConfig) -> Result<Vec<PathB
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let combined: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let combined: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         let paths = combined
                             .lines()
                             .filter(|l: &&str| !l.trim().is_empty())
@@ -497,15 +488,12 @@ pub fn pick_images_with_config(config: &AndroidPickerConfig) -> Result<Vec<PathB
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let err: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let err: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         return Err(PickerError::PermissionDenied(err));
                     }
                 }
@@ -558,15 +546,12 @@ pub fn capture_photo_with_config(config: &AndroidPickerConfig) -> Result<PathBuf
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let path: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let path: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         return Ok(PathBuf::from(path));
                     }
                 }
@@ -584,15 +569,12 @@ pub fn capture_photo_with_config(config: &AndroidPickerConfig) -> Result<PathBuf
                         let obj_str = env.cast_local::<JString<'_>>(obj).map_err(|e| {
                             PickerError::PermissionDenied(format!("String cast failed: {}", e))
                         })?;
-                        let err: String = obj_str
-                            .try_to_string(env)
-                            .map_err(|e| {
-                                PickerError::PermissionDenied(format!(
-                                    "String conversion failed: {}",
-                                    e
-                                ))
-                            })?
-                            ;
+                        let err: String = obj_str.try_to_string(env).map_err(|e| {
+                            PickerError::PermissionDenied(format!(
+                                "String conversion failed: {}",
+                                e
+                            ))
+                        })?;
                         return Err(PickerError::PermissionDenied(err));
                     }
                 }
