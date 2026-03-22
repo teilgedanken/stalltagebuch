@@ -11,6 +11,7 @@ use std::path::PathBuf;
 pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
+    let mut birthday = use_signal(|| String::new());
     let mut ring_color_left = use_signal(|| String::new());
     let mut ring_color_right = use_signal(|| String::new());
     let mut photo_path = use_signal(|| None::<PathBuf>);
@@ -19,6 +20,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
     let create_quail = spacetime::use_reducer_create_quail();
+    let create_event = spacetime::use_reducer_create_event();
     let create_photo_collection = spacetime::use_reducer_create_photo_collection();
     let create_photo = spacetime::use_reducer_create_photo();
     let set_quail_photo = spacetime::use_reducer_set_quail_photo();
@@ -49,6 +51,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
 
         let ring_color_left_value = normalize_ring_color_selection(&ring_color_left());
         let ring_color_right_value = normalize_ring_color_selection(&ring_color_right());
+        let birthday_value = normalize_optional_date_input(&birthday());
 
         let device_id = crate::services::device_id_service::get_device_id()
             .unwrap_or_else(|_| "unknown-device".to_string());
@@ -64,7 +67,6 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             ring_color_left: ring_color_left_value,
             ring_color_right: ring_color_right_value,
             profile_photo: None,
-            birthday: None,
             device_id: device_id.clone(),
         }) {
             error.set(Some(err.to_string()));
@@ -72,12 +74,30 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
+        let birthday_event_date = birthday_value.clone();
         let on_navigate_submit = on_navigate.clone();
+        let create_event_reducer = create_event.clone();
         let create_photo_collection_reducer = create_photo_collection.clone();
         let create_photo_reducer = create_photo.clone();
         let set_quail_photo_reducer = set_quail_photo.clone();
 
         spawn(async move {
+            if let Some(event_date) = birthday_event_date {
+                if let Err(err) = create_event_reducer(spacetime::CreateEventArgs {
+                    uuid: uuid::Uuid::new_v4().to_string(),
+                    quail_uuid: quail_uuid.clone(),
+                    event_type: "born".to_string(),
+                    event_date,
+                    notes: None,
+                    photos: None,
+                    device_id: device_id.clone(),
+                }) {
+                    error.set(Some(err.to_string()));
+                    saving.set(false);
+                    return;
+                }
+            }
+
             if let Some(path) = selected_photo_path {
                 let collection_uuid = quail_uuid.clone();
 
@@ -204,6 +224,19 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                         option { value: "unknown", {tid!("gender-unknown")} } // Unknown gender option
                         option { value: "female", {tid!("gender-female")} } // Female gender option
                         option { value: "male", {tid!("gender-male")} } // Male gender option
+                    }
+                }
+
+                div { style: "margin-bottom: 20px;",
+                    label {
+                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
+                        {tid!("field-date")}
+                    }
+                    input {
+                        r#type: "date",
+                        class: "input",
+                        value: "{birthday}",
+                        oninput: move |e| birthday.set(e.value()),
                     }
                 }
 
@@ -409,6 +442,15 @@ fn normalize_ring_color_selection(value: &str) -> Option<String> {
         None
     } else {
         Some(RingColor::from_str(trimmed).as_str().to_string())
+    }
+}
+
+fn normalize_optional_date_input(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
     }
 }
 

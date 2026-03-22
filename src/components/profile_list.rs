@@ -2,6 +2,7 @@ use super::synced_photo::SyncedThumbnailImage;
 use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
+use chrono::{Datelike, Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
@@ -30,13 +31,22 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         let all_events = events().clone();
         let search = search_filter().to_lowercase();
         let dead_only = show_dead();
+        let today = Local::now().date_naive();
+
+        let born_dates_by_quail = earliest_born_dates_by_quail(&all_events);
 
         let photo_paths_by_uuid: std::collections::HashMap<String, String> = photos()
             .iter()
             .map(|photo| (photo.uuid.clone(), photo.relative_path.clone()))
             .collect();
 
-        let mut rows = Vec::<(Quail, Option<EventType>, Option<String>, Option<String>)>::new();
+        let mut rows = Vec::<(
+            Quail,
+            Option<EventType>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        )>::new();
 
         for remote_quail in quails().iter() {
             if let Some(owner_value) = owner.as_ref() {
@@ -64,7 +74,17 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 let profile_photo_path = profile_photo_uuid
                     .as_ref()
                     .and_then(|uuid| photo_paths_by_uuid.get(uuid).cloned());
-                rows.push((local_quail, status, profile_photo_uuid, profile_photo_path));
+                let age_display = born_dates_by_quail
+                    .get(&remote_quail.uuid)
+                    .map(|birth_date| format_age_years_months(*birth_date, today));
+
+                rows.push((
+                    local_quail,
+                    status,
+                    profile_photo_uuid,
+                    profile_photo_path,
+                    age_display,
+                ));
             }
         }
 
@@ -118,12 +138,13 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
             } else {
                 div { class: "profile-grid",
-                    for (profile, status, profile_photo_uuid, profile_photo_path) in filtered_profiles() {
+                    for (profile, status, profile_photo_uuid, profile_photo_path, age_display) in filtered_profiles() {
                         ProfileCard {
                             key: "{profile.uuid}",
                             profile: profile.clone(),
                             profile_photo_path,
                             profile_photo_uuid,
+                            age_display,
                             status,
                             on_click: move |_| on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string())),
                         }
@@ -139,6 +160,7 @@ pub fn ProfileCard(
     profile: Quail,
     profile_photo_path: Option<String>,
     profile_photo_uuid: Option<String>,
+    age_display: Option<String>,
     status: Option<EventType>,
     on_click: EventHandler<()>,
 ) -> Element {
@@ -185,8 +207,18 @@ pub fn ProfileCard(
                 div {
                     class: "profile-overlay",
                     style: format!("background: {};", overlay_bg),
-                    div { class: "profile-name", "{profile.name}" }
-                    div { class: "profile-gender", "{profile.gender.display_name()}" }
+                    div { style: "display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;",
+                        div {
+                            div { class: "profile-name", "{profile.name}" }
+                            div { class: "profile-gender", "{profile.gender.display_name()}" }
+                        }
+                        if let Some(age) = age_display {
+                            div {
+                                style: "margin-left: auto; font-size: 12px; font-weight: 700; color: #1f2937; text-shadow: 0 1px 2px rgba(255,255,255,0.6); white-space: nowrap;",
+                                "{age}"
+                            }
+                        }
+                    }
                 }
 
                 {
@@ -222,6 +254,65 @@ fn latest_status_for(quail_uuid: &str, events: &[spacetime::QuailEvent]) -> Opti
                 .then_with(|| a.uuid.cmp(&b.uuid))
         })
         .map(|event| EventType::from_str(&event.event_type))
+}
+
+fn earliest_born_dates_by_quail(
+    events: &[spacetime::QuailEvent],
+) -> std::collections::HashMap<String, NaiveDate> {
+    let mut map = std::collections::HashMap::<String, NaiveDate>::new();
+
+    for event in events {
+        if EventType::from_str(&event.event_type) != EventType::Born {
+            continue;
+        }
+
+        let Ok(date) = NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d") else {
+            continue;
+        };
+
+        map.entry(event.quail_uuid.clone())
+            .and_modify(|current| {
+                if date < *current {
+                    *current = date;
+                }
+            })
+            .or_insert(date);
+    }
+
+    map
+}
+
+fn format_age_years_months(birth_date: NaiveDate, today: NaiveDate) -> String {
+    if birth_date > today {
+        return "0 Monate".to_string();
+    }
+
+    let mut total_months = (today.year() - birth_date.year()) * 12
+        + (today.month() as i32 - birth_date.month() as i32);
+
+    if today.day() < birth_date.day() {
+        total_months -= 1;
+    }
+
+    if total_months < 0 {
+        total_months = 0;
+    }
+
+    let years = total_months / 12;
+    let months = total_months % 12;
+
+    if years > 0 {
+        let years_label = if years == 1 { "Jahr" } else { "Jahre" };
+        if months > 0 {
+            let months_label = if months == 1 { "Monat" } else { "Monate" };
+            format!("{} {} {} {}", years, years_label, months, months_label)
+        } else {
+            format!("{} {}", years, years_label)
+        }
+    } else {
+        let months_label = if months == 1 { "Monat" } else { "Monate" };
+        format!("{} {}", months, months_label)
+    }
 }
 
 fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {

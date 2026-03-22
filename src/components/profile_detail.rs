@@ -4,6 +4,7 @@ use super::synced_photo::{SyncedCollectionFullscreen, SyncedThumbnailImage};
 use crate::Screen;
 use crate::models::{EventType, Gender};
 use crate::spacetime;
+use chrono::{Datelike, Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
@@ -78,6 +79,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                 .then_with(|| b.uuid.cmp(&a.uuid))
         });
         rows
+    });
+
+    let age_display = use_memo(move || {
+        let today = Local::now().date_naive();
+        age_display_from_events(&events(), today)
     });
 
     let quail_id_for_photos_memo = quail_id.clone();
@@ -247,6 +253,16 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                     }
                     // Detail Grid
                     div { style: "display:grid; gap:16px;",
+                        if let Some(age) = age_display() {
+                            div { style: "padding:14px; background:#f5f5f5; border-radius:8px;",
+                                div { style: "font-size:11px; color:#666; font-weight:600; margin-bottom:4px;",
+                                    "Alter"
+                                }
+                                div { style: "font-size:15px; color:#333; font-weight:600;",
+                                    "{age}"
+                                }
+                            }
+                        }
                         div { style: "padding:14px; background:#f5f5f5; border-radius:8px;",
                             div { style: "font-size:11px; color:#666; font-weight:600; margin-bottom:4px;",
                                 "UUID"
@@ -418,4 +434,47 @@ fn format_event_date(value: &str) -> String {
     chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
         .map(|date| date.format("%d.%m.%Y").to_string())
         .unwrap_or_else(|_| value.to_string())
+}
+
+fn age_display_from_events(events: &[spacetime::QuailEvent], today: NaiveDate) -> Option<String> {
+    let birth_date = events
+        .iter()
+        .filter(|event| EventType::from_str(&event.event_type) == EventType::Born)
+        .filter_map(|event| NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d").ok())
+        .min()?;
+
+    Some(format_age_years_months(birth_date, today))
+}
+
+fn format_age_years_months(birth_date: NaiveDate, today: NaiveDate) -> String {
+    if birth_date > today {
+        return "0 Monate".to_string();
+    }
+
+    let mut total_months = (today.year() - birth_date.year()) * 12
+        + (today.month() as i32 - birth_date.month() as i32);
+
+    if today.day() < birth_date.day() {
+        total_months -= 1;
+    }
+
+    if total_months < 0 {
+        total_months = 0;
+    }
+
+    let years = total_months / 12;
+    let months = total_months % 12;
+
+    if years > 0 {
+        let years_label = if years == 1 { "Jahr" } else { "Jahre" };
+        if months > 0 {
+            let months_label = if months == 1 { "Monat" } else { "Monate" };
+            format!("{} {} {} {}", years, years_label, months, months_label)
+        } else {
+            format!("{} {}", years, years_label)
+        }
+    } else {
+        let months_label = if months == 1 { "Monat" } else { "Monate" };
+        format!("{} {}", months, months_label)
+    }
 }

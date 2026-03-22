@@ -86,7 +86,6 @@ pub fn BackupCard(
                         ring_color_left: quail.ring_color_left,
                         ring_color_right: quail.ring_color_right,
                         profile_photo: quail.profile_photo,
-                        birthday: quail.birthday,
                         device_id: quail.device_id,
                         owner: quail.owner,
                         created_at: quail.created_at,

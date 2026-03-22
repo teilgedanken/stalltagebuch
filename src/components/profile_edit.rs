@@ -33,7 +33,6 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut gender = use_signal(|| "unknown".to_string());
     let mut ring_color_left = use_signal(|| String::new());
     let mut ring_color_right = use_signal(|| String::new());
-    let mut birthday = use_signal(|| None::<String>);
     let mut photos = use_signal(|| Vec::<Photo>::new());
     let mut selected_profile_photo_id = use_signal(|| None::<String>);
     let mut show_delete_confirm = use_signal(|| false);
@@ -83,7 +82,6 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 if let Some(profile_uuid) = local_quail.profile_photo {
                     selected_profile_photo_id.set(Some(profile_uuid.to_string()));
                 }
-                birthday.set(quail.birthday.clone());
                 profile.set(Some(local_quail));
 
                 // Load photos for this quail from SpacetimeDB
@@ -145,7 +143,6 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     ring_color_left: updated_ring_color_left,
                     ring_color_right: updated_ring_color_right,
                     profile_photo: selected_photo,
-                    birthday: birthday(),
                 }) {
                     error.set(err.to_string());
                     saving.set(false);

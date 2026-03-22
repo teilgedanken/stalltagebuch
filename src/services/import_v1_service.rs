@@ -260,7 +260,6 @@ async fn import_quail_v1(
         "ring_color_left": sats_option_string(quail.ring_color.clone()),
         "ring_color_right": serde_json::Value::Null,
         "profile_photo": serde_json::Value::Null,
-        "birthday": serde_json::Value::Null,
         "device_id": device_id,
     });
     if let Err(create_err) = client.call_reducer("create_quail", &create_args).await {
@@ -272,7 +271,6 @@ async fn import_quail_v1(
             "ring_color_left": sats_option_string(quail.ring_color.clone()),
             "ring_color_right": serde_json::Value::Null,
             "profile_photo": serde_json::Value::Null,
-            "birthday": serde_json::Value::Null,
         });
         client
             .call_reducer("update_quail", &update_args)

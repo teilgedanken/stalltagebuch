@@ -526,7 +526,7 @@ photos-title = Photos
 placeholder-event-notes = Additional information about the event...
 
 # Source: ./src/components/profile_add.rs:275
-profile-add-info = Birth date and notes can be added as events after creation.
+profile-add-info = Notes can be added as events after creation.
 
 # New profile page title
 # Source: ./src/components/profile_add.rs:161

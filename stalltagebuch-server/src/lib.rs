@@ -46,8 +46,6 @@ pub struct Quail {
     pub ring_color_right: Option<String>,
     /// UUID of the profile photo stored in the photo-gallery / Nextcloud.
     pub profile_photo: Option<String>,
-    /// Optional birth date (ISO 8601 date string YYYY-MM-DD).
-    pub birthday: Option<String>,
     /// ID of the device that created this quail.
     pub device_id: String,
     /// The SpacetimeDB identity of the user who owns this quail.
@@ -180,7 +178,6 @@ pub struct CreateQuailArgs {
     pub ring_color_left: Option<String>,
     pub ring_color_right: Option<String>,
     pub profile_photo: Option<String>,
-    pub birthday: Option<String>,
     pub device_id: String,
 }
 
@@ -192,7 +189,6 @@ pub struct UpdateQuailArgs {
     pub ring_color_left: Option<String>,
     pub ring_color_right: Option<String>,
     pub profile_photo: Option<String>,
-    pub birthday: Option<String>,
 }
 
 #[derive(SpacetimeType)]
@@ -300,7 +296,6 @@ pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
         ring_color_left: args.ring_color_left,
         ring_color_right: args.ring_color_right,
         profile_photo: args.profile_photo,
-        birthday: args.birthday,
         device_id: args.device_id,
         owner: ctx.sender().to_string(),
         created_at: now,
