@@ -94,7 +94,7 @@ backup-card-history-more = Mehr ({ $count })
 backup-card-history-nextcloud = Nextcloud: { $name }
 
 # Source: ./src/components/settings/backup_card.rs:633
-# Parameters: $photos_files_missing, $photos_files_included, $photos_meta
+# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
 backup-card-history-photos = Fotos: { $photos_meta } Einträge, { $photos_files_included } Dateien enthalten, { $photos_files_missing } fehlend
 
 # Source: ./src/components/settings/backup_card.rs:627
@@ -179,7 +179,7 @@ backup-import-android-only = ⚠️ Dateiauswahl ist nur auf Android verfügbar
 backup-import-no-file-selected = ❌ Keine Datei ausgewählt
 
 # Source: ./src/components/settings/backup_card.rs:321
-# Parameters: $count, $photos
+# Parameters: $photos, $count
 backup-import-success-with-counts = ✅ { $count } Einträge und { $photos } Fotos importiert
 
 # Source: ./src/components/settings/backup_card.rs:526
@@ -786,8 +786,9 @@ sync-login-success = Anmeldung erfolgreich!
 # Source: ./src/components/settings/nextcloud_card.rs:120
 sync-login-success-folder = Anmeldung erfolgreich! Ordner erstellt.
 
+# seconds will be replaced with the numerical value of the seconds to wait
 # Source: ./src/components/settings/nextcloud_card.rs:312
-sync-next-check-in = Nächste Prüfung in { $seconds } s
+sync-next-check-in = Nächste Prüfung in seconds s
 
 # Source: ./src/components/settings/nextcloud_card.rs:198
 sync-now = Jetzt synchronisieren
@@ -840,7 +841,7 @@ sync-status-running-full = 🔄 Vollständige Synchronisation...
 sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 
 # Source: ./src/components/settings/nextcloud_card.rs:230
-# Parameters: $percent, $current, $total
+# Parameters: $current, $percent, $total
 sync-upload-progress-detail = { $current } von { $total } Fotos hochgeladen ({ $percent }%)
 
 # Source: ./src/components/settings/nextcloud_card.rs:229

@@ -5,7 +5,10 @@ use dioxus_i18n::tid;
 use nextcloud_auth::{AuthLabels, NextcloudAuthComponent, NextcloudCredentials};
 
 #[component]
-pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
+pub fn NextcloudCard(
+    on_status_message: EventHandler<String>,
+    on_nextcloud_config_changed: EventHandler<bool>,
+) -> Element {
     let mut server_url = use_signal_sync(|| String::from("https://"));
     let mut remote_path = use_signal_sync(|| String::from("/Stalltagebuch"));
     let mut current_settings = use_signal_sync(|| None::<SpacetimeSettings>);
@@ -64,6 +67,7 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
                 server_url.set(saved.nextcloud_url.clone());
                 remote_path.set(saved.nextcloud_remote_path.clone());
                 current_settings.set(Some(saved));
+                on_nextcloud_config_changed.call(true);
             }
         }
     });
@@ -117,6 +121,7 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
             server_url.set(server_url_value);
             current_settings.set(Some(st_settings));
             details_expanded.set(false);
+            on_nextcloud_config_changed.call(true);
             on_status_message.call(format!("✅ {}", tid!("sync-login-success-folder")));
         });
     };
@@ -137,6 +142,7 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
         }
         current_settings.set(None);
         details_expanded.set(false);
+        on_nextcloud_config_changed.call(false);
         on_status_message.call(format!("✅ {}", tid!("sync-settings-deleted")));
     };
 
@@ -309,7 +315,7 @@ pub fn NextcloudCard(on_status_message: EventHandler<String>) -> Element {
                             step3: tid!("sync-login-step3").to_string(),
                             step4: tid!("sync-login-step4").to_string(),
                             step5: tid!("sync-login-step5").to_string(),
-                            next_check_in: tid!("sync-next-check-in").to_string(),
+                            next_check_in: tid!("sync-next-check-in").to_string(),  // seconds will be replaced with the numerical value of the seconds to wait
                             waiting_icon: "🔄".to_string(),
                         }),
                     }

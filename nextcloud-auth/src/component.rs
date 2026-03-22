@@ -54,7 +54,7 @@ fn format_next_check(template: &str, seconds: u64) -> String {
     template
         .replace("{ $seconds }", &seconds_str)
         .replace("{$seconds}", &seconds_str)
-        .replace("{seconds}", &seconds_str)
+        .replace("seconds", &seconds_str)
 }
 
 /// Nextcloud authentication component

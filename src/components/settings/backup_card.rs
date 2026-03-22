@@ -10,7 +10,10 @@ use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
 #[component]
-pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
+pub fn BackupCard(
+    on_status_message: EventHandler<String>,
+    is_nextcloud_configured: bool,
+) -> Element {
     crate::spacetime::use_subscription(&[
         "SELECT * FROM devices",
         "SELECT * FROM quails",
@@ -38,7 +41,6 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
     let mut is_importing = use_signal(|| false);
 
     let mut is_backup_uploading = use_signal_sync(|| false);
-    let mut is_nextcloud_configured = use_signal_sync(|| false);
     let mut include_photo_files = use_signal_sync(|| true);
     let backup_history = crate::spacetime::use_table_backups();
     let mut expanded_backup_id = use_signal_sync(|| None::<String>);
@@ -49,12 +51,6 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
     let finish_backup_for_export = finish_backup.clone();
     let create_backup_started_for_upload = create_backup_started.clone();
     let finish_backup_for_upload = finish_backup.clone();
-
-    use_effect(move || {
-        if let Ok(saved) = spacetime_settings_service::load_spacetime_settings() {
-            is_nextcloud_configured.set(saved.is_nextcloud_configured());
-        }
-    });
 
     let create_export_archive =
         move |include_images: bool, mut progress_callback: Box<dyn FnMut(ExportProgress)>| {
@@ -350,12 +346,11 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
             return;
         }
 
-        let configured = spacetime_settings_service::load_spacetime_settings()
+        let is_currently_configured = spacetime_settings_service::load_spacetime_settings()
             .map(|s| s.is_nextcloud_configured())
             .unwrap_or(false);
-        is_nextcloud_configured.set(configured);
 
-        if !configured {
+        if !is_currently_configured {
             on_status_message.call(tid!("sync-setup-title").to_string());
             return;
         }
@@ -520,7 +515,7 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                     button {
                         class: "btn-primary",
                         style: "flex: 1;",
-                        disabled: is_backup_uploading() || !is_nextcloud_configured(),
+                        disabled: is_backup_uploading() || !is_nextcloud_configured,
                         onclick: upload_backup,
                         if is_backup_uploading() {
                             {tid!("backup-upload-button-running")}
@@ -530,7 +525,7 @@ pub fn BackupCard(on_status_message: EventHandler<String>) -> Element {
                     }
                 }
 
-                if !is_nextcloud_configured() {
+                if !is_nextcloud_configured {
                     p { style: "margin: 8px 0 0 0; font-size: 12px; color: #a66;",
                         {tid!("backup-card-nextcloud-not-connected")}
                     }

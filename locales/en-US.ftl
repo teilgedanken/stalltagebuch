@@ -94,7 +94,7 @@ backup-card-history-more = More ({ $count })
 backup-card-history-nextcloud = Nextcloud: { $name }
 
 # Source: ./src/components/settings/backup_card.rs:633
-# Parameters: $photos_files_included, $photos_files_missing, $photos_meta
+# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
 backup-card-history-photos = Photos: { $photos_meta } entries, { $photos_files_included } files included, { $photos_files_missing } missing
 
 # Source: ./src/components/settings/backup_card.rs:627
@@ -786,8 +786,9 @@ sync-login-success = Login successful
 # Source: ./src/components/settings/nextcloud_card.rs:120
 sync-login-success-folder = Login successful (folder set)
 
+# seconds will be replaced with the numerical value of the seconds to wait
 # Source: ./src/components/settings/nextcloud_card.rs:312
-sync-next-check-in = Next check in { $seconds } s
+sync-next-check-in = Next check in seconds s
 
 # Source: ./src/components/settings/nextcloud_card.rs:198
 sync-now = Sync now
@@ -840,7 +841,7 @@ sync-status-running-full = 🔄 Running full synchronization...
 sync-status-success-photos = ✅ Sync complete: uploaded { $count } photos
 
 # Source: ./src/components/settings/nextcloud_card.rs:230
-# Parameters: $current, $total, $percent
+# Parameters: $total, $current, $percent
 sync-upload-progress-detail = Uploaded { $current } of { $total } photos ({ $percent }%)
 
 # Source: ./src/components/settings/nextcloud_card.rs:229
