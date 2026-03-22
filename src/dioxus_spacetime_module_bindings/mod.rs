@@ -291,7 +291,7 @@ impl __sdk::Reducer for Reducer {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[allow(non_snake_case)]
 #[doc(hidden)]
 pub struct DbUpdate {

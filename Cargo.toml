@@ -41,18 +41,11 @@ reqwest_dav = { version = "0.3", default-features = false, features = [
     "rustls-tls",
 ] }
 base64 = "0.22"
-toml = "0.9.8"
-sha2 = "0.10"
 ulid = "1.1"
 tokio = { version = "1.0", features = ["rt", "time", "macros"] }
 log = "0.4.28"
 env_logger = "0.11"
 hostname = "0.4"
-image = { version = "0.25", default-features = false, features = [
-    "jpeg",
-    "webp",
-] }
-rand = "0.9"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
@@ -67,8 +60,8 @@ rustls-platform-verifier = { git = "https://github.com/rustls/rustls-platform-ve
 [features]
 default = ["mobile"]
 web = ["dioxus/web"]
-desktop = ["dioxus/desktop"]
-mobile = ["dioxus/mobile"]
+desktop = ["dioxus/desktop", "openssl/vendored"]
+mobile = ["dioxus/mobile", "openssl/vendored"]
 
 # Android build targets
 [target.aarch64-linux-android.dev-dependencies]
