@@ -52,16 +52,16 @@ pub fn SettingsScreen(
 
             NetworkCheckCard {}
             SpacetimeDbCard { on_spacetime_settings_saved }
-            DevicesCard {}
-            BackupCard {
-                on_status_message: move |message| status_message.set(message),
-                is_nextcloud_configured: is_nextcloud_configured(),
-            }
             NextcloudCard {
                 on_status_message: move |message| status_message.set(message),
                 on_nextcloud_config_changed: move |configured| {
                     is_nextcloud_configured.set(configured)
                 },
+            }
+            DevicesCard {}
+            BackupCard {
+                on_status_message: move |message| status_message.set(message),
+                is_nextcloud_configured: is_nextcloud_configured(),
             }
         }
     }

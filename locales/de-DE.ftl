@@ -1,5 +1,5 @@
 # Generated translation template by dx-i18n
-# Contains 270 translation keys
+# Contains 279 translation keys
 
 # Add event
 # Source: ./src/components/profile_detail.rs:339
@@ -54,145 +54,179 @@ action-update = Aktualisieren
 # Source: ./src/components/home.rs:25
 app-title = Wachtel-Stallbuch
 
-# Source: ./src/components/settings/backup_card.rs:498
+# Source: ./src/components/settings/backup_card.rs:493
 backup-card-actions-description = Backup-Aktionen: Die Option "Bilddateien im Backup enthalten" gilt für beide Buttons.
 
-# Source: ./src/components/settings/backup_card.rs:517
+# Source: ./src/components/settings/backup_card.rs:512
 backup-card-button-file = 💾 Backup in Datei
 
-# Source: ./src/components/settings/backup_card.rs:517
+# Source: ./src/components/settings/backup_card.rs:512
 backup-card-button-file-running = ⏳ Backup-Datei…
 
-# Source: ./src/components/settings/backup_card.rs:528
+# Source: ./src/components/settings/backup_card.rs:523
 backup-card-button-nextcloud = ☁️ Backup zu Nextcloud
 
-# Source: ./src/components/settings/backup_card.rs:558
+# Source: ./src/components/settings/backup_card.rs:553
 backup-card-history-empty = Noch keine Backups protokolliert.
 
-# Source: ./src/components/settings/backup_card.rs:636
+# Source: ./src/components/settings/backup_card.rs:631
 # Parameters: $error
 backup-card-history-error = Fehler: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:621
+# Source: ./src/components/settings/backup_card.rs:616
 # Parameters: $path
 backup-card-history-file = Datei: { $path }
 
-# Source: ./src/components/settings/backup_card.rs:617
+# Source: ./src/components/settings/backup_card.rs:612
 # Parameters: $include_images
 backup-card-history-include-images = Mit Bildern: { $include_images }
 
-# Source: ./src/components/settings/backup_card.rs:630
+# Source: ./src/components/settings/backup_card.rs:625
 # Parameters: $quails, $events, $egg_records
 backup-card-history-items = Items: { $quails } Wachteln, { $events } Ereignisse, { $egg_records } Eiereinträge
 
-# Source: ./src/components/settings/backup_card.rs:649
+# Source: ./src/components/settings/backup_card.rs:644
 # Parameters: $count
 backup-card-history-more = Mehr ({ $count })
 
-# Source: ./src/components/settings/backup_card.rs:624
+# Source: ./src/components/settings/backup_card.rs:619
 # Parameters: $name
 backup-card-history-nextcloud = Nextcloud: { $name }
 
-# Source: ./src/components/settings/backup_card.rs:633
-# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
+# Source: ./src/components/settings/backup_card.rs:628
+# Parameters: $photos_files_missing, $photos_meta, $photos_files_included
 backup-card-history-photos = Fotos: { $photos_meta } Einträge, { $photos_files_included } Dateien enthalten, { $photos_files_missing } fehlend
 
-# Source: ./src/components/settings/backup_card.rs:627
+# Source: ./src/components/settings/backup_card.rs:622
 # Parameters: $size
 backup-card-history-size = Größe: { $size } B
 
-# Source: ./src/components/settings/backup_card.rs:607
+# Source: ./src/components/settings/backup_card.rs:602
 # Parameters: $status
 backup-card-history-status = Status: { $status }
 
-# Source: ./src/components/settings/backup_card.rs:555
+# Source: ./src/components/settings/backup_card.rs:550
 backup-card-history-title = Backup-Historie
 
-# Source: ./src/components/settings/backup_card.rs:671
+# Source: ./src/components/settings/backup_card.rs:666
 backup-card-import-button = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:671
+# Source: ./src/components/settings/backup_card.rs:666
 backup-card-import-button-running = ⏳ Import läuft…
 
-# Source: ./src/components/settings/backup_card.rs:657
+# Source: ./src/components/settings/backup_card.rs:652
 backup-card-import-title = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:508
+# Source: ./src/components/settings/backup_card.rs:503
 backup-card-include-photo-files = Bilddateien im Backup enthalten
 
-# Source: ./src/components/settings/backup_card.rs:535
+# Source: ./src/components/settings/backup_card.rs:530
 backup-card-nextcloud-not-connected = Nextcloud nicht verbunden
 
-# Source: ./src/components/settings/backup_card.rs:615
+# Source: ./src/components/settings/backup_card.rs:610
 backup-card-no = Nein
 
-# Source: ./src/components/settings/backup_card.rs:548
+# Source: ./src/components/settings/backup_card.rs:543
 backup-card-progress-complete = ✅ Fertig!
 
-# Source: ./src/components/settings/backup_card.rs:547
+# Source: ./src/components/settings/backup_card.rs:542
 backup-card-progress-packing-zip = 📦 Erstelle ZIP…
 
-# Source: ./src/components/settings/backup_card.rs:545
+# Source: ./src/components/settings/backup_card.rs:540
 backup-card-progress-reading-egg-records = 🥚 Lese Eier-Einträge…
 
-# Source: ./src/components/settings/backup_card.rs:544
+# Source: ./src/components/settings/backup_card.rs:539
 backup-card-progress-reading-events = 📅 Lese Ereignisse…
 
-# Source: ./src/components/settings/backup_card.rs:546
+# Source: ./src/components/settings/backup_card.rs:541
 backup-card-progress-reading-photos = 📷 Lese Fotos…
 
-# Source: ./src/components/settings/backup_card.rs:543
+# Source: ./src/components/settings/backup_card.rs:538
 backup-card-progress-reading-quails = 📚 Lese Wachteln…
 
-# Source: ./src/components/settings/backup_card.rs:542
+# Source: ./src/components/settings/backup_card.rs:537
 backup-card-progress-starting = 🔄 Initialisiere…
 
-# Source: ./src/components/settings/backup_card.rs:604
+# Source: ./src/components/settings/backup_card.rs:599
 backup-card-status-failed = Fehlgeschlagen
 
-# Source: ./src/components/settings/backup_card.rs:605
+# Source: ./src/components/settings/backup_card.rs:600
 backup-card-status-pending = Ausstehend
 
-# Source: ./src/components/settings/backup_card.rs:603
+# Source: ./src/components/settings/backup_card.rs:598
 backup-card-status-success = Erfolgreich
 
-# Source: ./src/components/settings/backup_card.rs:494
+# Source: ./src/components/settings/backup_card.rs:489
 backup-card-title = 💾 Backup
 
-# Source: ./src/components/settings/backup_card.rs:592
+# Source: ./src/components/settings/backup_card.rs:587
 backup-card-unknown = unbekannt
 
-# Source: ./src/components/settings/backup_card.rs:613
+# Source: ./src/components/settings/backup_card.rs:608
 backup-card-yes = Ja
 
-# Source: ./src/components/settings/nextcloud_card.rs:248
+# Source: ./src/components/settings/nextcloud_card.rs:367
 backup-cleanup-button = 🧹 Verwaiste Fotos löschen
+
+# Source: ./src/components/settings/nextcloud_card.rs:383
+backup-cleanup-review-description = Diese Dateien liegen in Nextcloud unter /sync/photos, haben aber keinen passenden Fotoeintrag in SpacetimeDB. Bitte prüfen Sie die Liste und bestätigen Sie das endgültige Löschen.
+
+# Source: ./src/components/settings/nextcloud_card.rs:380
+# Parameters: $count
+backup-cleanup-review-title = ⚠️ Verwaiste Fotos gefunden: { $count }
+
+# Source: ./src/components/settings/nextcloud_card.rs:231
+# Parameters: $count
+backup-cleanup-status-deleting = 🧹 Lösche { $count } verwaiste Fotos aus Nextcloud...
+
+# Source: ./src/components/settings/nextcloud_card.rs:205
+# Parameters: $error
+backup-cleanup-status-failed = ❌ Bereinigung fehlgeschlagen: { $error }
+
+# Source: ./src/components/settings/nextcloud_card.rs:194
+backup-cleanup-status-none = ✅ Keine verwaisten Fotos in Nextcloud gefunden
+
+# Source: ./src/components/settings/nextcloud_card.rs:259
+# Parameters: $deleted
+backup-cleanup-status-partial = ⚠️ { $deleted } Fotos gelöscht, { $failed } konnten nicht gelöscht werden. Erstes Problem: { $error }
+
+# Source: ./src/components/settings/nextcloud_card.rs:197
+# Parameters: $count
+backup-cleanup-status-review = ⚠️ { $count } verwaiste Fotos gefunden. Bitte Liste prüfen und Löschen bestätigen.
+
+# Source: ./src/components/settings/nextcloud_card.rs:185
+backup-cleanup-status-scanning = 🔎 Prüfe Nextcloud auf verwaiste Fotos...
+
+# Source: ./src/components/settings/nextcloud_card.rs:241
+# Parameters: $count
+backup-cleanup-status-success = ✅ { $count } verwaiste Fotos aus Nextcloud gelöscht
 
 # Source: ./src/components/settings/nextcloud_card.rs:246
 # Parameters: $error
+# UNUSED: This key is no longer used in the code
 backup-db-error = ❌ Datenbankfehler: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:344
+# Source: ./src/components/settings/backup_card.rs:340
 backup-import-android-only = ⚠️ Dateiauswahl ist nur auf Android verfügbar
 
-# Source: ./src/components/settings/backup_card.rs:337
+# Source: ./src/components/settings/backup_card.rs:333
 backup-import-no-file-selected = ❌ Keine Datei ausgewählt
 
-# Source: ./src/components/settings/backup_card.rs:321
-# Parameters: $photos, $count
+# Source: ./src/components/settings/backup_card.rs:317
+# Parameters: $count, $photos
 backup-import-success-with-counts = ✅ { $count } Einträge und { $photos } Fotos importiert
 
-# Source: ./src/components/settings/backup_card.rs:526
+# Source: ./src/components/settings/backup_card.rs:521
 backup-upload-button-running = ⏳ Backup-Upload läuft...
 
-# Source: ./src/components/settings/backup_card.rs:384
+# Source: ./src/components/settings/backup_card.rs:379
 # Parameters: $error
 backup-upload-failed = ❌ Backup-Upload fehlgeschlagen: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:364
+# Source: ./src/components/settings/backup_card.rs:359
 backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
 
-# Source: ./src/components/settings/backup_card.rs:430
+# Source: ./src/components/settings/backup_card.rs:425
 # Parameters: $filename
 backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
 
@@ -330,13 +364,13 @@ events-empty = Keine Ereignisse vorhanden
 # Source: ./src/components/profile_detail.rs:325
 events-timeline-title = Ereignisse
 
-# Source: ./src/components/settings/backup_card.rs:200
+# Source: ./src/components/settings/backup_card.rs:196
 export-failed = Fehler beim Exportieren
 
-# Source: ./src/components/settings/backup_card.rs:183
+# Source: ./src/components/settings/backup_card.rs:179
 export-in-progress = Export läuft...
 
-# Source: ./src/components/settings/backup_card.rs:243
+# Source: ./src/components/settings/backup_card.rs:239
 export-success = Datensicherung erfolgreich erstellt
 
 # Source: ./src/components/event_add.rs:122
@@ -401,13 +435,13 @@ gender-male = Männlich
 # Source: ./src/components/profile_add.rs:204
 gender-unknown = Unbekannt
 
-# Source: ./src/components/settings/backup_card.rs:658
+# Source: ./src/components/settings/backup_card.rs:653
 import-description = Importiere Daten aus einer ZIP-Sicherungsdatei (v1 oder v2 Format).
 
-# Source: ./src/components/settings/backup_card.rs:286
+# Source: ./src/components/settings/backup_card.rs:282
 import-failed = Fehler beim Importieren
 
-# Source: ./src/components/settings/backup_card.rs:307
+# Source: ./src/components/settings/backup_card.rs:303
 import-in-progress = Import läuft...
 
 # Source: ./src/components/profile_edit.rs:323
@@ -741,116 +775,116 @@ status-slaughtered = Geschlachtet
 # Source: ./src/components/profile_edit.rs:210
 success-profile-updated = Profil erfolgreich aktualisiert!
 
-# Source: ./src/components/settings/nextcloud_card.rs:298
+# Source: ./src/components/settings/nextcloud_card.rs:463
 sync-connecting = Verbinde mit Server...
 
-# Source: ./src/components/settings/nextcloud_card.rs:205
+# Source: ./src/components/settings/nextcloud_card.rs:322
 sync-delete-config = Konfiguration löschen
 
-# Source: ./src/components/settings/nextcloud_card.rs:125
+# Source: ./src/components/settings/nextcloud_card.rs:133
 sync-error = Fehler bei der Anmeldung
 
-# Source: ./src/components/settings/nextcloud_card.rs:155
+# Source: ./src/components/settings/nextcloud_card.rs:165
 sync-failed = Sync fehlgeschlagen
 
-# Source: ./src/components/settings/nextcloud_card.rs:287
+# Source: ./src/components/settings/nextcloud_card.rs:452
 sync-login = Mit Nextcloud anmelden
 
-# Source: ./src/components/settings/nextcloud_card.rs:302
+# Source: ./src/components/settings/nextcloud_card.rs:467
 sync-login-browser = Im Browser öffnen
 
-# Source: ./src/components/settings/nextcloud_card.rs:306
+# Source: ./src/components/settings/nextcloud_card.rs:471
 sync-login-info-title = Wie funktioniert die Anmeldung?
 
-# Source: ./src/components/settings/nextcloud_card.rs:301
+# Source: ./src/components/settings/nextcloud_card.rs:466
 sync-login-instructions = Bitte öffnen Sie diesen Link in Ihrem Browser und melden Sie sich an:
 
-# Source: ./src/components/settings/nextcloud_card.rs:307
+# Source: ./src/components/settings/nextcloud_card.rs:472
 sync-login-step1 = Klicken Sie auf 'Mit Nextcloud anmelden'
 
-# Source: ./src/components/settings/nextcloud_card.rs:308
+# Source: ./src/components/settings/nextcloud_card.rs:473
 sync-login-step2 = Öffnen Sie den Link im Browser
 
-# Source: ./src/components/settings/nextcloud_card.rs:309
+# Source: ./src/components/settings/nextcloud_card.rs:474
 sync-login-step3 = Melden Sie sich bei Ihrer Nextcloud an
 
-# Source: ./src/components/settings/nextcloud_card.rs:310
+# Source: ./src/components/settings/nextcloud_card.rs:475
 sync-login-step4 = Bestätigen Sie den Zugriff für diese App
 
-# Source: ./src/components/settings/nextcloud_card.rs:311
+# Source: ./src/components/settings/nextcloud_card.rs:476
 sync-login-step5 = Kehren Sie zur App zurück und klicken Sie 'Weiter'
 
-# Source: ./src/components/settings/nextcloud_card.rs:303
+# Source: ./src/components/settings/nextcloud_card.rs:468
 sync-login-success = Anmeldung erfolgreich!
 
-# Source: ./src/components/settings/nextcloud_card.rs:120
+# Source: ./src/components/settings/nextcloud_card.rs:128
 sync-login-success-folder = Anmeldung erfolgreich! Ordner erstellt.
 
 # seconds will be replaced with the numerical value of the seconds to wait
-# Source: ./src/components/settings/nextcloud_card.rs:312
+# Source: ./src/components/settings/nextcloud_card.rs:477
 sync-next-check-in = Nächste Prüfung in seconds s
 
-# Source: ./src/components/settings/nextcloud_card.rs:198
+# Source: ./src/components/settings/nextcloud_card.rs:315
 sync-now = Jetzt synchronisieren
 
-# Source: ./src/components/settings/nextcloud_card.rs:186
+# Source: ./src/components/settings/nextcloud_card.rs:303
 sync-path = Pfad
 
-# Source: ./src/components/settings/nextcloud_card.rs:271
+# Source: ./src/components/settings/nextcloud_card.rs:436
 sync-path-label = Speicherpfad
 
-# Source: ./src/components/settings/nextcloud_card.rs:212
+# Source: ./src/components/settings/nextcloud_card.rs:329
 # Parameters: $count
 sync-photo-status-active = Aktiv: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:215
+# Source: ./src/components/settings/nextcloud_card.rs:332
 # Parameters: $count
 sync-photo-status-error = Fehler: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:211
+# Source: ./src/components/settings/nextcloud_card.rs:328
 # Parameters: $count
 sync-photo-status-pending = Ausstehend: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:213
+# Source: ./src/components/settings/nextcloud_card.rs:330
 # Parameters: $count
 sync-photo-status-synced = Synchronisiert: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:210
+# Source: ./src/components/settings/nextcloud_card.rs:327
 sync-photo-status-title = 📷 Foto-Sync Status
 
-# Source: ./src/components/settings/nextcloud_card.rs:300
+# Source: ./src/components/settings/nextcloud_card.rs:465
 sync-polling-background = Polling läuft im Hintergrund (max. 5 Minuten)
 
-# Source: ./src/components/settings/nextcloud_card.rs:178
+# Source: ./src/components/settings/nextcloud_card.rs:295
 sync-server = Server
 
-# Source: ./src/components/settings/nextcloud_card.rs:257
+# Source: ./src/components/settings/nextcloud_card.rs:422
 sync-server-url = Nextcloud Server URL
 
-# Source: ./src/components/settings/nextcloud_card.rs:140
+# Source: ./src/components/settings/nextcloud_card.rs:150
 sync-settings-deleted = Einstellungen gelöscht
 
-# Source: ./src/components/settings/backup_card.rs:359
+# Source: ./src/components/settings/backup_card.rs:354
 sync-setup-title = Nextcloud Synchronisierung einrichten
 
-# Source: ./src/components/settings/nextcloud_card.rs:146
+# Source: ./src/components/settings/nextcloud_card.rs:156
 sync-status-running-full = 🔄 Vollständige Synchronisation...
 
-# Source: ./src/components/settings/nextcloud_card.rs:150
+# Source: ./src/components/settings/nextcloud_card.rs:160
 # Parameters: $count
 sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 
-# Source: ./src/components/settings/nextcloud_card.rs:230
-# Parameters: $current, $percent, $total
+# Source: ./src/components/settings/nextcloud_card.rs:347
+# Parameters: $total, $percent, $current
 sync-upload-progress-detail = { $current } von { $total } Fotos hochgeladen ({ $percent }%)
 
-# Source: ./src/components/settings/nextcloud_card.rs:229
+# Source: ./src/components/settings/nextcloud_card.rs:346
 sync-upload-progress-title = Fotos werden hochgeladen...
 
-# Source: ./src/components/settings/nextcloud_card.rs:182
+# Source: ./src/components/settings/nextcloud_card.rs:299
 sync-username = Benutzer
 
-# Source: ./src/components/settings/nextcloud_card.rs:299
+# Source: ./src/components/settings/nextcloud_card.rs:464
 sync-waiting = Warte auf Anmeldung...
 
 # Source: ./src/components/event_edit.rs:309

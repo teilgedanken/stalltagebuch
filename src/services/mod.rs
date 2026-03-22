@@ -7,6 +7,7 @@ pub mod export_service;
 pub mod import_service;
 #[cfg(target_os = "android")]
 pub mod import_v1_service;
+pub mod nextcloud_cleanup_service;
 pub mod nextcloud_webdav;
 pub mod photo_paths;
 pub mod photo_service;

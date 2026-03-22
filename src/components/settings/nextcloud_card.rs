@@ -15,6 +15,9 @@ pub fn NextcloudCard(
     let mut details_expanded = use_signal_sync(|| false);
     let mut is_syncing = use_signal_sync(|| false);
     let mut upload_progress = use_signal_sync(|| (0usize, 0usize));
+    let mut cleanup_candidates = use_signal_sync(|| Vec::<String>::new());
+    let mut is_cleanup_scanning = use_signal_sync(|| false);
+    let mut is_cleanup_deleting = use_signal_sync(|| false);
 
     use_coroutine(move |_: UnboundedReceiver<()>| async move {
         let mut rx = crate::services::background_sync::subscribe_upload_progress();
@@ -141,6 +144,7 @@ pub fn NextcloudCard(
             }
         }
         current_settings.set(None);
+        cleanup_candidates.set(Vec::new());
         details_expanded.set(false);
         on_nextcloud_config_changed.call(false);
         on_status_message.call(format!("✅ {}", tid!("sync-settings-deleted")));
@@ -162,6 +166,113 @@ pub fn NextcloudCard(
                 }
             }
             is_syncing.set(false);
+        });
+    };
+
+    let scan_orphaned_photos = move |_| {
+        if is_cleanup_scanning() || is_cleanup_deleting() {
+            return;
+        }
+
+        let known_relative_paths: Vec<String> = photos()
+            .iter()
+            .map(|photo| photo.relative_path.clone())
+            .collect();
+
+        spawn(async move {
+            cleanup_candidates.set(Vec::new());
+            is_cleanup_scanning.set(true);
+            on_status_message.call(tid!("backup-cleanup-status-scanning").to_string());
+
+            match crate::services::nextcloud_cleanup_service::find_orphaned_remote_photos(
+                &known_relative_paths,
+            )
+            .await
+            {
+                Ok(orphaned_paths) => {
+                    if orphaned_paths.is_empty() {
+                        on_status_message.call(tid!("backup-cleanup-status-none").to_string());
+                    } else {
+                        on_status_message.call(
+                            tid!("backup-cleanup-status-review", count : orphaned_paths.len())
+                                .to_string(),
+                        );
+                        cleanup_candidates.set(orphaned_paths);
+                    }
+                }
+                Err(error) => {
+                    on_status_message.call(
+                        tid!("backup-cleanup-status-failed", error : error.to_string()).to_string(),
+                    );
+                }
+            }
+
+            is_cleanup_scanning.set(false);
+        });
+    };
+
+    let cancel_cleanup = move |_| {
+        cleanup_candidates.set(Vec::new());
+    };
+
+    let confirm_cleanup = move |_| {
+        if is_cleanup_scanning() || is_cleanup_deleting() {
+            return;
+        }
+
+        let orphaned_paths = cleanup_candidates();
+        if orphaned_paths.is_empty() {
+            return;
+        }
+
+        spawn(async move {
+            is_cleanup_deleting.set(true);
+            on_status_message.call(
+                tid!("backup-cleanup-status-deleting", count : orphaned_paths.len()).to_string(),
+            );
+
+            match crate::services::nextcloud_cleanup_service::delete_remote_photos(&orphaned_paths)
+                .await
+            {
+                Ok(result) => {
+                    if result.failed_paths.is_empty() {
+                        cleanup_candidates.set(Vec::new());
+                        on_status_message.call(
+                            tid!("backup-cleanup-status-success", count : result.deleted_paths.len())
+                                .to_string(),
+                        );
+                    } else {
+                        let first_error = result
+                            .failed_paths
+                            .first()
+                            .map(|(_, error)| error.clone())
+                            .unwrap_or_default();
+                        cleanup_candidates.set(
+                            result
+                                .failed_paths
+                                .iter()
+                                .map(|(path, _)| path.clone())
+                                .collect(),
+                        );
+                        on_status_message.call(
+                            tid!(
+                                "backup-cleanup-status-partial",
+                                deleted : result.deleted_paths.len(),
+                                failed : result.failed_paths.len(),
+                                error : first_error
+                            )
+                            .to_string(),
+                        );
+                    }
+                }
+                Err(error) => {
+                    on_status_message.call(
+                        tid!("backup-cleanup-status-failed", error : error.to_string()).to_string(),
+                    );
+                }
+            }
+
+            is_cleanup_deleting.set(false);
         });
     };
 
@@ -248,10 +359,58 @@ pub fn NextcloudCard(
                             button {
                                 class: "btn-danger",
                                 style: "width: 100%;",
-                                onclick: move |_| {
-                                    on_status_message.call(tid!("backup-db-error", error : "Feature not yet available for SpacetimeDB".to_string()));
-                                },
-                                {tid!("backup-cleanup-button")}
+                                disabled: is_syncing() || is_cleanup_scanning() || is_cleanup_deleting(),
+                                onclick: scan_orphaned_photos,
+                                if is_cleanup_scanning() || is_cleanup_deleting() {
+                                    {tid!("action-loading")}
+                                } else {
+                                    {tid!("backup-cleanup-button")}
+                                }
+                            }
+                        }
+
+                        {
+                            let cleanup_candidates = cleanup_candidates();
+                            if cleanup_candidates.is_empty() {
+                                rsx! {}
+                            } else {
+                                rsx! {
+                                    div { style: "margin-top: 16px; padding: 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #ef6c00;",
+                                        p { style: "margin: 0 0 8px 0; font-weight: 600; font-size: 14px; color: #7a4b00;",
+                                            {tid!("backup-cleanup-review-title", count : cleanup_candidates.len())}
+                                        }
+                                        p { style: "margin: 0 0 10px 0; font-size: 12px; color: #6d4c41;",
+                                            {tid!("backup-cleanup-review-description")}
+                                        }
+                                        div { style: "max-height: 180px; overflow-y: auto; padding: 8px; background: #fffdf7; border: 1px solid #f0d7a1; border-radius: 6px;",
+                                            for relative_path in cleanup_candidates {
+                                                p { style: "margin: 0; font-size: 12px; color: #5d4037; line-height: 1.5; word-break: break-all;",
+                                                    "• {relative_path}"
+                                                }
+                                            }
+                                        }
+                                        div { style: "display: flex; gap: 12px; margin-top: 12px;",
+                                            button {
+                                                class: "btn-primary",
+                                                style: "flex: 1;",
+                                                disabled: is_cleanup_deleting(),
+                                                onclick: cancel_cleanup,
+                                                {tid!("action-cancel")}
+                                            }
+                                            button {
+                                                class: "btn-danger",
+                                                style: "flex: 1;",
+                                                disabled: is_cleanup_deleting(),
+                                                onclick: confirm_cleanup,
+                                                if is_cleanup_deleting() {
+                                                    {tid!("action-loading")}
+                                                } else {
+                                                    {tid!("action-delete-permanently")}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

@@ -41,7 +41,7 @@ impl NextcloudWebDav {
         relative_path: &str,
     ) -> Result<(), AppError> {
         let bytes = std::fs::read(local_path)?;
-        let remote_path = format!("{}/sync/photos/{}", self.remote_root, relative_path);
+        let remote_path = self.remote_photo_path(relative_path);
         self.client
             .put(&remote_path, bytes)
             .await
@@ -54,7 +54,7 @@ impl NextcloudWebDav {
         relative_path: &str,
         local_path: &std::path::Path,
     ) -> Result<(), AppError> {
-        let remote_path = format!("{}/sync/photos/{}", self.remote_root, relative_path);
+        let remote_path = self.remote_photo_path(relative_path);
         let response = self
             .client
             .get(&remote_path)
@@ -70,6 +70,45 @@ impl NextcloudWebDav {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(local_path, &bytes)?;
+        Ok(())
+    }
+
+    pub async fn list_remote_photos(&self) -> Result<Vec<String>, AppError> {
+        let photos_dir = format!("{}/", self.remote_photos_dir());
+        let prefix = format!("{}/", self.remote_photos_dir());
+        let entries = self
+            .client
+            .list(&photos_dir, reqwest_dav::Depth::Infinity)
+            .await
+            .map_err(|e| AppError::Other(format!("WebDAV photo listing failed: {e:?}")))?;
+
+        let mut remote_paths = Vec::new();
+        for entry in entries {
+            let href = match entry {
+                reqwest_dav::types::list_cmd::ListEntity::File(file) => file.href,
+                reqwest_dav::types::list_cmd::ListEntity::Folder(_) => continue,
+            };
+
+            let Some(relative_path) = extract_relative_href(&href, &prefix) else {
+                continue;
+            };
+
+            if !relative_path.is_empty() {
+                remote_paths.push(relative_path);
+            }
+        }
+
+        remote_paths.sort_unstable();
+        remote_paths.dedup();
+        Ok(remote_paths)
+    }
+
+    pub async fn delete_remote_photo(&self, relative_path: &str) -> Result<(), AppError> {
+        let remote_path = self.remote_photo_path(relative_path);
+        self.client
+            .delete(&remote_path)
+            .await
+            .map_err(|e| AppError::Other(format!("WebDAV photo delete failed: {e:?}")))?;
         Ok(())
     }
 
@@ -141,4 +180,28 @@ impl NextcloudWebDav {
         let _ = self.client.mkcol(&backups_dir).await;
         Ok(())
     }
+
+    fn remote_photos_dir(&self) -> String {
+        format!("{}/sync/photos", self.remote_root)
+    }
+
+    fn remote_photo_path(&self, relative_path: &str) -> String {
+        format!(
+            "{}/{}",
+            self.remote_photos_dir(),
+            relative_path.trim_start_matches('/')
+        )
+    }
+}
+
+fn extract_relative_href(href: &str, prefix: &str) -> Option<String> {
+    if let Some(relative_path) = href.strip_prefix(prefix) {
+        return Some(relative_path.trim_start_matches('/').to_string());
+    }
+
+    href.find(prefix).map(|index| {
+        href[index + prefix.len()..]
+            .trim_start_matches('/')
+            .to_string()
+    })
 }
