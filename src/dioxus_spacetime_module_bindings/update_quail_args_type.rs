@@ -10,7 +10,8 @@ pub struct UpdateQuailArgs {
     pub uuid: String,
     pub name: String,
     pub gender: String,
-    pub ring_color: Option<String>,
+    pub ring_color_left: Option<String>,
+    pub ring_color_right: Option<String>,
     pub profile_photo: Option<String>,
     pub birthday: Option<String>,
 }

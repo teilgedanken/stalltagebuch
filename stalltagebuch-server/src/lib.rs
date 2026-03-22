@@ -40,8 +40,10 @@ pub struct Quail {
     pub name: String,
     /// "male" | "female" | "unknown"
     pub gender: String,
-    /// Optional leg ring colour (e.g. "lila", "rot", …)
-    pub ring_color: Option<String>,
+    /// Optional left leg ring colour (e.g. "lila", "rot", …)
+    pub ring_color_left: Option<String>,
+    /// Optional right leg ring colour (e.g. "lila", "rot", …)
+    pub ring_color_right: Option<String>,
     /// UUID of the profile photo stored in the photo-gallery / Nextcloud.
     pub profile_photo: Option<String>,
     /// Optional birth date (ISO 8601 date string YYYY-MM-DD).
@@ -175,7 +177,8 @@ pub struct CreateQuailArgs {
     pub uuid: String,
     pub name: String,
     pub gender: String,
-    pub ring_color: Option<String>,
+    pub ring_color_left: Option<String>,
+    pub ring_color_right: Option<String>,
     pub profile_photo: Option<String>,
     pub birthday: Option<String>,
     pub device_id: String,
@@ -186,7 +189,8 @@ pub struct UpdateQuailArgs {
     pub uuid: String,
     pub name: String,
     pub gender: String,
-    pub ring_color: Option<String>,
+    pub ring_color_left: Option<String>,
+    pub ring_color_right: Option<String>,
     pub profile_photo: Option<String>,
     pub birthday: Option<String>,
 }
@@ -293,7 +297,8 @@ pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
         
         name: args.name,
         gender: args.gender,
-        ring_color: args.ring_color,
+        ring_color_left: args.ring_color_left,
+        ring_color_right: args.ring_color_right,
         profile_photo: args.profile_photo,
         birthday: args.birthday,
         device_id: args.device_id,
@@ -312,7 +317,8 @@ pub fn update_quail(ctx: &ReducerContext, args: UpdateQuailArgs) {
         }
         existing.name = args.name;
         existing.gender = args.gender;
-        existing.ring_color = args.ring_color;
+        existing.ring_color_left = args.ring_color_left;
+        existing.ring_color_right = args.ring_color_right;
         existing.profile_photo = args.profile_photo;
         ctx.db.quails().uuid().update(existing);
     }

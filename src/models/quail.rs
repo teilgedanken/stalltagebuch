@@ -6,7 +6,8 @@ pub struct Quail {
     pub uuid: Uuid,
     pub name: String,
     pub gender: Gender,
-    pub ring_color: Option<RingColor>,
+    pub ring_color_left: Option<RingColor>,
+    pub ring_color_right: Option<RingColor>,
     pub profile_photo: Option<Uuid>,
 }
 

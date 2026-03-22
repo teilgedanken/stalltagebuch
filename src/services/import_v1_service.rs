@@ -244,7 +244,7 @@ async fn import_quail_v1(
     // Note: This would call the generated reducer for Quail creation
     // For now, we document the structure
     log::debug!(
-        "Importing quail: {} (gender: {}, ring_color: {:?})",
+        "Importing quail: {} (gender: {}, legacy ring_color -> left: {:?})",
         quail.name,
         quail.gender,
         quail.ring_color
@@ -257,7 +257,8 @@ async fn import_quail_v1(
         "uuid": quail.uuid.clone(),
         "name": quail.name.clone(),
         "gender": quail.gender.clone(),
-        "ring_color": sats_option_string(quail.ring_color.clone()),
+        "ring_color_left": sats_option_string(quail.ring_color.clone()),
+        "ring_color_right": serde_json::Value::Null,
         "profile_photo": serde_json::Value::Null,
         "birthday": serde_json::Value::Null,
         "device_id": device_id,
@@ -268,7 +269,8 @@ async fn import_quail_v1(
             "uuid": quail.uuid.clone(),
             "name": quail.name.clone(),
             "gender": quail.gender.clone(),
-            "ring_color": sats_option_string(quail.ring_color.clone()),
+            "ring_color_left": sats_option_string(quail.ring_color.clone()),
+            "ring_color_right": serde_json::Value::Null,
             "profile_photo": serde_json::Value::Null,
             "birthday": serde_json::Value::Null,
         });

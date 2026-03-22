@@ -1,14 +1,14 @@
 # Generated translation template by dx-i18n
-# Contains 325 translation keys
+# Contains 270 translation keys
 
 # Add event
 # Source: ./src/components/profile_detail.rs:339
 action-add-event = Ereignis
 
-# Source: ./src/components/profile_add.rs:160
+# Source: ./src/components/profile_add.rs:157
 action-back = Zurück
 
-# Source: ./src/components/profile_add.rs:335
+# Source: ./src/components/profile_add.rs:372
 action-camera = Kamera
 
 # Cancel
@@ -18,10 +18,10 @@ action-cancel = Abbrechen
 # Source: ./src/components/event_edit.rs:605
 action-delete = Löschen
 
-# Source: ./src/components/profile_edit.rs:413
+# Source: ./src/components/profile_edit.rs:453
 action-delete-permanently = Endgültig löschen
 
-# Source: ./src/components/profile_edit.rs:427
+# Source: ./src/components/profile_edit.rs:467
 action-delete-quail = Wachtel löschen
 
 # Source: ./src/components/profile_detail.rs:405
@@ -30,7 +30,7 @@ action-edit = Bearbeiten
 # Source: ./src/components/event_edit.rs:472
 action-gallery = Galerie
 
-# Source: ./src/components/profile_add.rs:302
+# Source: ./src/components/profile_add.rs:339
 action-loading = Lädt...
 
 # Source: ./src/components/egg_history.rs:47
@@ -54,115 +54,115 @@ action-update = Aktualisieren
 # Source: ./src/components/home.rs:25
 app-title = Wachtel-Stallbuch
 
-# Source: ./src/components/settings/backup_card.rs:497
+# Source: ./src/components/settings/backup_card.rs:498
 backup-card-actions-description = Backup-Aktionen: Die Option "Bilddateien im Backup enthalten" gilt für beide Buttons.
 
-# Source: ./src/components/settings/backup_card.rs:516
+# Source: ./src/components/settings/backup_card.rs:517
 backup-card-button-file = 💾 Backup in Datei
 
-# Source: ./src/components/settings/backup_card.rs:516
+# Source: ./src/components/settings/backup_card.rs:517
 backup-card-button-file-running = ⏳ Backup-Datei…
 
-# Source: ./src/components/settings/backup_card.rs:527
+# Source: ./src/components/settings/backup_card.rs:528
 backup-card-button-nextcloud = ☁️ Backup zu Nextcloud
 
-# Source: ./src/components/settings/backup_card.rs:557
+# Source: ./src/components/settings/backup_card.rs:558
 backup-card-history-empty = Noch keine Backups protokolliert.
 
-# Source: ./src/components/settings/backup_card.rs:635
+# Source: ./src/components/settings/backup_card.rs:636
 # Parameters: $error
 backup-card-history-error = Fehler: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:620
+# Source: ./src/components/settings/backup_card.rs:621
 # Parameters: $path
 backup-card-history-file = Datei: { $path }
 
-# Source: ./src/components/settings/backup_card.rs:616
+# Source: ./src/components/settings/backup_card.rs:617
 # Parameters: $include_images
 backup-card-history-include-images = Mit Bildern: { $include_images }
 
-# Source: ./src/components/settings/backup_card.rs:629
-# Parameters: $egg_records, $quails, $events
+# Source: ./src/components/settings/backup_card.rs:630
+# Parameters: $quails, $events, $egg_records
 backup-card-history-items = Items: { $quails } Wachteln, { $events } Ereignisse, { $egg_records } Eiereinträge
 
-# Source: ./src/components/settings/backup_card.rs:648
+# Source: ./src/components/settings/backup_card.rs:649
 # Parameters: $count
 backup-card-history-more = Mehr ({ $count })
 
-# Source: ./src/components/settings/backup_card.rs:623
+# Source: ./src/components/settings/backup_card.rs:624
 # Parameters: $name
 backup-card-history-nextcloud = Nextcloud: { $name }
 
-# Source: ./src/components/settings/backup_card.rs:632
-# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
+# Source: ./src/components/settings/backup_card.rs:633
+# Parameters: $photos_files_missing, $photos_files_included, $photos_meta
 backup-card-history-photos = Fotos: { $photos_meta } Einträge, { $photos_files_included } Dateien enthalten, { $photos_files_missing } fehlend
 
-# Source: ./src/components/settings/backup_card.rs:626
+# Source: ./src/components/settings/backup_card.rs:627
 # Parameters: $size
 backup-card-history-size = Größe: { $size } B
 
-# Source: ./src/components/settings/backup_card.rs:606
+# Source: ./src/components/settings/backup_card.rs:607
 # Parameters: $status
 backup-card-history-status = Status: { $status }
 
-# Source: ./src/components/settings/backup_card.rs:554
+# Source: ./src/components/settings/backup_card.rs:555
 backup-card-history-title = Backup-Historie
 
-# Source: ./src/components/settings/backup_card.rs:670
+# Source: ./src/components/settings/backup_card.rs:671
 backup-card-import-button = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:670
+# Source: ./src/components/settings/backup_card.rs:671
 backup-card-import-button-running = ⏳ Import läuft…
 
-# Source: ./src/components/settings/backup_card.rs:656
+# Source: ./src/components/settings/backup_card.rs:657
 backup-card-import-title = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:507
+# Source: ./src/components/settings/backup_card.rs:508
 backup-card-include-photo-files = Bilddateien im Backup enthalten
 
-# Source: ./src/components/settings/backup_card.rs:534
+# Source: ./src/components/settings/backup_card.rs:535
 backup-card-nextcloud-not-connected = Nextcloud nicht verbunden
 
-# Source: ./src/components/settings/backup_card.rs:614
+# Source: ./src/components/settings/backup_card.rs:615
 backup-card-no = Nein
 
-# Source: ./src/components/settings/backup_card.rs:547
+# Source: ./src/components/settings/backup_card.rs:548
 backup-card-progress-complete = ✅ Fertig!
 
-# Source: ./src/components/settings/backup_card.rs:546
+# Source: ./src/components/settings/backup_card.rs:547
 backup-card-progress-packing-zip = 📦 Erstelle ZIP…
 
-# Source: ./src/components/settings/backup_card.rs:544
+# Source: ./src/components/settings/backup_card.rs:545
 backup-card-progress-reading-egg-records = 🥚 Lese Eier-Einträge…
 
-# Source: ./src/components/settings/backup_card.rs:543
+# Source: ./src/components/settings/backup_card.rs:544
 backup-card-progress-reading-events = 📅 Lese Ereignisse…
 
-# Source: ./src/components/settings/backup_card.rs:545
+# Source: ./src/components/settings/backup_card.rs:546
 backup-card-progress-reading-photos = 📷 Lese Fotos…
 
-# Source: ./src/components/settings/backup_card.rs:542
+# Source: ./src/components/settings/backup_card.rs:543
 backup-card-progress-reading-quails = 📚 Lese Wachteln…
 
-# Source: ./src/components/settings/backup_card.rs:541
+# Source: ./src/components/settings/backup_card.rs:542
 backup-card-progress-starting = 🔄 Initialisiere…
 
-# Source: ./src/components/settings/backup_card.rs:603
+# Source: ./src/components/settings/backup_card.rs:604
 backup-card-status-failed = Fehlgeschlagen
 
-# Source: ./src/components/settings/backup_card.rs:604
+# Source: ./src/components/settings/backup_card.rs:605
 backup-card-status-pending = Ausstehend
 
-# Source: ./src/components/settings/backup_card.rs:602
+# Source: ./src/components/settings/backup_card.rs:603
 backup-card-status-success = Erfolgreich
 
-# Source: ./src/components/settings/backup_card.rs:493
+# Source: ./src/components/settings/backup_card.rs:494
 backup-card-title = 💾 Backup
 
-# Source: ./src/components/settings/backup_card.rs:591
+# Source: ./src/components/settings/backup_card.rs:592
 backup-card-unknown = unbekannt
 
-# Source: ./src/components/settings/backup_card.rs:612
+# Source: ./src/components/settings/backup_card.rs:613
 backup-card-yes = Ja
 
 # Source: ./src/components/settings/nextcloud_card.rs:248
@@ -172,31 +172,31 @@ backup-cleanup-button = 🧹 Verwaiste Fotos löschen
 # Parameters: $error
 backup-db-error = ❌ Datenbankfehler: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:343
+# Source: ./src/components/settings/backup_card.rs:344
 backup-import-android-only = ⚠️ Dateiauswahl ist nur auf Android verfügbar
 
-# Source: ./src/components/settings/backup_card.rs:336
+# Source: ./src/components/settings/backup_card.rs:337
 backup-import-no-file-selected = ❌ Keine Datei ausgewählt
 
-# Source: ./src/components/settings/backup_card.rs:320
-# Parameters: $photos, $count
+# Source: ./src/components/settings/backup_card.rs:321
+# Parameters: $count, $photos
 backup-import-success-with-counts = ✅ { $count } Einträge und { $photos } Fotos importiert
 
-# Source: ./src/components/settings/backup_card.rs:525
+# Source: ./src/components/settings/backup_card.rs:526
 backup-upload-button-running = ⏳ Backup-Upload läuft...
 
-# Source: ./src/components/settings/backup_card.rs:383
+# Source: ./src/components/settings/backup_card.rs:384
 # Parameters: $error
 backup-upload-failed = ❌ Backup-Upload fehlgeschlagen: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:363
+# Source: ./src/components/settings/backup_card.rs:364
 backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
 
-# Source: ./src/components/settings/backup_card.rs:429
+# Source: ./src/components/settings/backup_card.rs:430
 # Parameters: $filename
 backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
 
-# Source: ./src/components/profile_edit.rs:405
+# Source: ./src/components/profile_edit.rs:445
 confirm-delete-quail = Möchten Sie diese Wachtel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 
 # Source: ./src/components/egg_history.rs:109
@@ -225,11 +225,11 @@ egg-tracking-success = Eintrag erfolgreich gespeichert!
 # Source: ./src/components/egg_tracking.rs:150
 egg-tracking-title = Eier eintragen
 
-# Source: ./src/components/profile_add.rs:37
+# Source: ./src/components/profile_add.rs:38
 # Parameters: $error
 error = Fehler
 
-# Source: ./src/components/profile_add.rs:295
+# Source: ./src/components/profile_add.rs:332
 error-android-only = Nur auf Android verfügbar
 
 # Source: ./src/components/event_edit.rs:562
@@ -276,7 +276,7 @@ error-invalid-event-id = Ungueltige Ereignis-ID
 error-multiselect-android-only = Mehrfach-Auswahl nur auf Android verfügbar
 
 # Name cannot be empty
-# Source: ./src/components/profile_add.rs:32
+# Source: ./src/components/profile_add.rs:33
 error-name-required = Name darf nicht leer sein
 
 # Source: ./src/components/settings/network_check_card.rs:14
@@ -330,13 +330,13 @@ events-empty = Keine Ereignisse vorhanden
 # Source: ./src/components/profile_detail.rs:325
 events-timeline-title = Ereignisse
 
-# Source: ./src/components/settings/backup_card.rs:199
+# Source: ./src/components/settings/backup_card.rs:200
 export-failed = Fehler beim Exportieren
 
-# Source: ./src/components/settings/backup_card.rs:182
+# Source: ./src/components/settings/backup_card.rs:183
 export-in-progress = Export läuft...
 
-# Source: ./src/components/settings/backup_card.rs:242
+# Source: ./src/components/settings/backup_card.rs:243
 export-success = Datensicherung erfolgreich erstellt
 
 # Source: ./src/components/event_add.rs:122
@@ -379,7 +379,7 @@ field-notes-optional = Notizen (optional)
 field-notes-placeholder = Besonderheiten, Auffälligkeiten, etc.
 
 # Photos count
-# Source: ./src/components/profile_edit.rs:290
+# Source: ./src/components/profile_edit.rs:330
 field-photos = Fotos
 
 # Ring color
@@ -390,27 +390,27 @@ field-ring-color = Ringfarbe
 field-type = Typ
 
 # Female gender option
-# Source: ./src/components/profile_add.rs:208
+# Source: ./src/components/profile_add.rs:205
 gender-female = Weiblich
 
 # Male gender option
-# Source: ./src/components/profile_add.rs:209
+# Source: ./src/components/profile_add.rs:206
 gender-male = Männlich
 
 # Unknown gender option
-# Source: ./src/components/profile_add.rs:207
+# Source: ./src/components/profile_add.rs:204
 gender-unknown = Unbekannt
 
-# Source: ./src/components/settings/backup_card.rs:657
+# Source: ./src/components/settings/backup_card.rs:658
 import-description = Importiere Daten aus einer ZIP-Sicherungsdatei (v1 oder v2 Format).
 
-# Source: ./src/components/settings/backup_card.rs:285
+# Source: ./src/components/settings/backup_card.rs:286
 import-failed = Fehler beim Importieren
 
-# Source: ./src/components/settings/backup_card.rs:306
+# Source: ./src/components/settings/backup_card.rs:307
 import-in-progress = Import läuft...
 
-# Source: ./src/components/profile_edit.rs:283
+# Source: ./src/components/profile_edit.rs:323
 info-photos-detail-view = Fotos werden in der Detailansicht hinzugefügt. Hier können Sie nur das Profilbild auswählen oder Fotos löschen.
 
 # Source: ./src/components/home.rs:91
@@ -426,7 +426,7 @@ info-spacetimedb-disconnected = SpacetimeDB: nicht verbunden
 info-spacetimedb-error = SpacetimeDB: Verbindungsfehler
 
 # Tap a photo to mark it as profile photo.
-# Source: ./src/components/profile_edit.rs:370
+# Source: ./src/components/profile_edit.rs:410
 info-tap-photo-to-mark = Tippen Sie auf ein Foto, um es als Profilbild zu markieren.
 
 # Source: ./src/components/event_edit.rs:609
@@ -473,11 +473,11 @@ period-week = Woche
 period-year = Jahr
 
 # No photo selected message
-# Source: ./src/components/profile_add.rs:272
+# Source: ./src/components/profile_add.rs:309
 photo-none-selected = Kein Foto ausgewählt
 
 # Photo selected status message
-# Source: ./src/components/profile_add.rs:256
+# Source: ./src/components/profile_add.rs:293
 photo-selected = Foto ausgewählt
 
 # Source: ./src/components/event_edit.rs:360
@@ -491,14 +491,14 @@ photos-title = Fotos
 # Source: ./src/components/event_add.rs:141
 placeholder-event-notes = Weitere Informationen zum Ereignis...
 
-# Source: ./src/components/profile_add.rs:238
+# Source: ./src/components/profile_add.rs:275
 profile-add-info = Geburtsdatum und Notizen können nach dem Erstellen als Ereignisse hinzugefügt werden.
 
 # New profile page title
-# Source: ./src/components/profile_add.rs:164
+# Source: ./src/components/profile_add.rs:161
 profile-add-title = Wachtel hinzufügen
 
-# Source: ./src/components/profile_add.rs:177
+# Source: ./src/components/profile_add.rs:174
 profile-created-success = Profil erstellt!
 
 # Profile
@@ -509,7 +509,7 @@ profile-detail-title = Profil
 profile-edit-title = Profil bearbeiten
 
 # Gender field label
-# Source: ./src/components/profile_add.rs:201
+# Source: ./src/components/profile_add.rs:198
 profile-gender-label = Geschlecht
 
 # Source: ./src/components/profile_list.rs:117
@@ -519,63 +519,58 @@ profile-list-empty = Keine Profile vorhanden
 profile-list-title = Wachtel-Profile
 
 # Name field label with required marker
-# Source: ./src/components/profile_add.rs:186
+# Source: ./src/components/profile_add.rs:183
 profile-name-label = Name *
 
 # Example name placeholder
-# Source: ./src/components/profile_add.rs:191
+# Source: ./src/components/profile_add.rs:188
 profile-name-placeholder = z.B. Flecki
 
 # Photo field label
-# Source: ./src/components/profile_add.rs:244
+# Source: ./src/components/profile_add.rs:281
 profile-photo-label = Foto
 
 # Ring color field label
-# Source: ./src/components/profile_add.rs:216
+# Source: ./src/components/profile_add.rs:213
 profile-ring-color-label = Ringfarbe
 
-# Black ring color
-# Source: ./src/components/profile_add.rs:231
+# Source: ./src/components/profile_add.rs:235
 ring-color-black = Schwarz
 
-# Dark blue ring color
-# Source: ./src/components/profile_add.rs:226
+# Source: ./src/components/profile_add.rs:230
 ring-color-dark-blue = Dunkelblau
 
-# Green ring color
-# Source: ./src/components/profile_add.rs:232
+# Source: ./src/components/profile_add.rs:236
 ring-color-green = Grün
 
-# Light blue ring color
-# Source: ./src/components/profile_add.rs:225
+# Source: ./src/components/profile_add.rs:229
 ring-color-light-blue = Hellblau
 
-# No ring color option
-# Source: ./src/components/profile_add.rs:222
+# Source: ./src/components/profile_add.rs:226
 ring-color-none = Keine Ringfarbe
 
-# Orange ring color
-# Source: ./src/components/profile_add.rs:228
+# Source: ./src/components/profile_add.rs:232
 ring-color-orange = Orange
 
-# Pink ring color
-# Source: ./src/components/profile_add.rs:224
+# Source: ./src/components/profile_add.rs:228
 ring-color-pink = Rosa
 
-# Purple ring color
-# Source: ./src/components/profile_add.rs:223
+# Source: ./src/components/profile_add.rs:227
 ring-color-purple = Lila
 
-# Red ring color
-# Source: ./src/components/profile_add.rs:227
+# Source: ./src/components/profile_add.rs:231
 ring-color-red = Rot
 
-# White ring color
-# Source: ./src/components/profile_add.rs:229
+# Source: ./src/components/profile_add.rs:219
+ring-color-side-left = Links
+
+# Source: ./src/components/profile_add.rs:246
+ring-color-side-right = Rechts
+
+# Source: ./src/components/profile_add.rs:233
 ring-color-white = Weiß
 
-# Yellow ring color
-# Source: ./src/components/profile_add.rs:230
+# Source: ./src/components/profile_add.rs:234
 ring-color-yellow = Gelb
 
 # Source: ./src/components/profile_list.rs:109
@@ -834,7 +829,7 @@ sync-server-url = Nextcloud Server URL
 # Source: ./src/components/settings/nextcloud_card.rs:140
 sync-settings-deleted = Einstellungen gelöscht
 
-# Source: ./src/components/settings/backup_card.rs:358
+# Source: ./src/components/settings/backup_card.rs:359
 sync-setup-title = Nextcloud Synchronisierung einrichten
 
 # Source: ./src/components/settings/nextcloud_card.rs:146
@@ -845,7 +840,7 @@ sync-status-running-full = 🔄 Vollständige Synchronisation...
 sync-status-success-photos = ✅ Sync erfolgreich: { $count } Fotos hochgeladen
 
 # Source: ./src/components/settings/nextcloud_card.rs:230
-# Parameters: $total, $current, $percent
+# Parameters: $percent, $current, $total
 sync-upload-progress-detail = { $current } von { $total } Fotos hochgeladen ({ $percent }%)
 
 # Source: ./src/components/settings/nextcloud_card.rs:229

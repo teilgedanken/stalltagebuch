@@ -148,11 +148,10 @@ pub fn ProfileCard(
     // Clone UUID for use in memo
     let photo_uuid_for_lookup = profile_photo_uuid.clone();
 
-    let overlay_bg = if let Some(ring_color) = &profile.ring_color {
-        get_light_color_for(ring_color)
-    } else {
-        "rgba(255, 255, 255, 0.9)".to_string()
-    };
+    let overlay_bg = split_overlay_bg(
+        profile.ring_color_left.as_ref(),
+        profile.ring_color_right.as_ref(),
+    );
 
     // Try to get photo path from the provided path, or dynamically fetch from photos table
     let effective_photo_path = use_memo(move || {
@@ -236,25 +235,42 @@ fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {
         uuid,
         name: remote.name.clone(),
         gender: Gender::from_str(&remote.gender),
-        ring_color: remote
-            .ring_color
+        ring_color_left: remote
+            .ring_color_left
+            .as_ref()
+            .map(|value| RingColor::from_str(value)),
+        ring_color_right: remote
+            .ring_color_right
             .as_ref()
             .map(|value| RingColor::from_str(value)),
         profile_photo,
     })
 }
 
-fn get_light_color_for(color: &RingColor) -> String {
+fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> String {
+    let left_bg = left
+        .map(get_light_color_for)
+        .unwrap_or("rgba(255, 255, 255, 0.9)");
+    let right_bg = right
+        .map(get_light_color_for)
+        .unwrap_or("rgba(255, 255, 255, 0.9)");
+    format!(
+        "linear-gradient(to right, {} 0%, {} 50%, {} 50%, {} 100%)",
+        left_bg, left_bg, right_bg, right_bg
+    )
+}
+
+fn get_light_color_for(color: &RingColor) -> &'static str {
     match color {
-        RingColor::Rot => "rgba(255, 200, 200, 0.9)".to_string(),
-        RingColor::Dunkelblau => "rgba(200, 210, 245, 0.9)".to_string(),
-        RingColor::Hellblau => "rgba(210, 230, 255, 0.9)".to_string(),
-        RingColor::Gruen => "rgba(200, 255, 200, 0.9)".to_string(),
-        RingColor::Gelb => "rgba(255, 255, 200, 0.9)".to_string(),
-        RingColor::Orange => "rgba(255, 230, 200, 0.9)".to_string(),
-        RingColor::Lila => "rgba(230, 200, 255, 0.9)".to_string(),
-        RingColor::Rosa => "rgba(255, 200, 230, 0.9)".to_string(),
-        RingColor::Schwarz => "rgba(220, 220, 220, 0.9)".to_string(),
-        RingColor::Weiss => "rgba(255, 255, 255, 0.9)".to_string(),
+        RingColor::Rot => "rgba(255, 200, 200, 0.9)",
+        RingColor::Dunkelblau => "rgba(200, 210, 245, 0.9)",
+        RingColor::Hellblau => "rgba(210, 230, 255, 0.9)",
+        RingColor::Gruen => "rgba(200, 255, 200, 0.9)",
+        RingColor::Gelb => "rgba(255, 255, 200, 0.9)",
+        RingColor::Orange => "rgba(255, 230, 200, 0.9)",
+        RingColor::Lila => "rgba(230, 200, 255, 0.9)",
+        RingColor::Rosa => "rgba(255, 200, 230, 0.9)",
+        RingColor::Schwarz => "rgba(220, 220, 220, 0.9)",
+        RingColor::Weiss => "rgba(255, 255, 255, 0.9)",
     }
 }

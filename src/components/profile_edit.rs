@@ -31,7 +31,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut profile = use_signal(|| None::<Quail>);
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
-    let mut ring_color = use_signal(|| String::new());
+    let mut ring_color_left = use_signal(|| String::new());
+    let mut ring_color_right = use_signal(|| String::new());
     let mut birthday = use_signal(|| None::<String>);
     let mut photos = use_signal(|| Vec::<Photo>::new());
     let mut selected_profile_photo_id = use_signal(|| None::<String>);
@@ -55,7 +56,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         "female" => Gender::Female,
                         _ => Gender::Unknown,
                     },
-                    ring_color: if let Some(rc) = &quail.ring_color {
+                    ring_color_left: if let Some(rc) = &quail.ring_color_left {
+                        Some(RingColor::from_str(rc))
+                    } else {
+                        None
+                    },
+                    ring_color_right: if let Some(rc) = &quail.ring_color_right {
                         Some(RingColor::from_str(rc))
                     } else {
                         None
@@ -68,8 +74,11 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
                 name.set(local_quail.name.clone());
                 gender.set(local_quail.gender.as_str().to_string());
-                if let Some(rc) = &local_quail.ring_color {
-                    ring_color.set(rc.as_str().to_string());
+                if let Some(rc) = &local_quail.ring_color_left {
+                    ring_color_left.set(rc.as_str().to_string());
+                }
+                if let Some(rc) = &local_quail.ring_color_right {
+                    ring_color_right.set(rc.as_str().to_string());
                 }
                 if let Some(profile_uuid) = local_quail.profile_photo {
                     selected_profile_photo_id.set(Some(profile_uuid.to_string()));
@@ -118,14 +127,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 _ => "unknown".to_string(),
             };
 
-            // Ring Color
-            let ring_color_value = ring_color();
-            let ring_color_trimmed = ring_color_value.trim();
-            let updated_ring_color = if ring_color_trimmed.is_empty() {
-                "".to_string()
-            } else {
-                ring_color_trimmed.to_string()
-            };
+            let updated_ring_color_left = normalize_ring_color_selection(&ring_color_left());
+            let updated_ring_color_right = normalize_ring_color_selection(&ring_color_right());
 
             let quail_uuid = updated_profile.uuid.to_string();
             let selected_photo = selected_profile_photo_id();
@@ -139,11 +142,8 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     uuid: quail_uuid.clone(),
                     name: updated_name,
                     gender: updated_gender,
-                    ring_color: if updated_ring_color.is_empty() {
-                        None
-                    } else {
-                        Some(updated_ring_color)
-                    },
+                    ring_color_left: updated_ring_color_left,
+                    ring_color_right: updated_ring_color_right,
                     profile_photo: selected_photo,
                     birthday: birthday(),
                 }) {
@@ -260,21 +260,61 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
                         {tid!("field-ring-color")} // Ring color
                     }
-                    select {
-                        style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
-                        value: "{ring_color}",
-                        onchange: move |e| ring_color.set(e.value()),
-                        option { value: "", {tid!("ring-color-none")} } // None
-                        option { value: "lila", {tid!("ring-color-purple")} } // Purple
-                        option { value: "rosa", {tid!("ring-color-pink")} } // Pink
-                        option { value: "hellblau", {tid!("ring-color-light-blue")} } // Light blue
-                        option { value: "dunkelblau", {tid!("ring-color-dark-blue")} } // Dark blue
-                        option { value: "rot", {tid!("ring-color-red")} } // Red
-                        option { value: "orange", {tid!("ring-color-orange")} } // Orange
-                        option { value: "weiss", {tid!("ring-color-white")} } // White
-                        option { value: "gelb", {tid!("ring-color-yellow")} } // Yellow
-                        option { value: "schwarz", {tid!("ring-color-black")} } // Black
-                        option { value: "gruen", {tid!("ring-color-green")} } // Green
+                    div { style: "display: flex; gap: 10px;",
+                        div { style: "flex: 1;",
+                            div {
+                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
+                                {tid!("ring-color-side-left")}
+                            }
+                            div { style: "display: flex; gap: 8px; align-items: center;",
+                                select {
+                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_left())),
+                                    value: "{ring_color_left}",
+                                    onchange: move |e| ring_color_left.set(e.value()),
+                                    option { value: "", {tid!("ring-color-none")} }
+                                    option { value: "lila", {tid!("ring-color-purple")} }
+                                    option { value: "rosa", {tid!("ring-color-pink")} }
+                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                    option { value: "rot", {tid!("ring-color-red")} }
+                                    option { value: "orange", {tid!("ring-color-orange")} }
+                                    option { value: "weiss", {tid!("ring-color-white")} }
+                                    option { value: "gelb", {tid!("ring-color-yellow")} }
+                                    option { value: "schwarz", {tid!("ring-color-black")} }
+                                    option { value: "gruen", {tid!("ring-color-green")} }
+                                }
+                                div {
+                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_left())),
+                                }
+                            }
+                        }
+                        div { style: "flex: 1;",
+                            div {
+                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
+                                {tid!("ring-color-side-right")}
+                            }
+                            div { style: "display: flex; gap: 8px; align-items: center;",
+                                select {
+                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_right())),
+                                    value: "{ring_color_right}",
+                                    onchange: move |e| ring_color_right.set(e.value()),
+                                    option { value: "", {tid!("ring-color-none")} }
+                                    option { value: "lila", {tid!("ring-color-purple")} }
+                                    option { value: "rosa", {tid!("ring-color-pink")} }
+                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                    option { value: "rot", {tid!("ring-color-red")} }
+                                    option { value: "orange", {tid!("ring-color-orange")} }
+                                    option { value: "weiss", {tid!("ring-color-white")} }
+                                    option { value: "gelb", {tid!("ring-color-yellow")} }
+                                    option { value: "schwarz", {tid!("ring-color-black")} }
+                                    option { value: "gruen", {tid!("ring-color-green")} }
+                                }
+                                div {
+                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -430,5 +470,46 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 }
             }
         }
+    }
+}
+
+fn normalize_ring_color_selection(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(RingColor::from_str(trimmed).as_str().to_string())
+    }
+}
+
+fn ring_color_preview_bg(value: &str) -> &'static str {
+    match value.trim() {
+        "rot" => "#ef5350",
+        "dunkelblau" => "#5c6bc0",
+        "hellblau" => "#64b5f6",
+        "gruen" => "#66bb6a",
+        "gelb" => "#fff176",
+        "orange" => "#ffb74d",
+        "lila" => "#ba68c8",
+        "rosa" => "#f48fb1",
+        "schwarz" => "#616161",
+        "weiss" => "#f5f5f5",
+        _ => "#ffffff",
+    }
+}
+
+fn ring_color_select_bg(value: &str) -> &'static str {
+    match value.trim() {
+        "rot" => "#ffebee",
+        "dunkelblau" => "#e8eaf6",
+        "hellblau" => "#e3f2fd",
+        "gruen" => "#e8f5e9",
+        "gelb" => "#fffde7",
+        "orange" => "#fff3e0",
+        "lila" => "#f3e5f5",
+        "rosa" => "#fce4ec",
+        "schwarz" => "#f5f5f5",
+        "weiss" => "#ffffff",
+        _ => "#ffffff",
     }
 }
