@@ -52,7 +52,11 @@ pub async fn import_from_zip(
         2 => {
             log::info!("Importing v2 format...");
             progress_callback("Importing v2 format data...".to_string());
-            import_v2_from_zip(&mut archive, &mut progress_callback).await?
+            crate::services::import_v2_service::import_v2_from_zip(
+                &mut archive,
+                &mut progress_callback,
+            )
+            .await?
         }
         _ => {
             return Err(AppError::Other(format!(
@@ -90,20 +94,4 @@ fn detect_format_version(
         .ok_or_else(|| AppError::Other("Invalid metadata: format_version not found".to_string()))?;
 
     Ok(format_version as u32)
-}
-
-/// Import v2 format data (placeholder for now)
-async fn import_v2_from_zip(
-    _archive: &mut ZipArchive<impl std::io::Read + std::io::Seek>,
-    _progress_callback: &mut impl FnMut(String),
-) -> Result<(usize, usize), AppError> {
-    // TODO: Implement v2 import
-    // - Read data.json
-    // - Validate format
-    // - Insert into SpacetimeDB via reducers
-    // - Handle photos from photos/ directory
-    // - Handle conflicts (duplicate UUIDs)
-
-    log::warn!("V2 import not yet implemented");
-    Err(AppError::Other("V2 import not yet implemented".to_string()))
 }
