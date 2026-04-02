@@ -104,33 +104,26 @@ pub fn NetworkCheckCard() -> Element {
     rsx! {
         match network_status() {
             NetworkStatus::Checking => rsx! {
-                div { class: "card", style: "margin-bottom: 16px;",
-                    div { style: "display: flex; align-items: center; gap: 12px;",
-                        div { style: "font-size: 24px;", "🔄" }
-                        div {
-                            p { style: "margin: 0; font-weight: 600; font-size: 14px;", {tid!("network-checking")} } // Network connectivity check in progress
-                        }
+                div { class: "notification is-info is-light",
+                    div { class: "is-flex is-align-items-center", style: "gap: 12px;",
+                        span { class: "tag is-info is-light", "🔄" }
+                        p { class: "mb-0 has-text-weight-semibold", {tid!("network-checking")} }
                     }
                 }
             },
             NetworkStatus::Online => rsx! {},
             NetworkStatus::Offline(error) => rsx! {
-                div { class: "card", style: "margin-bottom: 16px;",
-                    div {
-                        div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 12px;",
-                            div { style: "font-size: 24px;", "❌" }
-                            div {
-                                p {
-                                    style: "margin: 0; font-weight: 600; font-size: 14px; color: #c62828;",
-                                    {tid!("network-offline")} // No internet connection message
-                                }
-                                p { style: "margin: 0; font-size: 12px; color: #666;", "{error}" }
-                            }
+                div { class: "notification is-danger is-light",
+                    div { class: "is-flex is-align-items-center mb-3", style: "gap: 12px;",
+                        span { class: "tag is-danger is-light", "❌" }
+                        div {
+                            p { class: "mb-0 has-text-weight-semibold", {tid!("network-offline")} }
+                            p { class: "mb-0 is-size-7 has-text-grey", "{error}" }
                         }
-                        button { class: "btn-primary", style: "width: 100%;", onclick: recheck,
-                            "🔄 "
-                            {tid!("action-retry")}
-                        }
+                    }
+                    button { class: "button is-primary is-fullwidth", onclick: recheck,
+                        "🔄 "
+                        {tid!("action-retry")}
                     }
                 }
             },

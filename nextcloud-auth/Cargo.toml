@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 description = "Nextcloud Login Flow v2 authentication library with Dioxus UI components"
 
 [dependencies]
-dioxus = { version = "0.7.1" }
+dioxus = { version = "0.7.4" }
 reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "rustls",

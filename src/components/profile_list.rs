@@ -93,60 +93,65 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     });
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-            div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 8px;",
-                h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700;",
-                    "🐦 "
-                    {tid!("profile-list-title")}
-                }
-                div { style: "display: flex; gap: 8px; align-items: center;",
-                    button {
-                        style: format!(
-                            "padding: 8px 10px; font-size: 16px; border-radius: 8px; {}",
-                            if show_dead() {
-                                "background:#ffe6e6; color:#a00; border:1px solid #f5b5b5;"
-                            } else {
-                                "background:#f0f0f0; color:#666; border:1px solid #ddd;"
-                            },
-                        ),
-                        onclick: move |_| show_dead.set(!show_dead()),
-                        "🪦"
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        h1 { class: "title is-4 mb-0",
+                            "🐦 "
+                            {tid!("profile-list-title")}
+                        }
                     }
-                    button {
-                        class: "btn-success",
-                        style: "padding: 10px 16px; font-size: 16px; font-weight: 500;",
-                        onclick: move |_| on_navigate.call(Screen::AddProfile),
-                        "+ "
-                        {tid!("action-new")}
+                    div { class: "level-right",
+                        div { class: "buttons mb-0",
+                            button {
+                                class: if show_dead() {
+                                    "button is-danger is-light"
+                                } else {
+                                    "button is-light"
+                                },
+                                onclick: move |_| show_dead.set(!show_dead()),
+                                "🪦"
+                            }
+                            button {
+                                class: "button is-success",
+                                onclick: move |_| on_navigate.call(Screen::AddProfile),
+                                "+ "
+                                {tid!("action-new")}
+                            }
+                        }
                     }
                 }
-            }
 
-            div { style: "margin: 12px 0 16px;",
-                input {
-                    style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 10px; background: white; margin-bottom: 12px;",
-                    r#type: "text",
-                    placeholder: "🔍 {tid!(\"search-placeholder-name\")}",
-                    value: "{search_filter}",
-                    oninput: move |e| search_filter.set(e.value()),
-                },
-            }
-
-            if filtered_profiles().is_empty() {
-                div { style: "text-align: center; padding: 40px; color: #999;",
-                    {tid!("profile-list-empty")}
+                div { class: "field mb-4",
+                    p { class: "control has-icons-left",
+                        input {
+                            class: "input",
+                            r#type: "text",
+                            placeholder: tid!("search-placeholder-name"),
+                            value: "{search_filter}",
+                            oninput: move |e| search_filter.set(e.value()),
+                        }
+                        span { class: "icon is-small is-left", "🔍" }
+                    }
                 }
-            } else {
-                div { class: "profile-grid",
-                    for (profile, status, profile_photo_uuid, profile_photo_path, age_display) in filtered_profiles() {
-                        ProfileCard {
-                            key: "{profile.uuid}",
-                            profile: profile.clone(),
-                            profile_photo_path,
-                            profile_photo_uuid,
-                            age_display,
-                            status,
-                            on_click: move |_| on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string())),
+
+                if filtered_profiles().is_empty() {
+                    div { class: "notification is-light has-text-centered",
+                        {tid!("profile-list-empty")}
+                    }
+                } else {
+                    div { class: "profile-grid",
+                        for (profile, status, profile_photo_uuid, profile_photo_path, age_display) in filtered_profiles() {
+                            ProfileCard {
+                                key: "{profile.uuid}",
+                                profile: profile.clone(),
+                                profile_photo_path,
+                                profile_photo_uuid,
+                                age_display,
+                                status,
+                                on_click: move |_| on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string())),
+                            }
                         }
                     }
                 }
@@ -207,14 +212,15 @@ pub fn ProfileCard(
                 div {
                     class: "profile-overlay",
                     style: format!("background: {};", overlay_bg),
-                    div { style: "display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;",
+                    div { class: "is-flex is-align-items-flex-end is-justify-content-space-between", style: "gap: 12px;",
                         div {
                             div { class: "profile-name", "{profile.name}" }
                             div { class: "profile-gender", "{profile.gender.display_name()}" }
                         }
                         if let Some(age) = age_display {
-                            div {
-                                style: "margin-left: auto; font-size: 12px; font-weight: 700; color: #1f2937; text-shadow: 0 1px 2px rgba(255,255,255,0.6); white-space: nowrap;",
+                            span {
+                                class: "tag is-light is-small",
+                                style: "margin-left: auto; white-space: nowrap;",
                                 "{age}"
                             }
                         }
@@ -225,13 +231,13 @@ pub fn ProfileCard(
                     if let Some(status) = status {
                         match status {
                             EventType::Sick => rsx! {
-                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🤒" }
+                                span { class: "tag is-danger is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🤒" }
                             },
                             EventType::MarkedForSlaughter | EventType::Slaughtered => rsx! {
-                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🥩" }
+                                span { class: "tag is-warning is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🥩" }
                             },
                             EventType::Died => rsx! {
-                                div { style: "position: absolute; top: 8px; right: 8px; font-size: 32px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);", "🪦" }
+                                span { class: "tag is-dark is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🪦" }
                             },
                             _ => rsx! {},
                         }

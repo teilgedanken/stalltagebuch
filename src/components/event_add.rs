@@ -78,92 +78,94 @@ pub fn EventAdd(
     };
 
     rsx! {
-        div { class: "container", style: "padding: 20px;",
-
-            h2 { {tid!("event-add-title")} }
-            p { style: "color: #666; margin-bottom: 20px;",
-                {tid!("event-add-for", name : quail_name.clone())}
-            }
-
-            if let Some(error) = error_message() {
-                div {
-                    class: "error-message",
-                    style: "background-color: #fee; color: #c00; padding: 10px; margin-bottom: 20px; border-radius: 4px;",
-                    "{error}"
-                }
-            }
-
-            div { class: "form-group", style: "margin-bottom: 20px;",
-
-                label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {tid!("field-event-type")}
-                }
-                select {
-                    value: "{event_type().as_str()}",
-                    oninput: move |e| {
-                        let value = e.value();
-                        let et = EventType::from_str(value.as_str());
-                        event_type.set(et);
-                    },
-                    style: "width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;",
-                    option { value: "born", {tid!("event-type-born")} }
-                    option { value: "alive", {tid!("event-type-alive")} }
-                    option { value: "sick", {tid!("event-type-sick")} }
-                    option { value: "healthy", {tid!("event-type-healthy")} }
-                    option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
-                    option { value: "slaughtered", {tid!("event-type-slaughtered")} }
-                    option { value: "died", {tid!("event-type-died")} }
-                }
-            }
-
-            div { class: "form-group", style: "margin-bottom: 20px;",
-
-                label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {tid!("field-date")}
-                }
-                input {
-                    r#type: "date",
-                    value: "{event_date}",
-                    oninput: move |e| event_date.set(e.value()),
-                    style: "width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;",
-                }
-            }
-
-            div { class: "form-group", style: "margin-bottom: 20px;",
-
-                label { style: "display: block; margin-bottom: 8px; font-weight: bold;",
-                    {tid!("field-notes-optional")}
-                }
-                textarea {
-                    value: "{notes}",
-                    oninput: move |e| notes.set(e.value()),
-                    style: "width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-height: 100px;",
-                    placeholder: tid!("placeholder-event-notes"),
-                }
-            }
-
-            div { class: "button-group", style: "display: flex; gap: 10px;",
-
-                button {
-                    disabled: saving(),
-                    onclick: on_save,
-                    style: "flex: 1; padding: 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;",
-                    if saving() {
-                        "⏳ "
-                        {tid!("action-saving")}
-                    } else {
-                        {tid!("action-save")}
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "box",
+                    h2 { class: "title is-4", {tid!("event-add-title")} }
+                    p { class: "subtitle is-6",
+                        {tid!("event-add-for", name : quail_name.clone())}
                     }
-                }
 
-                button {
-                    disabled: saving(),
-                    onclick: {
-                        let quail_id_for_cancel = quail_id.clone();
-                        move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
-                    },
-                    style: "flex: 1; padding: 12px; background-color: #f44336; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;",
-                    {tid!("action-cancel")}
+                    if let Some(error) = error_message() {
+                        div { class: "notification is-danger is-light",
+                            "{error}"
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-event-type")} }
+                        div { class: "control",
+                            div { class: "select is-fullwidth",
+                                select {
+                                    value: "{event_type().as_str()}",
+                                    oninput: move |e| {
+                                        let value = e.value();
+                                        let et = EventType::from_str(value.as_str());
+                                        event_type.set(et);
+                                    },
+                                    option { value: "born", {tid!("event-type-born")} }
+                                    option { value: "alive", {tid!("event-type-alive")} }
+                                    option { value: "sick", {tid!("event-type-sick")} }
+                                    option { value: "healthy", {tid!("event-type-healthy")} }
+                                    option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
+                                    option { value: "slaughtered", {tid!("event-type-slaughtered")} }
+                                    option { value: "died", {tid!("event-type-died")} }
+                                }
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-date")} }
+                        div { class: "control",
+                            input {
+                                r#type: "date",
+                                class: "input",
+                                value: "{event_date}",
+                                oninput: move |e| event_date.set(e.value()),
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-notes-optional")} }
+                        div { class: "control",
+                            textarea {
+                                class: "textarea",
+                                value: "{notes}",
+                                oninput: move |e| notes.set(e.value()),
+                                placeholder: tid!("placeholder-event-notes"),
+                            }
+                        }
+                    }
+
+                    div { class: "field is-grouped mt-4",
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-primary is-fullwidth",
+                                disabled: saving(),
+                                onclick: on_save,
+                                if saving() {
+                                    "⏳ "
+                                    {tid!("action-saving")}
+                                } else {
+                                    {tid!("action-save")}
+                                }
+                            }
+                        }
+
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-light is-fullwidth",
+                                disabled: saving(),
+                                onclick: {
+                                    let quail_id_for_cancel = quail_id.clone();
+                                    move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
+                                },
+                                {tid!("action-cancel")}
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -166,269 +166,273 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     };
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-
-            div { style: "display: flex; align-items: center; margin-bottom: 24px;",
-                button {
-                    class: "btn-secondary",
-                    style: "margin-right: 12px; padding: 8px 16px;",
-                    onclick: move |_| on_navigate.call(Screen::ProfileList),
-                    "← "
-                    {tid!("action-back")}
-                }
-                h1 {
-                    style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
-                    {tid!("profile-add-title")} // New profile page title
-                }
-            }
-
-            if let Some(err) = error() {
-                div { style: "background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "⚠️ {err}"
-                }
-            }
-
-            if success() {
-                div { style: "background: #efe; border: 1px solid #cfc; color: #3a3; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "✅ "
-                    {tid!("profile-created-success")}
-                }
-            }
-
-            div { class: "card",
-
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("profile-name-label")} // Name field label with required marker
+        section { class: "section pt-4 pb-4",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        button {
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::ProfileList),
+                            "← "
+                            {tid!("action-back")}
+                        }
                     }
-                    input {
-                        r#type: "text",
-                        class: "input",
-                        placeholder: tid!("profile-name-placeholder"), // Example name placeholder
-                        value: "{name}",
-                        oninput: move |e| name.set(e.value()),
-                        autofocus: true,
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0",
+                            {tid!("profile-add-title")}
+                        }
+                    }
+                    div { class: "level-right" }
+                }
+
+                if let Some(err) = error() {
+                    div { class: "notification is-danger is-light",
+                        "⚠️ {err}"
                     }
                 }
 
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("profile-gender-label")} // Gender field label
-                    }
-                    select {
-                        class: "input",
-                        value: "{gender}",
-                        onchange: move |e| gender.set(e.value()),
-                        option { value: "unknown", {tid!("gender-unknown")} } // Unknown gender option
-                        option { value: "female", {tid!("gender-female")} } // Female gender option
-                        option { value: "male", {tid!("gender-male")} } // Male gender option
+                if success() {
+                    div { class: "notification is-success is-light",
+                        "✅ "
+                        {tid!("profile-created-success")}
                     }
                 }
 
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-date")}
-                    }
-                    input {
-                        r#type: "date",
-                        class: "input",
-                        value: "{birthday}",
-                        oninput: move |e| birthday.set(e.value()),
-                    }
-                }
-
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("profile-ring-color-label")} // Ring color field label
-                    }
-                    div { style: "display: flex; gap: 10px;",
-                        div { style: "flex: 1;",
-                            div {
-                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
-                                {tid!("ring-color-side-left")}
-                            }
-                            div { style: "display: flex; gap: 8px; align-items: center;",
-                                select {
-                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_left())),
-                                    value: "{ring_color_left}",
-                                    onchange: move |e| ring_color_left.set(e.value()),
-                                    option { value: "", {tid!("ring-color-none")} }
-                                    option { value: "lila", {tid!("ring-color-purple")} }
-                                    option { value: "rosa", {tid!("ring-color-pink")} }
-                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
-                                    option { value: "rot", {tid!("ring-color-red")} }
-                                    option { value: "orange", {tid!("ring-color-orange")} }
-                                    option { value: "weiss", {tid!("ring-color-white")} }
-                                    option { value: "gelb", {tid!("ring-color-yellow")} }
-                                    option { value: "schwarz", {tid!("ring-color-black")} }
-                                    option { value: "gruen", {tid!("ring-color-green")} }
-                                }
-                                div {
-                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_left())),
-                                }
+                div { class: "box",
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-name-label")} }
+                        div { class: "control",
+                            input {
+                                r#type: "text",
+                                class: "input",
+                                placeholder: tid!("profile-name-placeholder"),
+                                value: "{name}",
+                                oninput: move |e| name.set(e.value()),
+                                autofocus: true,
                             }
                         }
-                        div { style: "flex: 1;",
-                            div {
-                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
-                                {tid!("ring-color-side-right")}
-                            }
-                            div { style: "display: flex; gap: 8px; align-items: center;",
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-gender-label")} }
+                        div { class: "control",
+                            div { class: "select is-fullwidth",
                                 select {
-                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_right())),
-                                    value: "{ring_color_right}",
-                                    onchange: move |e| ring_color_right.set(e.value()),
-                                    option { value: "", {tid!("ring-color-none")} }
-                                    option { value: "lila", {tid!("ring-color-purple")} }
-                                    option { value: "rosa", {tid!("ring-color-pink")} }
-                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
-                                    option { value: "rot", {tid!("ring-color-red")} }
-                                    option { value: "orange", {tid!("ring-color-orange")} }
-                                    option { value: "weiss", {tid!("ring-color-white")} }
-                                    option { value: "gelb", {tid!("ring-color-yellow")} }
-                                    option { value: "schwarz", {tid!("ring-color-black")} }
-                                    option { value: "gruen", {tid!("ring-color-green")} }
-                                }
-                                div {
-                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                    value: "{gender}",
+                                    onchange: move |e| gender.set(e.value()),
+                                    option { value: "unknown", {tid!("gender-unknown")} }
+                                    option { value: "female", {tid!("gender-female")} }
+                                    option { value: "male", {tid!("gender-male")} }
                                 }
                             }
                         }
                     }
-                }
 
-                div { style: "padding: 12px; background: #e3f2fd; border-radius: 8px; color: #0066cc; font-size: 13px; margin-bottom: 20px;",
-                    "ℹ️ "
-                    {tid!("profile-add-info")}
-                }
-
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("profile-photo-label")} // Photo field label
+                    div { class: "field",
+                        label { class: "label", {tid!("field-date")} }
+                        div { class: "control",
+                            input {
+                                r#type: "date",
+                                class: "input",
+                                value: "{birthday}",
+                                oninput: move |e| birthday.set(e.value()),
+                            }
+                        }
                     }
 
-                    div { style: "margin-bottom: 12px;",
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-ring-color-label")} }
+                        div { class: "columns is-mobile",
+                            div { class: "column",
+                                p { class: "help mb-2", {tid!("ring-color-side-left")} }
+                                div { class: "field has-addons",
+                                    p { class: "control is-expanded",
+                                        span { class: "select is-fullwidth",
+                                            select {
+                                                style: format!("background: {};", ring_color_select_bg(&ring_color_left())),
+                                                value: "{ring_color_left}",
+                                                onchange: move |e| ring_color_left.set(e.value()),
+                                                option { value: "", {tid!("ring-color-none")} }
+                                                option { value: "lila", {tid!("ring-color-purple")} }
+                                                option { value: "rosa", {tid!("ring-color-pink")} }
+                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "rot", {tid!("ring-color-red")} }
+                                                option { value: "orange", {tid!("ring-color-orange")} }
+                                                option { value: "weiss", {tid!("ring-color-white")} }
+                                                option { value: "gelb", {tid!("ring-color-yellow")} }
+                                                option { value: "schwarz", {tid!("ring-color-black")} }
+                                                option { value: "gruen", {tid!("ring-color-green")} }
+                                            }
+                                        }
+                                    }
+                                    p { class: "control",
+                                        span {
+                                            class: "tag",
+                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_left())),
+                                        }
+                                    }
+                                }
+                            }
+
+                            div { class: "column",
+                                p { class: "help mb-2", {tid!("ring-color-side-right")} }
+                                div { class: "field has-addons",
+                                    p { class: "control is-expanded",
+                                        span { class: "select is-fullwidth",
+                                            select {
+                                                style: format!("background: {};", ring_color_select_bg(&ring_color_right())),
+                                                value: "{ring_color_right}",
+                                                onchange: move |e| ring_color_right.set(e.value()),
+                                                option { value: "", {tid!("ring-color-none")} }
+                                                option { value: "lila", {tid!("ring-color-purple")} }
+                                                option { value: "rosa", {tid!("ring-color-pink")} }
+                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "rot", {tid!("ring-color-red")} }
+                                                option { value: "orange", {tid!("ring-color-orange")} }
+                                                option { value: "weiss", {tid!("ring-color-white")} }
+                                                option { value: "gelb", {tid!("ring-color-yellow")} }
+                                                option { value: "schwarz", {tid!("ring-color-black")} }
+                                                option { value: "gruen", {tid!("ring-color-green")} }
+                                            }
+                                        }
+                                    }
+                                    p { class: "control",
+                                        span {
+                                            class: "tag",
+                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    article { class: "message is-info is-light",
+                        div { class: "message-body",
+                            "ℹ️ "
+                            {tid!("profile-add-info")}
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-photo-label")} }
+
                         if let Some(path) = photo_path() {
-                            div { style: "display: flex; align-items: center; gap: 12px; padding: 12px; background: #f0f0f0; border-radius: 8px;",
-                                div { style: "width: 60px; height: 60px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px;",
-                                    "📷"
-                                }
-                                div { style: "flex: 1;",
+                            div { class: "notification is-light",
+                                div { class: "is-flex is-align-items-center is-justify-content-space-between",
                                     div {
-                                        style: "font-size: 14px; font-weight: 600; color: #333;",
-                                        {tid!("photo-selected")} // Photo selected status message
+                                        strong { "📷 " }
+                                        {tid!("photo-selected")}
+                                        p { class: "help", {path.file_name().and_then(|n| n.to_str()).unwrap_or("Unbekannt")} }
                                     }
-                                    div { style: "font-size: 12px; color: #666; word-break: break-all;",
-                                        "{path.file_name().and_then(|n| n.to_str()).unwrap_or(\"Unbekannt\")}"
+                                    button {
+                                        class: "button is-small is-light",
+                                        onclick: move |_| photo_path.set(None),
+                                        "🗑️"
                                     }
-                                }
-                                button {
-                                    class: "btn-secondary",
-                                    style: "padding: 6px 12px; font-size: 12px;",
-                                    onclick: move |_| photo_path.set(None),
-                                    "🗑️"
                                 }
                             }
                         } else {
                             div {
-                                style: "width: 100%; height: 120px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px;",
-                                {tid!("photo-none-selected")} // No photo selected message
+                                class: "notification is-light has-text-centered",
+                                style: "border: 2px dashed #ccc;",
+                                {tid!("photo-none-selected")}
+                            }
+                        }
+
+                        div { class: "field is-grouped mt-3",
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-light is-fullwidth",
+                                    disabled: uploading(),
+                                    onclick: move |_| {
+                                        uploading.set(true);
+                                        error.set(None);
+                                        spawn(async move {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match crate::camera::pick_image() {
+                                                    Ok(path) => photo_path.set(Some(path)),
+                                                    Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                error.set(Some(tid!("error-android-only")));
+                                            }
+                                            uploading.set(false);
+                                        });
+                                    },
+                                    if uploading() {
+                                        "⏳ "
+                                        {tid!("action-loading")}
+                                    } else {
+                                        "🖼️ "
+                                        {tid!("action-gallery")}
+                                    }
+                                }
+                            }
+
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-light is-fullwidth",
+                                    disabled: uploading(),
+                                    onclick: move |_| {
+                                        uploading.set(true);
+                                        error.set(None);
+                                        spawn(async move {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match crate::camera::capture_photo() {
+                                                    Ok(path) => photo_path.set(Some(path)),
+                                                    Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                error.set(Some(tid!("error-android-only")));
+                                            }
+                                            uploading.set(false);
+                                        });
+                                    },
+                                    if uploading() {
+                                        "⏳ "
+                                        {tid!("action-loading")}
+                                    } else {
+                                        "📷 "
+                                        {tid!("action-camera")}
+                                    }
+                                }
                             }
                         }
                     }
 
-                    div { style: "display: flex; gap: 8px;",
-                        button {
-                            class: "btn-secondary",
-                            style: "flex: 1; padding: 10px; font-size: 14px;",
-                            disabled: uploading(),
-                            onclick: move |_| {
-                                uploading.set(true);
-                                error.set(None);
-                                spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::pick_image() {
-                                            Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
-                                        }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        error.set(Some(tid!("error-android-only")));
-                                    }
-                                    uploading.set(false);
-                                });
-                            },
-                            if uploading() {
-                                "⏳ "
-                                {tid!("action-loading")}
-                            } else {
-                                "🖼️ "
-                                {tid!("action-gallery")}
+                    div { class: "field is-grouped mt-5",
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-primary is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| handle_submit(),
+                                if saving() {
+                                    "⏳ "
+                                    {tid!("action-saving")}
+                                } else {
+                                    "💾 "
+                                    {tid!("action-save")}
+                                }
                             }
                         }
-                        button {
-                            class: "btn-secondary",
-                            style: "flex: 1; padding: 10px; font-size: 14px;",
-                            disabled: uploading(),
-                            onclick: move |_| {
-                                uploading.set(true);
-                                error.set(None);
-                                spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::capture_photo() {
-                                            Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
-                                        }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        error.set(Some(tid!("error-android-only")));
-                                    }
-                                    uploading.set(false);
-                                });
-                            },
-                            if uploading() {
-                                "⏳ "
-                                {tid!("action-loading")}
-                            } else {
-                                "📷 "
-                                {tid!("action-camera")}
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-light is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| on_navigate.call(Screen::ProfileList),
+                                "❌ "
+                                {tid!("action-cancel")}
                             }
                         }
-                    }
-                }
-
-                div { style: "display: flex; gap: 12px; margin-top: 24px;",
-                    button {
-                        class: "btn-primary",
-                        style: "flex: 1; padding: 14px;",
-                        disabled: saving(),
-                        onclick: move |_| handle_submit(),
-                        if saving() {
-                            "⏳ "
-                            {tid!("action-saving")}
-                        } else {
-                            "💾 "
-                            {tid!("action-save")}
-                        }
-                    }
-                    button {
-                        class: "btn-secondary",
-                        style: "flex: 1; padding: 14px;",
-                        disabled: saving(),
-                        onclick: move |_| on_navigate.call(Screen::ProfileList),
-                        "❌ "
-                        {tid!("action-cancel")}
                     }
                 }
             }

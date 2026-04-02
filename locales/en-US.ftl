@@ -779,7 +779,7 @@ success-profile-updated = Profile updated
 sync-connecting = Connecting...
 
 # Source: ./src/components/settings/nextcloud_card.rs:322
-sync-delete-config = Delete config
+sync-delete-config = Log out
 
 # Source: ./src/components/settings/nextcloud_card.rs:133
 sync-error = Sync error

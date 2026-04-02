@@ -277,59 +277,68 @@ pub fn NextcloudCard(
     };
 
     rsx! {
-        div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "☁️ Nextcloud" }
+        div { class: "box mb-4",
+            h2 { class: "title is-5 mb-3", "☁️ Nextcloud" }
 
             if let Some(settings) = current_settings() {
-                button {
-                    class: "btn-primary",
-                    style: "width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #2e7d32;",
-                    onclick: move |_| details_expanded.set(!details_expanded()),
-                    span { "✅ Verbunden" }
-                    span { if details_expanded() { "▾" } else { "▸" } }
-                }
+                div { class: "field has-addons mt-4 is-fullwidth",
+                    p { class: "control is-expanded",
+                        onclick: move |_| details_expanded.set(!details_expanded()),
+                        button { class: "button is-success is-light is-small is-fullwidth",
+                            span { "✅ Verbunden" }
+                            span { if details_expanded() { "▾" } else { "▸" } }
+                        }
+                    }
+                    if details_expanded() {
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-danger is-light is-small is-fullwidth",
+                                onclick: delete_settings,
+                                span { class: "icon is-small", "🗑️" }
+                                span { {tid!("sync-delete-config")} }
+                            }
+                        }
+                    }
+
+            }
 
                 if details_expanded() {
-                    div { style: "padding: 12px; background: #f8fff8; border: 1px solid #d7ebd8; border-radius: 8px;",
-                        p { style: "margin: 4px 0; font-size: 14px;",
+                    div { class: "notification is-success is-light mt-3",
+                        p {
                             strong { {tid!("sync-server")} ": " }
                             "{settings.nextcloud_url}"
                         }
-                        p { style: "margin: 4px 0; font-size: 14px;",
+                        p {
                             strong { {tid!("sync-username")} ": " }
                             "{settings.nextcloud_username}"
                         }
-                        p { style: "margin: 4px 0; font-size: 14px;",
+                        p {
                             strong { {tid!("sync-path")} ": " }
                             "{settings.nextcloud_remote_path}"
                         }
 
-                        div { style: "display: flex; gap: 12px; margin-top: 12px;",
-                            button {
-                                class: "btn-primary",
-                                style: "flex: 1;",
-                                disabled: is_syncing(),
-                                onclick: run_sync,
-                                if is_syncing() { "⏳" } else { "🔄" }
-                                " "
-                                {tid!("sync-now")}
+                        div { class: "field has-addons mt-4",
+                            p { class: "control",
+                                button {
+                                    class: "button is-link is-small",
+                                    disabled: is_syncing(),
+                                    onclick: run_sync,
+                                    span { class: "icon is-small", if is_syncing() { "⏳" } else { "🔄" } }
+                                    span { {tid!("sync-now")} }
+                                }
                             }
-                            button {
-                                class: "btn-danger",
-                                style: "flex: 1;",
-                                onclick: delete_settings,
-                                "🗑️ "
-                                {tid!("sync-delete-config")}
-                            }
+
                         }
 
-                        div { style: "margin-top: 16px; padding: 12px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #0066cc;",
-                            p { style: "margin: 0 0 10px 0; font-weight: 600; font-size: 14px;", {tid!("sync-photo-status-title")} }
-                            p { style: "margin: 4px 0; font-size: 12px; color: #333;", {tid!("sync-photo-status-pending", count : pending_count())} }
-                            p { style: "margin: 4px 0; font-size: 12px; color: #333;", {tid!("sync-photo-status-active", count : uploading_count())} }
-                            p { style: "margin: 4px 0; font-size: 12px; color: #2e7d32;", {tid!("sync-photo-status-synced", count : synced_count())} }
-                            if error_count() > 0 {
-                                p { style: "margin: 4px 0; font-size: 12px; color: #c62828;", {tid!("sync-photo-status-error", count : error_count())} }
+                        div { class: "message is-info mt-4",
+                            div { class: "message-header", {tid!("sync-photo-status-title")} }
+                            div { class: "message-body",
+                                p { class: "mb-1", {tid!("sync-photo-status-pending", count : pending_count())} }
+                                p { class: "mb-1", {tid!("sync-photo-status-active", count : uploading_count())} }
+                                p { class: "mb-1", {tid!("sync-photo-status-synced", count : synced_count())} }
+                                if error_count() > 0 {
+                                    p { class: "has-text-danger", {tid!("sync-photo-status-error", count : error_count())} }
+                                }
                             }
                         }
 
@@ -342,11 +351,16 @@ pub fn NextcloudCard(
                                     0
                                 };
                                 rsx! {
-                                    div { style: "margin-top: 16px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffb300;",
-                                        p { style: "margin: 0 0 8px 0; font-weight: 600; font-size: 14px;", {tid!("sync-upload-progress-title")} }
-                                        p { style: "margin: 0 0 8px 0; font-size: 12px; color: #666;", {tid!("sync-upload-progress-detail", current : current, total : total, percent : percent)} }
-                                        div { style: "width: 100%; background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden;",
-                                            div { style: "height: 100%; background: linear-gradient(90deg, #0066cc, #0088ff); transition: width 0.3s ease; width: {percent}%;" }
+                                    div { class: "message is-warning mt-4",
+                                        div { class: "message-header", {tid!("sync-upload-progress-title")} }
+                                        div { class: "message-body",
+                                            p { class: "mb-2", {tid!("sync-upload-progress-detail", current : current, total : total, percent : percent)} }
+                                            progress {
+                                                class: "progress is-link",
+                                                value: "{current}",
+                                                max: "{total}",
+                                                "{percent}%"
+                                            }
                                         }
                                     }
                                 }
@@ -355,16 +369,17 @@ pub fn NextcloudCard(
                             }
                         }
 
-                        div { style: "margin-top: 16px;",
-                            button {
-                                class: "btn-danger",
-                                style: "width: 100%;",
-                                disabled: is_syncing() || is_cleanup_scanning() || is_cleanup_deleting(),
-                                onclick: scan_orphaned_photos,
-                                if is_cleanup_scanning() || is_cleanup_deleting() {
-                                    {tid!("action-loading")}
-                                } else {
-                                    {tid!("backup-cleanup-button")}
+                        div { class: "field mt-4",
+                            div { class: "control",
+                                button {
+                                    class: "button is-warning is-fullwidth",
+                                    disabled: is_syncing() || is_cleanup_scanning() || is_cleanup_deleting(),
+                                    onclick: scan_orphaned_photos,
+                                    if is_cleanup_scanning() || is_cleanup_deleting() {
+                                        {tid!("action-loading")}
+                                    } else {
+                                        {tid!("backup-cleanup-button")}
+                                    }
                                 }
                             }
                         }
@@ -375,37 +390,35 @@ pub fn NextcloudCard(
                                 rsx! {}
                             } else {
                                 rsx! {
-                                    div { style: "margin-top: 16px; padding: 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #ef6c00;",
-                                        p { style: "margin: 0 0 8px 0; font-weight: 600; font-size: 14px; color: #7a4b00;",
+                                    div { class: "message is-warning mt-4",
+                                        div { class: "message-header",
                                             {tid!("backup-cleanup-review-title", count : cleanup_candidates.len())}
                                         }
-                                        p { style: "margin: 0 0 10px 0; font-size: 12px; color: #6d4c41;",
-                                            {tid!("backup-cleanup-review-description")}
-                                        }
-                                        div { style: "max-height: 180px; overflow-y: auto; padding: 8px; background: #fffdf7; border: 1px solid #f0d7a1; border-radius: 6px;",
-                                            for relative_path in cleanup_candidates {
-                                                p { style: "margin: 0; font-size: 12px; color: #5d4037; line-height: 1.5; word-break: break-all;",
-                                                    "• {relative_path}"
+                                        div { class: "message-body",
+                                            p { class: "mb-3", {tid!("backup-cleanup-review-description")} }
+                                            div { class: "content", style: "max-height: 180px; overflow-y: auto;",
+                                                ul {
+                                                    for relative_path in cleanup_candidates {
+                                                        li { "{relative_path}" }
+                                                    }
                                                 }
                                             }
-                                        }
-                                        div { style: "display: flex; gap: 12px; margin-top: 12px;",
-                                            button {
-                                                class: "btn-primary",
-                                                style: "flex: 1;",
-                                                disabled: is_cleanup_deleting(),
-                                                onclick: cancel_cleanup,
-                                                {tid!("action-cancel")}
-                                            }
-                                            button {
-                                                class: "btn-danger",
-                                                style: "flex: 1;",
-                                                disabled: is_cleanup_deleting(),
-                                                onclick: confirm_cleanup,
-                                                if is_cleanup_deleting() {
-                                                    {tid!("action-loading")}
-                                                } else {
-                                                    {tid!("action-delete-permanently")}
+                                            div { class: "buttons mt-3",
+                                                button {
+                                                    class: "button is-light",
+                                                    disabled: is_cleanup_deleting(),
+                                                    onclick: cancel_cleanup,
+                                                    {tid!("action-cancel")}
+                                                }
+                                                button {
+                                                    class: "button is-danger",
+                                                    disabled: is_cleanup_deleting(),
+                                                    onclick: confirm_cleanup,
+                                                    if is_cleanup_deleting() {
+                                                        {tid!("action-loading")}
+                                                    } else {
+                                                        {tid!("action-delete-permanently")}
+                                                    }
                                                 }
                                             }
                                         }
@@ -416,37 +429,35 @@ pub fn NextcloudCard(
                     }
                 }
             } else {
-                div { style: "margin-bottom: 16px;",
-                    label {
-                        style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                        {tid!("sync-server-url")}
-                    }
-                    input {
-                        r#type: "url",
-                        value: "{server_url}",
-                        oninput: move |e| server_url.set(e.value()),
-                        placeholder: "https://cloud.example.com",
-                        style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
+                div { class: "field",
+                    label { class: "label", {tid!("sync-server-url")} }
+                    div { class: "control",
+                        input {
+                            class: "input",
+                            r#type: "url",
+                            value: "{server_url}",
+                            oninput: move |e| server_url.set(e.value()),
+                            placeholder: "https://cloud.example.com",
+                        }
                     }
                 }
 
-                div { style: "margin-bottom: 16px;",
-                    label {
-                        style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                        {tid!("sync-path-label")}
-                    }
-                    input {
-                        r#type: "text",
-                        value: "{remote_path}",
-                        oninput: move |e| remote_path.set(e.value()),
-                        placeholder: "/Stalltagebuch",
-                        style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
+                div { class: "field",
+                    label { class: "label", {tid!("sync-path-label")} }
+                    div { class: "control",
+                        input {
+                            class: "input",
+                            r#type: "text",
+                            value: "{remote_path}",
+                            oninput: move |e| remote_path.set(e.value()),
+                            placeholder: "/Stalltagebuch",
+                        }
                     }
                 }
 
                 if server_url().trim().is_empty() || !server_url().starts_with("http") {
                     button {
-                        class: "btn-primary",
+                        class: "button is-link is-fullwidth",
                         disabled: true,
                         "🔐 "
                         {tid!("sync-login")}
@@ -474,7 +485,7 @@ pub fn NextcloudCard(
                             step3: tid!("sync-login-step3").to_string(),
                             step4: tid!("sync-login-step4").to_string(),
                             step5: tid!("sync-login-step5").to_string(),
-                            next_check_in: tid!("sync-next-check-in").to_string(),  // seconds will be replaced with the numerical value of the seconds to wait
+                            next_check_in: tid!("sync-next-check-in").to_string(),
                             waiting_icon: "🔄".to_string(),
                         }),
                     }

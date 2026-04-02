@@ -20,6 +20,7 @@ use components::{
 };
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
+const BULMA_CSS: Asset = asset!("/assets/bulma.css");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 fn main() {
@@ -53,19 +54,19 @@ fn main() {
 
 #[cfg(target_os = "android")]
 fn init_android_tls_verifier() {
-    use jni::errors::Error as JniError;
-    use jni::objects::JObject;
+    use ::jni::errors::Error as JniError;
+    use ::jni::objects::JObject;
     use ndk_context::android_context;
 
-    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
-    let context_ptr = android_context().context() as jni::sys::jobject;
+    let vm_ptr = android_context().vm() as *mut ::jni::sys::JavaVM;
+    let context_ptr = android_context().context() as ::jni::sys::jobject;
 
     if vm_ptr.is_null() || context_ptr.is_null() {
         log::error!("Android TLS verifier init failed: missing VM or context pointer");
         return;
     }
 
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) };
+    let vm = unsafe { ::jni::JavaVM::from_raw(vm_ptr) };
     match vm.attach_current_thread(|env| -> Result<(), JniError> {
         let context_global = unsafe { JObject::from_raw(env, context_ptr) };
         let context_local = env.new_local_ref(&context_global)?;
@@ -337,9 +338,10 @@ fn App() -> Element {
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
+        document::Link { rel: "stylesheet", href: BULMA_CSS }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
-        div { style: "display: flex; flex-direction: column; height: 100vh; font-family: sans-serif;",
+        div { style: "display: flex; flex-direction: column; min-height: 100vh;",
             // We intentionally swap wrapper element types to force a hard subtree remount.
             // This reliably restarts the Spacetime provider effect after credentials are saved.
             if session_generation() % 2 == 0 {

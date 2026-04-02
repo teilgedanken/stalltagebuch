@@ -204,39 +204,40 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
             match login_state() {
                 LoginState::NotStarted => rsx! {
                     button {
-                        class: "btn-primary",
+                        class: "button is-link is-fullwidth",
                         onclick: start_login,
                         "{labels.login_button}"
                     }
                 },
                 LoginState::InitiatingFlow => rsx! {
                     div {
-                        style: "padding: 12px; background: #fff3cd; border-radius: 4px; text-align: center;",
+                        class: "notification is-warning is-light has-text-centered",
                         "{labels.connecting}"
                     }
                 },
                 LoginState::WaitingForUser { login_url, poll_url: _, token: _ } => rsx! {
                     div {
-                        style: "padding: 12px; background: #d1ecf1; border-radius: 4px;",
+                        class: "notification is-info is-light",
                         div {
-                            style: "display: flex; align-items: center; gap: 12px; margin-bottom: 12px;",
+                            class: "is-flex is-align-items-center mb-3",
+                            style: "gap: 12px;",
                             div {
                                 style: "font-size: 28px; animation: spin 1.4s linear infinite;",
                                 "{labels.waiting_icon}"
                             }
                             div {
                                 p {
-                                    style: "margin: 0; font-weight: 600; font-size: 16px;",
+                                    class: "mb-1 has-text-weight-semibold",
                                     "{labels.waiting}"
                                 }
                                 p {
-                                    style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
+                                    class: "is-size-7 has-text-grey mb-1",
                                     "{labels.polling_background}"
                                 }
                                 if let Some(next_check_in) = next_poll_in_seconds() {
                                     if next_check_in > 0 {
                                         p {
-                                            style: "margin: 4px 0 0 0; font-size: 12px; color: #345;",
+                                            class: "is-size-7",
                                             "{format_next_check(&labels.next_check_in, next_check_in)}"
                                         }
                                     }
@@ -244,13 +245,13 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                             }
                         }
                         p {
-                            style: "margin: 0 0 12px 0; font-size: 14px;",
+                            class: "mb-3",
                             "{labels.instructions}"
                         }
                         a {
+                            class: "button is-link is-fullwidth",
                             href: "{login_url}",
                             target: "_blank",
-                            style: "display: block; padding: 12px; background: #0066cc; color: white; text-decoration: none; border-radius: 4px; text-align: center; font-weight: 600;",
                             "{labels.open_browser}"
                         }
                     }
@@ -259,7 +260,7 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                     if props.show_success_state {
                         rsx! {
                             div {
-                                style: "padding: 12px; background: #d4edda; border-radius: 4px; text-align: center; color: #155724;",
+                                class: "notification is-success is-light has-text-centered",
                                 "{labels.login_success}"
                             }
                         }
@@ -269,15 +270,14 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
                 },
                 LoginState::Error(error) => rsx! {
                     div {
-                        style: "padding: 12px; background: #f8d7da; border-radius: 4px; color: #721c24;",
+                        class: "notification is-danger is-light",
                         p {
-                            style: "margin: 0 0 12px 0; font-weight: 600;",
+                            class: "mb-3 has-text-weight-semibold",
                             "{labels.error_title}"
                         }
-                        p { style: "margin: 0; font-size: 14px;", "{error}" }
+                        p { class: "mb-3", "{error}" }
                         button {
-                            class: "btn-primary",
-                            style: "margin-top: 12px;",
+                            class: "button is-link is-light",
                             onclick: move |_| login_state.set(LoginState::NotStarted),
                             "{labels.retry_button}"
                         }
@@ -288,18 +288,21 @@ pub fn NextcloudAuthComponent(props: NextcloudAuthProps) -> Element {
             if props.show_info_box {
                 // Info box
                 div {
-                    style: "margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #0066cc;",
+                    class: "message is-link is-light mt-4",
+                    div { class: "message-header", "{labels.info_title}" }
+                    div { class: "message-body",
                     p {
-                        style: "margin: 0 0 8px 0; font-size: 14px; font-weight: 600;",
+                        class: "mb-2 has-text-weight-semibold",
                         "{labels.info_title}"
                     }
-                    ul {
-                        style: "margin: 0; padding-left: 20px; font-size: 13px; color: #555;",
+                        ul {
+                            class: "is-size-7",
                         li { "{labels.step1}" }
                         li { "{labels.step2}" }
                         li { "{labels.step3}" }
                         li { "{labels.step4}" }
                         li { "{labels.step5}" }
+                        }
                     }
                 }
             }

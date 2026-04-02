@@ -61,58 +61,46 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
         }
 
         match state {
-            ConnectionState::Connected(_, _) => "🟢",
+            ConnectionState::Connected(_, _) => "✅",
             ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => "🟡",
             ConnectionState::Error => "🔴",
             ConnectionState::Disconnected => "⚪",
         }
     };
 
-    let status_button_style = move || {
+    let status_button_class = move || {
         let state = conn_state();
         let has_connection = connection().is_some();
 
         if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
-            return "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #6c757d; color: #fff; cursor: pointer; text-align: left;";
+            return "button is-fullwidth is-dark";
         }
 
         match state {
-            ConnectionState::Connected(_, _) => {
-                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #28a745; color: #fff; cursor: pointer; text-align: left;"
-            }
+            ConnectionState::Connected(_, _) => "button is-fullwidth is-success",
             ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => {
-                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #fd7e14; color: #fff; cursor: pointer; text-align: left;"
+                "button is-fullwidth is-warning"
             }
-            ConnectionState::Error => {
-                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #dc3545; color: #fff; cursor: pointer; text-align: left;"
-            }
-            ConnectionState::Disconnected => {
-                "width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; background: #6c757d; color: #fff; cursor: pointer; text-align: left;"
-            }
+            ConnectionState::Error => "button is-fullwidth is-danger",
+            ConnectionState::Disconnected => "button is-fullwidth is-dark",
         }
     };
 
-    let details_panel_style = move || {
+    let details_panel_class = move || {
         let state = conn_state();
         let has_connection = connection().is_some();
 
         if !has_connection && matches!(state, ConnectionState::Connected(_, _)) {
-            return "margin-top: 12px; padding: 12px; background: #f1f3f5; border-radius: 4px; color: #495057;";
+            return "notification is-light";
         }
 
         match state {
-            ConnectionState::Connected(_, _) => {
-                "margin-top: 12px; padding: 12px; background: #d4edda; border-radius: 4px; color: #155724;"
-            }
+            ConnectionState::Connected(_, _) => "notification is-success is-light",
             ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => {
-                "margin-top: 12px; padding: 12px; background: #fff3cd; border-radius: 4px; color: #856404;"
+                "notification is-warning is-light"
             }
-            ConnectionState::Error => {
-                "margin-top: 12px; padding: 12px; background: #f8d7da; border-radius: 4px; color: #721c24;"
-            }
-            ConnectionState::Disconnected => {
-                "margin-top: 12px; padding: 12px; background: #f1f3f5; border-radius: 4px; color: #495057;"
-            }
+            ConnectionState::Error => "notification is-danger is-light",
+            ConnectionState::Disconnected => "notification is-light",
         }
     };
 
@@ -159,77 +147,69 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
     };
 
     rsx! {
-        div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 16px 0; font-size: 18px; color: #333;", "🗄️ {tid!(\"spacetime-card-title\")}" }
+        div { class: "box mb-4",
+            h2 { class: "title is-5 mb-4", "🗄️ {tid!(\"spacetime-card-title\")}" }
 
             if !is_logged_in() {
-                div { style: "margin-bottom: 16px;",
-                    label {
-                        style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                        {tid!("spacetime-card-server-label")}
+                div { class: "field",
+                    label { class: "label", {tid!("spacetime-card-server-label")} }
+                    div { class: "control",
+                        input {
+                            class: "input",
+                            r#type: "url",
+                            value: "{server_url}",
+                            oninput: move |e| server_url.set(e.value()),
+                            placeholder: "https://testnet.spacetimedb.com",
+                        }
                     }
-                    input {
-                        r#type: "url",
-                        value: "{server_url}",
-                        oninput: move |e| server_url.set(e.value()),
-                        placeholder: "https://testnet.spacetimedb.com",
-                        style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
-                    }
-                    p {
-                        style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                        {tid!("spacetime-card-server-hint")}
-                    }
+                    p { class: "help", {tid!("spacetime-card-server-hint")} }
                 }
 
-                div { style: "margin-bottom: 16px;",
-                    label {
-                        style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                        {tid!("spacetime-card-database-label")}
+                div { class: "field",
+                    label { class: "label", {tid!("spacetime-card-database-label")} }
+                    div { class: "control",
+                        input {
+                            class: "input",
+                            r#type: "text",
+                            value: "{database_name}",
+                            oninput: move |e| database_name.set(e.value()),
+                            placeholder: "stalltagebuch",
+                        }
                     }
-                    input {
-                        r#type: "text",
-                        value: "{database_name}",
-                        oninput: move |e| database_name.set(e.value()),
-                        placeholder: "stalltagebuch",
-                        style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
-                    }
-                    p {
-                        style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                        {tid!("spacetime-card-database-hint")}
-                    }
+                    p { class: "help", {tid!("spacetime-card-database-hint")} }
                 }
 
-                div { style: "margin-bottom: 16px;",
-                    label {
-                        style: "display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;",
-                        {tid!("spacetime-card-token-label")}
+                div { class: "field",
+                    label { class: "label", {tid!("spacetime-card-token-label")} }
+                    div { class: "control",
+                        input {
+                            class: "input",
+                            r#type: "text",
+                            value: "{token}",
+                            oninput: move |e| token.set(e.value()),
+                            placeholder: "Token aus spacetime login",
+                        }
                     }
-                    input {
-                        r#type: "text",
-                        value: "{token}",
-                        oninput: move |e| token.set(e.value()),
-                        placeholder: "Token aus spacetime login",
-                        style: "width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;",
-                    }
-                    p {
-                        style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                        {tid!("spacetime-card-token-hint")}
-                    }
+                    p { class: "help", {tid!("spacetime-card-token-hint")} }
                 }
 
-                button {
-                    class: "btn-primary",
-                    onclick: save_and_connect,
-                    disabled: server_url().trim().is_empty() || database_name().trim().is_empty() || token().trim().is_empty(),
-                    "🔐 {tid!(\"spacetime-card-login-button\")}"
+                div { class: "field",
+                    div { class: "control",
+                        button {
+                            class: "button is-link is-fullwidth",
+                            onclick: save_and_connect,
+                            disabled: server_url().trim().is_empty() || database_name().trim().is_empty() || token().trim().is_empty(),
+                            "🔐 {tid!(\"spacetime-card-login-button\")}"
+                        }
+                    }
                 }
             } else {
                 button {
+                    class: "{status_button_class()}",
                     onclick: toggle_details,
-                    style: "{status_button_style()}",
-                    div { style: "display: flex; align-items: center; justify-content: space-between; gap: 12px;",
+                    div { class: "is-flex is-align-items-center is-justify-content-space-between is-fullwidth",
                         span { "{connection_icon()} {connection_label()}" }
-                        span { style: "font-size: 13px; opacity: 0.95;",
+                        span {
                             {if show_details() {
                                 tid!("spacetime-card-hide-details")
                             } else {
@@ -240,20 +220,19 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
                 }
 
                 if show_details() {
-                    div { style: "{details_panel_style()}",
-                        p { style: "margin: 0 0 8px 0; font-weight: 600;", {tid!("spacetime-card-connection-info")} }
-                        p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-server-value", value: server_url())} }
-                        p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-database-value", value: database_name())} }
-                        p { style: "margin: 0 0 12px 0; font-size: 14px;", {tid!("spacetime-card-status-value", value: connection_label())} }
+                    div { class: "{details_panel_class()} mt-3",
+                        p { class: "has-text-weight-semibold mb-2", {tid!("spacetime-card-connection-info")} }
+                        p { class: "mb-1", {tid!("spacetime-card-server-value", value: server_url())} }
+                        p { class: "mb-1", {tid!("spacetime-card-database-value", value: database_name())} }
+                        p { class: "mb-3", {tid!("spacetime-card-status-value", value: connection_label())} }
 
-                        p { style: "margin: 0 0 8px 0; font-weight: 600;", {tid!("spacetime-card-live-stats")} }
-                        p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-stats-quails", count: quails().len())} }
-                        p { style: "margin: 0 0 4px 0; font-size: 14px;", {tid!("spacetime-card-stats-events", count: events().len())} }
-                        p { style: "margin: 0; font-size: 14px;", {tid!("spacetime-card-stats-egg-records", count: egg_records().len())} }
+                        p { class: "has-text-weight-semibold mb-2", {tid!("spacetime-card-live-stats")} }
+                        p { class: "mb-1", {tid!("spacetime-card-stats-quails", count: quails().len())} }
+                        p { class: "mb-1", {tid!("spacetime-card-stats-events", count: events().len())} }
+                        p { {tid!("spacetime-card-stats-egg-records", count: egg_records().len())} }
 
                         button {
-                            class: "btn-primary",
-                            style: "margin-top: 12px;",
+                            class: "button is-link is-light mt-3",
                             onclick: open_login_form,
                             "🔄 {tid!(\"spacetime-card-edit-credentials\")}"
                         }
@@ -262,7 +241,9 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
             }
 
             if !status_msg().is_empty() {
-                p { style: "margin: 12px 0 0 0; font-size: 13px; color: #555;", "{status_msg}" }
+                div { class: "notification is-light mt-4",
+                    "{status_msg}"
+                }
             }
         }
     }

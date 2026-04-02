@@ -4,50 +4,38 @@ use dioxus_i18n::tid;
 
 #[component]
 pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) -> Element {
-    let nav_style = "display: flex; justify-content: space-around; padding: 10px; background: #f0f0f0; border-top: 1px solid #ddd;";
-
     rsx! {
-        div {
-            style: "{nav_style}",
+        div { class: "is-fixed-bottom",
+            div { class: "tabs is-toggle is-centered is-medium",
+                ul {
+                    li { class: if matches!(current_screen, Screen::Home) { "is-active" } else { "" },
+                        a { onclick: move |_| on_navigate.call(Screen::Home),
+                            span { "🏠" }
+                            if matches!(current_screen, Screen::Home) {span  { {tid!("nav-home")} }}
+                        }
+                    }
 
-            button {
-                style: if matches!(current_screen, Screen::Home) {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #0066cc; color: #ffffff;"
-                } else {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
-                },
-                onclick: move |_| on_navigate.call(Screen::Home),
-                {format!("🏠 {}", tid!("nav-home"))} // Home / Startseite
-            }
+                    li { class: if matches!(current_screen, Screen::ProfileList) { "is-active" } else { "" },
+                        a { onclick: move |_| on_navigate.call(Screen::ProfileList),
+                            span { "🐦" }
+                            if matches!(current_screen, Screen::ProfileList) {span { {tid!("nav-profiles")} }}
+                        }
+                    }
 
-            button {
-                style: if matches!(current_screen, Screen::ProfileList) {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #0066cc; color: #ffffff;"
-                } else {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
-                },
-                onclick: move |_| on_navigate.call(Screen::ProfileList),
-                {format!("🐦 {}", tid!("nav-profiles"))} // Profile
-            }
+                    li { class: if matches!(current_screen, Screen::EggHistory) { "is-active" } else { "" },
+                        a { onclick: move |_| on_navigate.call(Screen::EggHistory),
+                            span { "🥚" }
+                            if matches!(current_screen, Screen::EggHistory) {span { {tid!("nav-eggs")} }}
+                        }
+                    }
 
-            button {
-                style: if matches!(current_screen, Screen::EggHistory) {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #0066cc; color: #ffffff;"
-                } else {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
-                },
-                onclick: move |_| on_navigate.call(Screen::EggHistory),
-                {format!("🥚 {}", tid!("nav-eggs"))} // Eier
-            }
-
-            button {
-                style: if matches!(current_screen, Screen::Statistics) {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #0066cc; color: #ffffff;"
-                } else {
-                    "flex: 1; padding: 12px; margin: 0 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-align: center; background: #ffffff; color: #333;"
-                },
-                onclick: move |_| on_navigate.call(Screen::Statistics),
-                {format!("📊 {}", tid!("nav-statistics"))} // Statistik
+                    li { class: if matches!(current_screen, Screen::Statistics) { "is-active" } else { "" },
+                        a { onclick: move |_| on_navigate.call(Screen::Statistics),
+                            span { "📊" }
+                            if matches!(current_screen, Screen::Statistics) {span { {tid!("nav-statistics")} }}
+                        }
+                    }
+                }
             }
         }
     }

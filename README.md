@@ -29,7 +29,8 @@ stalltagebuch/
 │   ├── AndroidManifest.xml          # Permissions & FileProvider Config
 │   └── res/xml/file_paths.xml       # FileProvider Paths
 ├── assets/
-│   ├── main.css                     # Mobile-optimiertes Design
+│   ├── bulma.css                    # Bulma v1 UI-Framework (primäre Basis)
+│   ├── main.css                     # App-spezifische Ergänzungen/Overrides
 │   └── favicon.ico
 ├── build_android.sh                 # Wrapper Build-Script (siehe unten)
 ├── Cargo.toml                       # Rust Dependencies

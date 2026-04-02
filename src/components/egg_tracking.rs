@@ -141,113 +141,102 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
     };
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-
-            // Header
-            div { style: "display: flex; align-items: center; margin-bottom: 24px;",
-                h1 { style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
-                    "🥚 "
-                    {tid!("egg-tracking-title")}
-                }
-            }
-
-            // Error Message
-            if let Some(err) = error() {
-                div { style: "background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "⚠️ "
-                    {err}
-                }
-            }
-
-            // Success Message
-            if success() {
-                div { style: "background: #efe; border: 1px solid #cfc; color: #3a3; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "✅ "
-                    {tid!("egg-tracking-success")}
-                }
-            }
-
-            // Status
-            if existing_record_uuid().is_some() {
-                div { style: "background: #e8f4f8; padding: 12px; margin-bottom: 16px; border-radius: 8px; border-left: 3px solid #0066cc; font-size: 14px; color: #333;",
-                    "📝 "
-                    {tid!("egg-tracking-exists-warning")}
-                }
-            }
-
-            // Form
-            div { class: "card",
-
-                // Date Field
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-date-required")}
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        h1 { class: "title is-4 mb-0",
+                            "🥚 "
+                            {tid!("egg-tracking-title")}
+                        }
                     }
-                    input {
-                        r#type: "date",
-                        class: "input",
-                        value: "{date_str}",
-                        oninput: move |e| date_str.set(e.value()),
-                        autofocus: true,
-                    }
-                    p { style: "margin: 4px 0 0 0; font-size: 12px; color: #666;",
-                        {tid!("field-date-format-hint")}
-                    }
-                }
-
-                // Total Eggs Field
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-eggs-count-required")}
-                    }
-                    input {
-                        r#type: "number",
-                        class: "input",
-                        placeholder: tid!("field-eggs-count-placeholder"),
-                        min: "0",
-                        value: "{total_eggs}",
-                        oninput: move |e| total_eggs.set(e.value()),
-                    }
-                }
-
-                // Notes Field
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-notes")}
-                    }
-                    textarea {
-                        class: "input",
-                        style: "min-height: 80px; resize: vertical; font-family: inherit;",
-                        placeholder: tid!("field-notes-placeholder"),
-                        value: "{notes}",
-                        oninput: move |e| notes.set(e.value()),
-                    }
-                }
-
-                // Action Buttons
-                div { style: "display: flex; gap: 12px; margin-top: 24px;",
-                    button {
-                        class: "btn-success",
-                        style: "flex: 1; padding: 14px;",
-                        onclick: move |_| handle_submit(),
-                        "💾 "
-                        if existing_record_uuid().is_some() {
-                            {tid!("action-update")}
-                        } else {
-                            {tid!("action-save")}
+                    div { class: "level-right",
+                        button {
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::EggHistory),
+                            "📋 "
+                            {tid!("egg-tracking-show-history")}
                         }
                     }
                 }
-            }
 
-            // Quick Links
-            div { style: "margin-top: 16px; display: flex; gap: 12px;",
-                button {
-                    class: "btn-primary",
-                    style: "flex: 1; padding: 12px;",
-                    onclick: move |_| on_navigate.call(Screen::EggHistory),
-                    "📋 "
-                    {tid!("egg-tracking-show-history")}
+                if let Some(err) = error() {
+                    div { class: "notification is-danger is-light",
+                        "⚠️ "
+                        {err}
+                    }
+                }
+
+                if success() {
+                    div { class: "notification is-success is-light",
+                        "✅ "
+                        {tid!("egg-tracking-success")}
+                    }
+                }
+
+                if existing_record_uuid().is_some() {
+                    div { class: "notification is-info is-light",
+                        "📝 "
+                        {tid!("egg-tracking-exists-warning")}
+                    }
+                }
+
+                div { class: "box",
+                    div { class: "field",
+                        label { class: "label", {tid!("field-date-required")} }
+                        div { class: "control",
+                            input {
+                                r#type: "date",
+                                class: "input",
+                                value: "{date_str}",
+                                oninput: move |e| date_str.set(e.value()),
+                                autofocus: true,
+                            }
+                        }
+                        p { class: "help", {tid!("field-date-format-hint")} }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-eggs-count-required")} }
+                        div { class: "control",
+                            input {
+                                r#type: "number",
+                                class: "input",
+                                placeholder: tid!("field-eggs-count-placeholder"),
+                                min: "0",
+                                value: "{total_eggs}",
+                                oninput: move |e| total_eggs.set(e.value()),
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-notes")} }
+                        div { class: "control",
+                            textarea {
+                                class: "textarea",
+                                style: "min-height: 80px; resize: vertical;",
+                                placeholder: tid!("field-notes-placeholder"),
+                                value: "{notes}",
+                                oninput: move |e| notes.set(e.value()),
+                            }
+                        }
+                    }
+
+                    div { class: "field is-grouped mt-4",
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-success is-fullwidth",
+                                onclick: move |_| handle_submit(),
+                                "💾 "
+                                if existing_record_uuid().is_some() {
+                                    {tid!("action-update")}
+                                } else {
+                                    {tid!("action-save")}
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

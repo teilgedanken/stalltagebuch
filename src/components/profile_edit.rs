@@ -185,283 +185,284 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let quail_id_for_cancel = quail_id.clone();
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-
-            // Header
-            div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-top: 8px;",
-                button {
-                    style: "padding: 8px 12px; background: #e0e0e0; color: #666; font-size: 20px; border-radius: 8px;",
-                    onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_back.clone())),
-                    "←"
-                }
-                h1 { style: "color: #0066cc; margin: 0; font-size: 24px; font-weight: 700; flex: 1;",
-                    "✏️ "
-                    {tid!("profile-edit-title")}
-                }
-            }
-
-            // Success Message
-            if success() {
-                div { style: "padding: 12px 16px; background: #d4edda; border-radius: 8px; color: #155724; font-size: 14px; margin-bottom: 16px; border-left: 3px solid #28a745;",
-                    "✓ "
-                    {tid!("success-profile-updated")}
-                }
-            }
-
-            // Error Message
-            if !error().is_empty() {
-                div { style: "padding: 12px 16px; background: #ffe6e6; border-radius: 8px; color: #cc0000; font-size: 14px; margin-bottom: 16px; border-left: 3px solid #cc0000;",
-                    "⚠️ "
-                    {error}
-                }
-            }
-
-            // Form
-            div { class: "card",
-
-                // Name Field
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-name-required")} // Name *
-                    }
-                    input {
-                        style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
-                        r#type: "text",
-                        placeholder: "{tid!(\"field-name-placeholder\")}", // e.g. Hen 1
-                        value: "{name}",
-                        oninput: move |e| name.set(e.value()),
-                        autofocus: true,
-                    }
-                }
-
-                // Gender Field
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-gender")} // Gender
-                    }
-                    select {
-                        style: "width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: white;",
-                        value: "{gender}",
-                        onchange: move |e| gender.set(e.value()),
-                        option { value: "unknown", {tid!("gender-unknown")} } // Unknown
-                        option { value: "female", {tid!("gender-female")} } // Female
-                        option { value: "male", {tid!("gender-male")} } // Male
-                    }
-                }
-
-                // Ring Color Field
-                div { style: "margin-bottom: 20px;",
-                    label {
-                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {tid!("field-ring-color")} // Ring color
-                    }
-                    div { style: "display: flex; gap: 10px;",
-                        div { style: "flex: 1;",
-                            div {
-                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
-                                {tid!("ring-color-side-left")}
-                            }
-                            div { style: "display: flex; gap: 8px; align-items: center;",
-                                select {
-                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_left())),
-                                    value: "{ring_color_left}",
-                                    onchange: move |e| ring_color_left.set(e.value()),
-                                    option { value: "", {tid!("ring-color-none")} }
-                                    option { value: "lila", {tid!("ring-color-purple")} }
-                                    option { value: "rosa", {tid!("ring-color-pink")} }
-                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
-                                    option { value: "rot", {tid!("ring-color-red")} }
-                                    option { value: "orange", {tid!("ring-color-orange")} }
-                                    option { value: "weiss", {tid!("ring-color-white")} }
-                                    option { value: "gelb", {tid!("ring-color-yellow")} }
-                                    option { value: "schwarz", {tid!("ring-color-black")} }
-                                    option { value: "gruen", {tid!("ring-color-green")} }
-                                }
-                                div {
-                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_left())),
-                                }
-                            }
-                        }
-                        div { style: "flex: 1;",
-                            div {
-                                style: "font-size: 12px; color: #666; margin-bottom: 6px;",
-                                {tid!("ring-color-side-right")}
-                            }
-                            div { style: "display: flex; gap: 8px; align-items: center;",
-                                select {
-                                    style: format!("flex: 1; width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; background: {};", ring_color_select_bg(&ring_color_right())),
-                                    value: "{ring_color_right}",
-                                    onchange: move |e| ring_color_right.set(e.value()),
-                                    option { value: "", {tid!("ring-color-none")} }
-                                    option { value: "lila", {tid!("ring-color-purple")} }
-                                    option { value: "rosa", {tid!("ring-color-pink")} }
-                                    option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                    option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
-                                    option { value: "rot", {tid!("ring-color-red")} }
-                                    option { value: "orange", {tid!("ring-color-orange")} }
-                                    option { value: "weiss", {tid!("ring-color-white")} }
-                                    option { value: "gelb", {tid!("ring-color-yellow")} }
-                                    option { value: "schwarz", {tid!("ring-color-black")} }
-                                    option { value: "gruen", {tid!("ring-color-green")} }
-                                }
-                                div {
-                                    style: format!("width: 22px; height: 22px; border: 1px solid #bbb; border-radius: 6px; background: {};", ring_color_preview_bg(&ring_color_right())),
-                                }
-                            }
-                        }
-                    }
-                }
-
-                div { style: "padding: 12px; background: #e3f2fd; border-radius: 8px; color: #0066cc; font-size: 13px; margin-bottom: 20px;",
-                    "ℹ️ "
-                    {tid!("info-photos-detail-view")}
-                }
-
-                // Photo Gallery with Profile Selection
-                div { style: "margin-bottom: 24px;",
-                    label {
-                        style: "display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;",
-                        {format!("{} ({})", tid!("field-photos"), photos().len())} // Photos count
-                    }
-
-                    {
-                        let photo_config = PhotoGalleryConfig {
-                            storage_path: crate::services::photo_service::get_storage_path(),
-                            enable_thumbnails: true,
-                            thumbnail_small_size: 256,
-                            thumbnail_medium_size: 512,
-                        };
-                        let photo_service = PhotoGalleryService::new(photo_config);
-                        let gallery_items: Vec<GalleryItem> = photos()
-                            .iter()
-                            .filter_map(|photo| {
-                                let thumb_or_original = photo_service
-                                    .get_photo_file_path(&photo.relative_path, PhotoSize::Small)
-                                    .or_else(|| {
-                                        photo_service.get_photo_file_path(
-                                            &photo.relative_path,
-                                            PhotoSize::Medium,
-                                        )
-                                    })
-                                    .or_else(|| {
-                                        photo_service.get_photo_file_path(
-                                            &photo.relative_path,
-                                            PhotoSize::Original,
-                                        )
-                                    });
-
-                                let abs_path = thumb_or_original?;
-                                match crate::image_processing::image_path_to_data_url(&abs_path) {
-                                    Ok(data_url) => {
-                                        Some(GalleryItem {
-                                            id: photo.uuid.clone(),
-                                            data_url,
-                                            caption: None,
-                                        })
-                                    }
-                                    Err(_) => None,
-                                }
-                            })
-                            .collect();
-                        let gallery_key = format!(
-                            "{}:{}:{}",
-                            quail_id,
-                            selected_profile_photo_id().as_deref().unwrap_or("none"),
-                            gallery_items
-                                .iter()
-                                .map(|item| item.id.as_str())
-                                .collect::<Vec<_>>()
-                                .join(","),
-                        );
-                        let gallery_config = GalleryConfig {
-                            allow_delete: true,
-                            allow_select: true,
-                            selected_id: selected_profile_photo_id(),
-                        };
-                        rsx! {
-                            Gallery {
-                                key: "{gallery_key}",
-                                items: gallery_items,
-                                config: gallery_config,
-                                on_delete: move |photo_id: String| {
-                                    let delete_photo_fn = delete_photo.clone();
-                                    // Delete photo via SpacetimeDB reducer
-                                    if let Err(err) = delete_photo_fn(photo_id) {
-                                        error.set(err.to_string());
-                                    }
-                                    // Photo list will auto-update via subscriptions
-                                },
-                                on_select: move |photo_id: String| {
-                                    selected_profile_photo_id.set(Some(photo_id));
-                                },
-                            }
-                        }
-                    }
-
-                    if !photos().is_empty() {
-                        div {
-                            style: "margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 6px; font-size: 12px; color: #666;",
-                            {tid!("info-tap-photo-to-mark")} // Tap a photo to mark it as profile photo.
-                        }
-                    }
-                }
-
-                // Buttons
-                div { style: "display: flex; gap: 12px;",
-                    button {
-                        class: "btn-success",
-                        style: "flex: 1; padding: 14px; font-size: 16px; font-weight: 600;",
-                        disabled: saving(),
-                        onclick: move |_| handle_submit(),
-                        if saving() {
-                            "⏳ "
-                            {tid!("action-saving")}
-                        } else {
-                            "✓ "
-                            {tid!("action-save")}
-                        }
-                    }
-                    button {
-                        style: "flex: 1; padding: 14px; background: #e0e0e0; color: #666; font-size: 16px; font-weight: 600;",
-                        disabled: saving(),
-                        onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone())),
-                        "✕ "
-                        {tid!("action-cancel")}
-                    }
-                }
-
-                // Delete Section
-                div { style: "margin-top: 32px; padding-top: 24px; border-top: 2px solid #f0f0f0;",
-                    if show_delete_confirm() {
-                        div {
-                            div { style: "margin-bottom: 16px; padding: 12px; background: #fff3cd; border-radius: 8px; color: #856404;",
-                                "⚠️ "
-                                {tid!("confirm-delete-quail")}
-                            }
-                            div { style: "display: flex; gap: 12px;",
-                                button {
-                                    class: "btn-danger",
-                                    style: "flex: 1; padding: 14px; font-size: 16px; font-weight: 600;",
-                                    onclick: move |_| handle_delete(),
-                                    "🗑️ "
-                                    {tid!("action-delete-permanently")}
-                                }
-                                button {
-                                    style: "flex: 1; padding: 14px; background: #e0e0e0; color: #666; font-size: 16px; font-weight: 600;",
-                                    onclick: move |_| show_delete_confirm.set(false),
-                                    {tid!("action-cancel")} // Cancel
-                                }
-                            }
-                        }
-                    } else {
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
                         button {
-                            style: "width: 100%; padding: 12px; background: #ffe6e6; color: #cc0000; font-size: 14px; font-weight: 600; border: 1px solid #ffcccc; border-radius: 8px;",
-                            onclick: move |_| show_delete_confirm.set(true),
-                            "🗑️ "
-                            {tid!("action-delete-quail")}
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_back.clone())),
+                            "← "
+                            {tid!("action-back")}
+                        }
+                    }
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0",
+                            "✏️ "
+                            {tid!("profile-edit-title")}
+                        }
+                    }
+                    div { class: "level-right" }
+                }
+
+                if success() {
+                    div { class: "notification is-success is-light",
+                        "✓ "
+                        {tid!("success-profile-updated")}
+                    }
+                }
+
+                if !error().is_empty() {
+                    div { class: "notification is-danger is-light",
+                        "⚠️ "
+                        {error()}
+                    }
+                }
+
+                div { class: "box",
+                    div { class: "field",
+                        label { class: "label", {tid!("field-name-required")} }
+                        div { class: "control",
+                            input {
+                                class: "input",
+                                r#type: "text",
+                                placeholder: tid!("field-name-placeholder"),
+                                value: "{name}",
+                                oninput: move |e| name.set(e.value()),
+                                autofocus: true,
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-gender")} }
+                        div { class: "control",
+                            div { class: "select is-fullwidth",
+                                select {
+                                    value: "{gender}",
+                                    onchange: move |e| gender.set(e.value()),
+                                    option { value: "unknown", {tid!("gender-unknown")} }
+                                    option { value: "female", {tid!("gender-female")} }
+                                    option { value: "male", {tid!("gender-male")} }
+                                }
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-ring-color")} }
+                        div { class: "columns is-mobile",
+                            div { class: "column",
+                                p { class: "help mb-2", {tid!("ring-color-side-left")} }
+                                div { class: "field has-addons",
+                                    p { class: "control is-expanded",
+                                        span { class: "select is-fullwidth",
+                                            select {
+                                                style: format!("background: {};", ring_color_select_bg(&ring_color_left())),
+                                                value: "{ring_color_left}",
+                                                onchange: move |e| ring_color_left.set(e.value()),
+                                                option { value: "", {tid!("ring-color-none")} }
+                                                option { value: "lila", {tid!("ring-color-purple")} }
+                                                option { value: "rosa", {tid!("ring-color-pink")} }
+                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "rot", {tid!("ring-color-red")} }
+                                                option { value: "orange", {tid!("ring-color-orange")} }
+                                                option { value: "weiss", {tid!("ring-color-white")} }
+                                                option { value: "gelb", {tid!("ring-color-yellow")} }
+                                                option { value: "schwarz", {tid!("ring-color-black")} }
+                                                option { value: "gruen", {tid!("ring-color-green")} }
+                                            }
+                                        }
+                                    }
+                                    p { class: "control",
+                                        span {
+                                            class: "tag",
+                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_left())),
+                                        }
+                                    }
+                                }
+                            }
+
+                            div { class: "column",
+                                p { class: "help mb-2", {tid!("ring-color-side-right")} }
+                                div { class: "field has-addons",
+                                    p { class: "control is-expanded",
+                                        span { class: "select is-fullwidth",
+                                            select {
+                                                style: format!("background: {};", ring_color_select_bg(&ring_color_right())),
+                                                value: "{ring_color_right}",
+                                                onchange: move |e| ring_color_right.set(e.value()),
+                                                option { value: "", {tid!("ring-color-none")} }
+                                                option { value: "lila", {tid!("ring-color-purple")} }
+                                                option { value: "rosa", {tid!("ring-color-pink")} }
+                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
+                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "rot", {tid!("ring-color-red")} }
+                                                option { value: "orange", {tid!("ring-color-orange")} }
+                                                option { value: "weiss", {tid!("ring-color-white")} }
+                                                option { value: "gelb", {tid!("ring-color-yellow")} }
+                                                option { value: "schwarz", {tid!("ring-color-black")} }
+                                                option { value: "gruen", {tid!("ring-color-green")} }
+                                            }
+                                        }
+                                    }
+                                    p { class: "control",
+                                        span {
+                                            class: "tag",
+                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    article { class: "message is-info is-light",
+                        div { class: "message-body",
+                            "ℹ️ "
+                            {tid!("info-photos-detail-view")}
+                        }
+                    }
+
+                    div { class: "field mt-4",
+                        label { class: "label", {format!("{} ({})", tid!("field-photos"), photos().len())} }
+
+                        {
+                            let photo_config = PhotoGalleryConfig {
+                                storage_path: crate::services::photo_service::get_storage_path(),
+                                enable_thumbnails: true,
+                                thumbnail_small_size: 256,
+                                thumbnail_medium_size: 512,
+                            };
+                            let photo_service = PhotoGalleryService::new(photo_config);
+                            let gallery_items: Vec<GalleryItem> = photos()
+                                .iter()
+                                .filter_map(|photo| {
+                                    let thumb_or_original = photo_service
+                                        .get_photo_file_path(&photo.relative_path, PhotoSize::Small)
+                                        .or_else(|| {
+                                            photo_service.get_photo_file_path(
+                                                &photo.relative_path,
+                                                PhotoSize::Medium,
+                                            )
+                                        })
+                                        .or_else(|| {
+                                            photo_service.get_photo_file_path(
+                                                &photo.relative_path,
+                                                PhotoSize::Original,
+                                            )
+                                        });
+
+                                    let abs_path = thumb_or_original?;
+                                    match crate::image_processing::image_path_to_data_url(&abs_path) {
+                                        Ok(data_url) => {
+                                            Some(GalleryItem {
+                                                id: photo.uuid.clone(),
+                                                data_url,
+                                                caption: None,
+                                            })
+                                        }
+                                        Err(_) => None,
+                                    }
+                                })
+                                .collect();
+                            let gallery_key = format!(
+                                "{}:{}:{}",
+                                quail_id,
+                                selected_profile_photo_id().as_deref().unwrap_or("none"),
+                                gallery_items
+                                    .iter()
+                                    .map(|item| item.id.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(","),
+                            );
+                            let gallery_config = GalleryConfig {
+                                allow_delete: true,
+                                allow_select: true,
+                                selected_id: selected_profile_photo_id(),
+                            };
+                            rsx! {
+                                Gallery {
+                                    key: "{gallery_key}",
+                                    items: gallery_items,
+                                    config: gallery_config,
+                                    on_delete: move |photo_id: String| {
+                                        let delete_photo_fn = delete_photo.clone();
+                                        if let Err(err) = delete_photo_fn(photo_id) {
+                                            error.set(err.to_string());
+                                        }
+                                    },
+                                    on_select: move |photo_id: String| {
+                                        selected_profile_photo_id.set(Some(photo_id));
+                                    },
+                                }
+                            }
+                        }
+
+                        if !photos().is_empty() {
+                            p { class: "help mt-2", {tid!("info-tap-photo-to-mark")} }
+                        }
+                    }
+
+                    div { class: "field is-grouped mt-5",
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-success is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| handle_submit(),
+                                if saving() {
+                                    "⏳ "
+                                    {tid!("action-saving")}
+                                } else {
+                                    "✓ "
+                                    {tid!("action-save")}
+                                }
+                            }
+                        }
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-light is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone())),
+                                "✕ "
+                                {tid!("action-cancel")}
+                            }
+                        }
+                    }
+
+                    div { class: "mt-5 pt-4", style: "border-top: 1px solid var(--bulma-border);",
+                        if show_delete_confirm() {
+                            div {
+                                div { class: "notification is-warning is-light",
+                                    "⚠️ "
+                                    {tid!("confirm-delete-quail")}
+                                }
+                                div { class: "field is-grouped",
+                                    p { class: "control is-expanded",
+                                        button {
+                                            class: "button is-danger is-fullwidth",
+                                            onclick: move |_| handle_delete(),
+                                            "🗑️ "
+                                            {tid!("action-delete-permanently")}
+                                        }
+                                    }
+                                    p { class: "control is-expanded",
+                                        button {
+                                            class: "button is-light is-fullwidth",
+                                            onclick: move |_| show_delete_confirm.set(false),
+                                            {tid!("action-cancel")}
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            button {
+                                class: "button is-danger is-light is-fullwidth",
+                                onclick: move |_| show_delete_confirm.set(true),
+                                "🗑️ "
+                                {tid!("action-delete-quail")}
+                            }
                         }
                     }
                 }

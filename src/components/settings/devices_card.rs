@@ -37,46 +37,45 @@ pub fn DevicesCard() -> Element {
     };
 
     rsx! {
-        div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", "📱 Geräte" }
+        div { class: "box",
+            h2 { class: "title is-5", "📱 Geräte" }
 
             if devices_vec.is_empty() {
-                p { style: "margin: 0; color: #888; font-size: 14px;",
+                p { class: "has-text-grey",
                     "Keine Geräte registriert"
                 }
             } else {
-                div { style: "display: flex; flex-direction: column; gap: 8px;",
-                    {
-                        devices_vec.iter().map(|device| {
+                div { class: "is-flex is-flex-direction-column", style: "gap: 8px;",
+                    for device in devices_vec.iter() {
+                        {
                             let is_current = device.device_id == current_id;
-                            let bg_color = if is_current { "#e3f2fd" } else { "#f5f5f5" };
-                            let border_color = if is_current { "4px solid #0066cc" } else { "1px solid #ddd" };
+                            let bg_class = if is_current {
+                                "notification is-info is-light"
+                            } else {
+                                "notification is-light"
+                            };
 
                             rsx! {
-                                div { style: "padding: 12px; border-radius: 6px; border-left: {border_color}; background: {bg_color}; display: flex; align-items: center; gap: 12px;",
-                                    div { style: "flex: 1;",
-                                        div { style: "display: flex; align-items: center; gap: 8px; margin-bottom: 6px;",
-                                            span { style: "font-weight: 600; font-size: 14px;",
-                                                "{device.name.as_ref().unwrap_or(&device.device_id)}"
-                                            }
-                                            if is_current {
-                                                span { style: "background: #0066cc; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;",
-                                                    "Dieses Gerät"
-                                                }
-                                            }
+                                div { class: "{bg_class}",
+                                    div { class: "is-flex is-align-items-center is-justify-content-space-between mb-1",
+                                        p { class: "mb-0 has-text-weight-semibold",
+                                            "{device.name.as_ref().unwrap_or(&device.device_id)}"
                                         }
-                                        p { style: "margin: 0; font-size: 12px; color: #666;",
-                                            "Zuletzt gesehen: {format_timestamp(device.last_seen)}"
+                                        if is_current {
+                                            span { class: "tag is-info", "Dieses Gerät" }
                                         }
-                                        if device.first_seen != device.last_seen {
-                                            p { style: "margin: 4px 0 0 0; font-size: 12px; color: #999;",
-                                                "Registriert: {format_timestamp(device.first_seen)}"
-                                            }
+                                    }
+                                    p { class: "mb-0 is-size-7 has-text-grey",
+                                        "Zuletzt gesehen: {format_timestamp(device.last_seen)}"
+                                    }
+                                    if device.first_seen != device.last_seen {
+                                        p { class: "mb-0 mt-1 is-size-7 has-text-grey-light",
+                                            "Registriert: {format_timestamp(device.first_seen)}"
                                         }
                                     }
                                 }
                             }
-                        })
+                        }
                     }
                 }
             }

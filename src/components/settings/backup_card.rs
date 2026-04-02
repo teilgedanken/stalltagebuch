@@ -484,54 +484,57 @@ pub fn BackupCard(
     };
 
     rsx! {
-        div { class: "card", style: "margin-bottom: 16px;",
-            h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", {tid!("backup-card-title")} }
+        div { class: "box mb-4",
+            h2 { class: "title is-5 mb-3", {tid!("backup-card-title")} }
 
-            div { style: "padding-bottom: 12px; margin-bottom: 12px;",
-                p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;",
+            div { class: "mb-4",
+                p { class: "is-size-7 has-text-grey mb-3",
                     {tid!("backup-card-actions-description")}
                 }
 
-                label { style: "display: grid; grid-template-columns: 24px 1fr; align-items: start; column-gap: 8px; margin: 0 0 12px 0; font-size: 13px; color: #333;",
-                    input {
-                        r#type: "checkbox",
-                        style: "width: 18px; height: 18px; margin: 2px 0 0 0;",
-                        checked: include_photo_files(),
-                        onchange: move |e| include_photo_files.set(e.checked()),
+                div { class: "field mb-3",
+                    label { class: "checkbox",
+                        input {
+                            r#type: "checkbox",
+                            checked: include_photo_files(),
+                            onchange: move |e| include_photo_files.set(e.checked()),
+                        }
+                        span { class: "ml-2", {tid!("backup-card-include-photo-files")} }
                     }
-                    span { style: "min-width: 0;", {tid!("backup-card-include-photo-files")} }
                 }
 
-                div { style: "display: flex; gap: 8px;",
-                    button {
-                        class: "btn-primary",
-                        style: "flex: 1;",
-                        disabled: is_exporting(),
-                        onclick: handle_export,
-                        if is_exporting() { {tid!("backup-card-button-file-running")} } else { {tid!("backup-card-button-file")} }
+                div { class: "field is-grouped",
+                    p { class: "control is-expanded",
+                        button {
+                            class: "button is-link is-fullwidth is-small",
+                            disabled: is_exporting(),
+                            onclick: handle_export,
+                            if is_exporting() { {tid!("backup-card-button-file-running")} } else { {tid!("backup-card-button-file")} }
+                        }
                     }
 
-                    button {
-                        class: "btn-primary",
-                        style: "flex: 1;",
-                        disabled: is_backup_uploading() || !is_nextcloud_configured,
-                        onclick: upload_backup,
-                        if is_backup_uploading() {
-                            {tid!("backup-upload-button-running")}
-                        } else {
-                            {tid!("backup-card-button-nextcloud")}
+                    p { class: "control is-expanded",
+                        button {
+                            class: "button is-info is-fullwidth is-small",
+                            disabled: is_backup_uploading() || !is_nextcloud_configured,
+                            onclick: upload_backup,
+                            if is_backup_uploading() {
+                                {tid!("backup-upload-button-running")}
+                            } else {
+                                {tid!("backup-card-button-nextcloud")}
+                            }
                         }
                     }
                 }
 
                 if !is_nextcloud_configured {
-                    p { style: "margin: 8px 0 0 0; font-size: 12px; color: #a66;",
+                    div { class: "notification is-warning is-light mt-3",
                         {tid!("backup-card-nextcloud-not-connected")}
                     }
                 }
 
                 if let Some(progress) = export_progress() {
-                    div { style: "padding: 8px; background: #f0f0f0; border-radius: 6px; margin-top: 12px; font-size: 12px;",
+                    div { class: "notification is-light mt-3",
                         match progress {
                             ExportProgress::Starting => rsx! { {tid!("backup-card-progress-starting")} },
                             ExportProgress::ReadingQuails => rsx! { {tid!("backup-card-progress-reading-quails")} },
@@ -545,13 +548,13 @@ pub fn BackupCard(
                 }
             }
 
-            div { style: "padding-bottom: 12px; border-bottom: 1px solid #e5e5e5; margin-bottom: 12px;",
-                h3 { style: "margin: 0 0 8px 0; font-size: 16px; color: #333;", {tid!("backup-card-history-title")} }
+            div { class: "mb-4",
+                h3 { class: "title is-6 mb-2", {tid!("backup-card-history-title")} }
 
                 if backup_history().is_empty() {
-                    p { style: "margin: 0; font-size: 12px; color: #777;", {tid!("backup-card-history-empty")} }
+                    p { class: "is-size-7 has-text-grey", {tid!("backup-card-history-empty")} }
                 } else {
-                    div { style: "display: flex; flex-direction: column; gap: 8px;",
+                    div { class: "is-flex is-flex-direction-column", style: "gap: 8px;",
                         for (idx, item) in {
                             let mut items = backup_history();
                             items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -559,7 +562,7 @@ pub fn BackupCard(
                         } {
                             if show_all_backups() || idx == 0 {
                                 button {
-                                    style: "text-align: left; width: 100%; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; padding: 8px;",
+                                    class: "button is-fullwidth is-light",
                                     onclick: {
                                         let id = item.backup_id.clone();
                                         move |_| {
@@ -570,7 +573,7 @@ pub fn BackupCard(
                                             }
                                         }
                                     },
-                                    div { style: "display: flex; justify-content: space-between; gap: 8px; align-items: center;",
+                                    div { class: "is-flex is-align-items-center is-justify-content-space-between is-fullwidth",
                                         span {
                                             {
                                                 let status_icon = match item.status.as_str() {
@@ -588,47 +591,47 @@ pub fn BackupCard(
                                             }
                                         }
                                     }
+                                }
 
-                                    if expanded_backup_id().as_ref() == Some(&item.backup_id) {
-                                        div { style: "margin-top: 8px; font-size: 12px; color: #444;",
-                                            p { style: "margin: 0 0 4px 0;",
-                                                {
-                                                    let status_label = match item.status.as_str() {
-                                                        "success" => tid!("backup-card-status-success"),
-                                                        "failed" => tid!("backup-card-status-failed"),
-                                                        _ => tid!("backup-card-status-pending"),
-                                                    };
-                                                    tid!("backup-card-history-status", status: status_label)
-                                                }
+                                if expanded_backup_id().as_ref() == Some(&item.backup_id) {
+                                    div { class: "notification is-light",
+                                        p { class: "mb-1",
+                                            {
+                                                let status_label = match item.status.as_str() {
+                                                    "success" => tid!("backup-card-status-success"),
+                                                    "failed" => tid!("backup-card-status-failed"),
+                                                    _ => tid!("backup-card-status-pending"),
+                                                };
+                                                tid!("backup-card-history-status", status: status_label)
                                             }
-                                            p { style: "margin: 0 0 4px 0;",
-                                                {
-                                                    let include_images = if item.include_images {
-                                                        tid!("backup-card-yes")
-                                                    } else {
-                                                        tid!("backup-card-no")
-                                                    };
-                                                    tid!("backup-card-history-include-images", include_images: include_images)
-                                                }
+                                        }
+                                        p { class: "mb-1",
+                                            {
+                                                let include_images = if item.include_images {
+                                                    tid!("backup-card-yes")
+                                                } else {
+                                                    tid!("backup-card-no")
+                                                };
+                                                tid!("backup-card-history-include-images", include_images: include_images)
                                             }
-                                            if let Some(path) = item.local_path.as_ref() {
-                                                p { style: "margin: 0 0 4px 0;", {tid!("backup-card-history-file", path: path.clone())} }
-                                            }
-                                            if let Some(name) = item.remote_filename.as_ref() {
-                                                p { style: "margin: 0 0 4px 0;", {tid!("backup-card-history-nextcloud", name: name.clone())} }
-                                            }
-                                            if let Some(size) = item.zip_size_bytes {
-                                                p { style: "margin: 0 0 4px 0;", {tid!("backup-card-history-size", size: size)} }
-                                            }
-                                            p { style: "margin: 0 0 4px 0;",
-                                                {tid!("backup-card-history-items", quails: item.quails, events: item.events, egg_records: item.egg_records)}
-                                            }
-                                            p { style: "margin: 0;",
-                                                {tid!("backup-card-history-photos", photos_meta: item.photos_meta, photos_files_included: item.photos_files_included, photos_files_missing: item.photos_files_missing)}
-                                            }
-                                            if let Some(err) = item.error_message.as_ref() {
-                                                p { style: "margin: 6px 0 0 0; color: #b33;", {tid!("backup-card-history-error", error: err.clone())} }
-                                            }
+                                        }
+                                        if let Some(path) = item.local_path.as_ref() {
+                                            p { class: "mb-1", {tid!("backup-card-history-file", path: path.clone())} }
+                                        }
+                                        if let Some(name) = item.remote_filename.as_ref() {
+                                            p { class: "mb-1", {tid!("backup-card-history-nextcloud", name: name.clone())} }
+                                        }
+                                        if let Some(size) = item.zip_size_bytes {
+                                            p { class: "mb-1", {tid!("backup-card-history-size", size: size)} }
+                                        }
+                                        p { class: "mb-1",
+                                            {tid!("backup-card-history-items", quails: item.quails, events: item.events, egg_records: item.egg_records)}
+                                        }
+                                        p {
+                                            {tid!("backup-card-history-photos", photos_meta: item.photos_meta, photos_files_included: item.photos_files_included, photos_files_missing: item.photos_files_missing)}
+                                        }
+                                        if let Some(err) = item.error_message.as_ref() {
+                                            p { class: "has-text-danger mt-2", {tid!("backup-card-history-error", error: err.clone())} }
                                         }
                                     }
                                 }
@@ -637,8 +640,7 @@ pub fn BackupCard(
 
                         if !show_all_backups() && backup_history().len() > 1 {
                             button {
-                                class: "btn-primary",
-                                style: "width: 100%;",
+                                class: "button is-link is-light is-fullwidth",
                                 onclick: move |_| show_all_backups.set(true),
                                 {tid!("backup-card-history-more", count: backup_history().len() - 1)}
                             }
@@ -647,26 +649,25 @@ pub fn BackupCard(
                 }
             }
 
-            div { style: "padding-bottom: 12px; margin-bottom: 0;",
-                h2 { style: "margin: 0 0 12px 0; font-size: 18px; color: #0066cc;", {tid!("backup-card-import-title")} }
-                p { style: "margin: 0 0 12px 0; font-size: 13px; color: #666;", {tid!("import-description")} }
+            div {
+                h2 { class: "title is-6 mb-2", {tid!("backup-card-import-title")} }
+                p { class: "is-size-7 has-text-grey mb-3", {tid!("import-description")} }
 
                 if let Some(progress) = import_progress() {
-                    div { style: "padding: 8px; background: #f0f0f0; border-radius: 6px; margin-bottom: 12px; font-size: 12px;",
+                    div { class: "notification is-light mb-3",
                         "{progress}"
                     }
                 }
 
                 button {
-                    class: "btn-primary",
-                    style: "width: 100%;",
+                    class: "button is-link is-fullwidth",
                     disabled: is_importing(),
                     onclick: handle_import,
                     if is_importing() { {tid!("backup-card-import-button-running")} } else { {tid!("backup-card-import-button")} }
                 }
 
                 if !import_status().is_empty() {
-                    p { style: "margin: 8px 0 0 0; font-size: 12px; color: #555; white-space: pre-wrap;", "{import_status}" }
+                    p { class: "is-size-7 has-text-grey mt-3", style: "white-space: pre-wrap;", "{import_status}" }
                 }
             }
         }

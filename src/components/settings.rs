@@ -29,39 +29,45 @@ pub fn SettingsScreen(
     });
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto;",
-            div { style: "display: flex; align-items: center; margin-bottom: 24px;",
-                button {
-                    class: "btn-back",
-                    onclick: move |_| on_navigate.call(Screen::Home),
-                    "← "
-                    {tid!("action-back")}
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        button {
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::Home),
+                            "← "
+                            {tid!("action-back")}
+                        }
+                    }
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0",
+                            "⚙️ "
+                            {tid!("settings-title")}
+                        }
+                    }
+                    div { class: "level-right" }
                 }
-                h1 { style: "flex: 1; text-align: center; margin: 0; font-size: 24px; color: #0066cc;",
-                    "⚙️ "
-                    {tid!("settings-title")}
-                }
-                div { style: "width: 80px;" }
-            }
 
-            if !status_message().is_empty() {
-                div { style: "padding: 12px; margin-bottom: 16px; background: #f0f0f0; border-radius: 8px; border-left: 4px solid #0066cc;",
-                    "{status_message}"
+                if !status_message().is_empty() {
+                    div { class: "notification is-info is-light",
+                        "{status_message}"
+                    }
                 }
-            }
 
-            NetworkCheckCard {}
-            SpacetimeDbCard { on_spacetime_settings_saved }
-            NextcloudCard {
-                on_status_message: move |message| status_message.set(message),
-                on_nextcloud_config_changed: move |configured| {
-                    is_nextcloud_configured.set(configured)
-                },
-            }
-            DevicesCard {}
-            BackupCard {
-                on_status_message: move |message| status_message.set(message),
-                is_nextcloud_configured: is_nextcloud_configured(),
+                NetworkCheckCard {}
+                SpacetimeDbCard { on_spacetime_settings_saved }
+                NextcloudCard {
+                    on_status_message: move |message| status_message.set(message),
+                    on_nextcloud_config_changed: move |configured| {
+                        is_nextcloud_configured.set(configured)
+                    },
+                }
+                DevicesCard {}
+                BackupCard {
+                    on_status_message: move |message| status_message.set(message),
+                    is_nextcloud_configured: is_nextcloud_configured(),
+                }
             }
         }
     }

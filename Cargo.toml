@@ -24,7 +24,7 @@ license = "MIT OR Apache-2.0"
 dioxus-gallery-components = { path = "dioxus-gallery-components" }
 photo-gallery = { path = "photo-gallery", features = ["sync", "components"] }
 nextcloud-auth = { path = "nextcloud-auth" }
-dioxus = { version = "0.7.3", features = [] }
+dioxus = { version = "0.7.4", features = [] }
 dioxus-i18n = { git = "https://github.com/Kannen/dioxus-i18n.git", branch = "main" }
 unic-langid = { version = "0.9", features = ["macros"] }
 spacetimedb_sdk = { package = "spacetimedb-sdk", git = "https://github.com/enaut/SpacetimeDB.git", branch = "copilot/create-pr-for-dioxus-changes" }

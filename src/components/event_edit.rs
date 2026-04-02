@@ -65,7 +65,7 @@ fn EventPhotoGallery(
 
     rsx! {
         if gallery_items.is_empty() && !photo_list.is_empty() {
-            div { style: "padding: 24px; text-align: center; color: #666;", "⏳ Loading photos..." }
+            div { class: "notification is-light has-text-centered", "⏳ Loading photos..." }
         } else {
             Gallery {
                 key: "{gallery_key}",
@@ -287,326 +287,350 @@ pub fn EventEditScreen(
     };
 
     rsx! {
-        div { style: "padding:16px; max-width:600px; margin:0 auto;",
-            // Header
-            div { style: "display:flex; align-items:center; gap:12px; margin-bottom:20px;",
-                button {
-                    style: "padding:8px 12px; background:#e0e0e0; border-radius:8px;",
-                    onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id.clone())),
-                    "←"
-                }
-                h1 { style: "margin:0; font-size:22px; color:#0066cc;", {tid!("event-edit-title")} }
-            }
-            if !error().is_empty() {
-                div { style: "background:#ffe6e6; padding:12px; border-radius:8px; color:#c00; margin-bottom:16px;",
-                    "⚠️ "
-                    {error()}
-                }
-            }
-            if success() {
-                div { style: "background:#e6ffe6; padding:12px; border-radius:8px; color:#060; margin-bottom:16px;",
-                    "✓ "
-                    {tid!("updated")}
-                }
-            }
-            if let Some(_) = event() {
-                // Event type
-                div { style: "margin-bottom:16px;",
-                    label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {tid!("field-type")}
-                    }
-                    select {
-                        value: event_type().as_str(),
-                        onchange: move |ev| {
-                            let v = ev.value();
-                            event_type.set(EventType::from_str(v.as_str()));
-                        },
-                        style: "width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;",
-                        option { value: "born", {tid!("event-type-born")} }
-                        option { value: "alive", {tid!("event-type-alive")} }
-                        option { value: "sick", {tid!("event-type-sick")} }
-                        option { value: "healthy", {tid!("event-type-healthy")} }
-                        option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
-                        option { value: "slaughtered", {tid!("event-type-slaughtered")} }
-                        option { value: "died", {tid!("event-type-died")} }
-                    }
-                }
-                // Date
-                div { style: "margin-bottom:16px;",
-                    label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {tid!("field-date")}
-                    }
-                    input {
-                        r#type: "date",
-                        value: "{event_date_str}",
-                        oninput: move |ev| event_date_str.set(ev.value()),
-                        style: "width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;",
-                    }
-                }
-                // Notes
-                div { style: "margin-bottom:16px;",
-                    label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {tid!("field-notes")}
-                    }
-                    textarea {
-                        value: "{notes}",
-                        oninput: move |ev| notes.set(ev.value()),
-                        style: "width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; min-height:120px;",
-                    }
-                }
-                // Photos grid
-                div { style: "margin-bottom:20px;",
-                    label { style: "display:block; font-weight:600; margin-bottom:6px;",
-                        {tid!("photos-count", count : photos().len())}
-                    }
-                    EventPhotoGallery {
-                        event_id: event_id.clone(),
-                        photos: photos.clone(),
-                        delete_photo_fn: move |photo_id: String| {
-                            if let Err(err) = delete_photo_gallery(photo_id) {
-                                log::error!("Failed to delete photo via SpacetimeDB reducer: {err}");
-                            }
-                        },
-                    }
-                    // Add buttons (always visible)
-                    div { style: "display:flex; gap:12px;",
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
                         button {
-                            disabled: uploading(),
-                            style: "flex:1; padding:10px; background:rgba(0,0,0,0.6); color:white; border-radius:8px;",
-                            onclick: {
-                                #[cfg(target_os = "android")]
-                                let create_photo_collection_gallery = create_photo_collection.clone();
-                                #[cfg(target_os = "android")]
-                                let create_photo_gallery = create_photo.clone();
-                                move |_| {
-                                    uploading.set(true);
-                                    error.set(String::new());
-                                    #[cfg(target_os = "android")]
-                                    let event_id_clone = event_id_for_gallery.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_collection_gallery_call =
-                                        create_photo_collection_gallery.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_gallery_call = create_photo_gallery.clone();
-                                    spawn(async move {
-                                        #[cfg(target_os = "android")]
-                                        {
-                                            let device_id = crate::services::device_id_service::get_device_id()
-                                                .unwrap_or_else(|_| "unknown-device".to_string());
-                                            match crate::camera::pick_images() {
-                                                Ok(paths) => {
-                                                    if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                                        let collection_uuid = event_uuid.to_string();
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::ProfileDetail(quail_id.clone())),
+                            "← "
+                            {tid!("action-back")}
+                        }
+                    }
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0", {tid!("event-edit-title")} }
+                    }
+                    div { class: "level-right" }
+                }
 
-                                                        if let Err(err) = create_photo_collection_gallery_call(spacetime::CreatePhotoCollectionArgs {
-                                                            uuid: collection_uuid.clone(),
-                                                            quail_uuid: None,
-                                                            event_uuid: Some(event_uuid.to_string()),
-                                                            name: format!(
-                                                                "Event-{}",
-                                                                event_uuid.to_string().chars().take(8).collect::<String>()
-                                                            ),
-                                                            device_id: device_id.clone(),
-                                                        }) {
-                                                            error.set(format!(
-                                                                "{}: {}",
-                                                                tid!("error-pick-images", error: ""),
-                                                                err
-                                                            ));
-                                                            uploading.set(false);
-                                                            return;
-                                                        }
+                if !error().is_empty() {
+                    div { class: "notification is-danger is-light",
+                        "⚠️ "
+                        {error()}
+                    }
+                }
 
-                                                        for picked_path in paths {
-                                                            let source = picked_path.to_string_lossy().to_string();
-                                                            match crate::services::photo_service::process_photo(source).await {
-                                                                Ok((relative_original, _, _)) => {
-                                                                    if let Some(photo_uuid) = std::path::Path::new(&relative_original)
-                                                                        .file_stem()
-                                                                        .and_then(|s| s.to_str())
-                                                                    {
-                                                                        if let Err(err) = create_photo_gallery_call(spacetime::CreatePhotoArgs {
-                                                                            uuid: photo_uuid.to_string(),
-                                                                            collection_uuid: collection_uuid.clone(),
-                                                                            relative_path: relative_original,
-                                                                            device_id: device_id.clone(),
-                                                                        }) {
-                                                                            error.set(format!(
-                                                                                "{}: {}",
-                                                                                tid!("error-pick-images", error: ""),
-                                                                                err
-                                                                            ));
-                                                                        }
-                                                                    }
-                                                                }
-                                                                Err(err) => {
-                                                                    error.set(format!(
-                                                                        "{}: {}",
-                                                                        tid!("error-pick-images", error: ""),
-                                                                        err
-                                                                    ));
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        error.set(tid!("error-invalid-event-id"));
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    error.set(tid!("error-pick-images", error : e.to_string()));
-                                                }
-                                            }
-                                        }
-                                        #[cfg(not(target_os = "android"))]
-                                        {
-                                            error.set(tid!("error-android-only-gallery"));
-                                        }
-                                        uploading.set(false);
-                                    });
+                if success() {
+                    div { class: "notification is-success is-light",
+                        "✓ "
+                        {tid!("updated")}
+                    }
+                }
+
+                if let Some(_) = event() {
+                    div { class: "box",
+                        div { class: "field",
+                            label { class: "label", {tid!("field-type")} }
+                            div { class: "control",
+                                div { class: "select is-fullwidth",
+                                    select {
+                                        value: event_type().as_str(),
+                                        onchange: move |ev| {
+                                            let v = ev.value();
+                                            event_type.set(EventType::from_str(v.as_str()));
+                                        },
+                                        option { value: "born", {tid!("event-type-born")} }
+                                        option { value: "alive", {tid!("event-type-alive")} }
+                                        option { value: "sick", {tid!("event-type-sick")} }
+                                        option { value: "healthy", {tid!("event-type-healthy")} }
+                                        option { value: "marked_for_slaughter", {tid!("event-type-marked")} }
+                                        option { value: "slaughtered", {tid!("event-type-slaughtered")} }
+                                        option { value: "died", {tid!("event-type-died")} }
+                                    }
                                 }
-                            },
-                            if uploading() {
-                                "⏳"
-                            } else {
-                                "🖼️ "
-                                {tid!("action-gallery")}
                             }
                         }
-                        button {
-                            disabled: uploading(),
-                            style: "flex:1; padding:10px; background:rgba(0,0,0,0.6); color:white; border-radius:8px;",
-                            onclick: {
-                                #[cfg(target_os = "android")]
-                                let create_photo_collection_camera = create_photo_collection.clone();
-                                #[cfg(target_os = "android")]
-                                let create_photo_camera = create_photo.clone();
-                                move |_| {
-                                    uploading.set(true);
-                                    error.set(String::new());
-                                    #[cfg(target_os = "android")]
-                                    let event_id_clone = event_id_for_camera.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_collection_camera_call =
-                                        create_photo_collection_camera.clone();
-                                    #[cfg(target_os = "android")]
-                                    let create_photo_camera_call = create_photo_camera.clone();
-                                    spawn(async move {
-                                        #[cfg(target_os = "android")]
-                                        {
-                                            let device_id = crate::services::device_id_service::get_device_id()
-                                                .unwrap_or_else(|_| "unknown-device".to_string());
-                                            match crate::camera::capture_photo() {
-                                                Ok(path) => {
-                                                    if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
-                                                        let collection_uuid = event_uuid.to_string();
 
-                                                        if let Err(err) = create_photo_collection_camera_call(spacetime::CreatePhotoCollectionArgs {
-                                                            uuid: collection_uuid.clone(),
-                                                            quail_uuid: None,
-                                                            event_uuid: Some(event_uuid.to_string()),
-                                                            name: format!(
-                                                                "Event-{}",
-                                                                event_uuid.to_string().chars().take(8).collect::<String>()
-                                                            ),
-                                                            device_id: device_id.clone(),
-                                                        }) {
-                                                            error.set(format!(
-                                                                "{}: {}",
-                                                                tid!("error-capture-photo", error: ""),
-                                                                err
-                                                            ));
-                                                            uploading.set(false);
-                                                            return;
+                        div { class: "field",
+                            label { class: "label", {tid!("field-date")} }
+                            div { class: "control",
+                                input {
+                                    r#type: "date",
+                                    class: "input",
+                                    value: "{event_date_str}",
+                                    oninput: move |ev| event_date_str.set(ev.value()),
+                                }
+                            }
+                        }
+
+                        div { class: "field",
+                            label { class: "label", {tid!("field-notes")} }
+                            div { class: "control",
+                                textarea {
+                                    class: "textarea",
+                                    style: "min-height: 120px;",
+                                    value: "{notes}",
+                                    oninput: move |ev| notes.set(ev.value()),
+                                }
+                            }
+                        }
+
+                        div { class: "field",
+                            label { class: "label", {tid!("photos-count", count : photos().len())} }
+                            EventPhotoGallery {
+                                event_id: event_id.clone(),
+                                photos: photos.clone(),
+                                delete_photo_fn: move |photo_id: String| {
+                                    if let Err(err) = delete_photo_gallery(photo_id) {
+                                        log::error!("Failed to delete photo via SpacetimeDB reducer: {err}");
+                                    }
+                                },
+                            }
+
+                            div { class: "field is-grouped mt-3",
+                                p { class: "control is-expanded",
+                                    button {
+                                        class: "button is-dark is-fullwidth",
+                                        disabled: uploading(),
+                                        onclick: {
+                                            #[cfg(target_os = "android")]
+                                            let create_photo_collection_gallery = create_photo_collection.clone();
+                                            #[cfg(target_os = "android")]
+                                            let create_photo_gallery = create_photo.clone();
+                                            move |_| {
+                                                uploading.set(true);
+                                                error.set(String::new());
+                                                #[cfg(target_os = "android")]
+                                                let event_id_clone = event_id_for_gallery.clone();
+                                                #[cfg(target_os = "android")]
+                                                let create_photo_collection_gallery_call =
+                                                    create_photo_collection_gallery.clone();
+                                                #[cfg(target_os = "android")]
+                                                let create_photo_gallery_call = create_photo_gallery.clone();
+                                                spawn(async move {
+                                                    #[cfg(target_os = "android")]
+                                                    {
+                                                        let device_id = crate::services::device_id_service::get_device_id()
+                                                            .unwrap_or_else(|_| "unknown-device".to_string());
+                                                        match crate::camera::pick_images() {
+                                                            Ok(paths) => {
+                                                                if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
+                                                                    let collection_uuid = event_uuid.to_string();
+
+                                                                    if let Err(err) = create_photo_collection_gallery_call(spacetime::CreatePhotoCollectionArgs {
+                                                                        uuid: collection_uuid.clone(),
+                                                                        quail_uuid: None,
+                                                                        event_uuid: Some(event_uuid.to_string()),
+                                                                        name: format!(
+                                                                            "Event-{}",
+                                                                            event_uuid.to_string().chars().take(8).collect::<String>()
+                                                                        ),
+                                                                        device_id: device_id.clone(),
+                                                                    }) {
+                                                                        error.set(format!(
+                                                                            "{}: {}",
+                                                                            tid!("error-pick-images", error: ""),
+                                                                            err
+                                                                        ));
+                                                                        uploading.set(false);
+                                                                        return;
+                                                                    }
+
+                                                                    for picked_path in paths {
+                                                                        let source = picked_path.to_string_lossy().to_string();
+                                                                        match crate::services::photo_service::process_photo(source).await {
+                                                                            Ok((relative_original, _, _)) => {
+                                                                                if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                                                                    .file_stem()
+                                                                                    .and_then(|s| s.to_str())
+                                                                                {
+                                                                                    if let Err(err) = create_photo_gallery_call(spacetime::CreatePhotoArgs {
+                                                                                        uuid: photo_uuid.to_string(),
+                                                                                        collection_uuid: collection_uuid.clone(),
+                                                                                        relative_path: relative_original,
+                                                                                        device_id: device_id.clone(),
+                                                                                    }) {
+                                                                                        error.set(format!(
+                                                                                            "{}: {}",
+                                                                                            tid!("error-pick-images", error: ""),
+                                                                                            err
+                                                                                        ));
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                            Err(err) => {
+                                                                                error.set(format!(
+                                                                                    "{}: {}",
+                                                                                    tid!("error-pick-images", error: ""),
+                                                                                    err
+                                                                                ));
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    error.set(tid!("error-invalid-event-id"));
+                                                                }
+                                                            }
+                                                            Err(e) => {
+                                                                error.set(tid!("error-pick-images", error : e.to_string()));
+                                                            }
                                                         }
+                                                    }
+                                                    #[cfg(not(target_os = "android"))]
+                                                    {
+                                                        error.set(tid!("error-android-only-gallery"));
+                                                    }
+                                                    uploading.set(false);
+                                                });
+                                            }
+                                        },
+                                        if uploading() {
+                                            "⏳"
+                                        } else {
+                                            "🖼️ "
+                                            {tid!("action-gallery")}
+                                        }
+                                    }
+                                }
 
-                                                        let source = path.to_string_lossy().to_string();
-                                                        match crate::services::photo_service::process_photo(source).await {
-                                                            Ok((relative_original, _, _)) => {
-                                                                if let Some(photo_uuid) = std::path::Path::new(&relative_original)
-                                                                    .file_stem()
-                                                                    .and_then(|s| s.to_str())
-                                                                {
-                                                                    if let Err(err) = create_photo_camera_call(spacetime::CreatePhotoArgs {
-                                                                        uuid: photo_uuid.to_string(),
-                                                                        collection_uuid,
-                                                                        relative_path: relative_original,
-                                                                        device_id,
+                                p { class: "control is-expanded",
+                                    button {
+                                        class: "button is-dark is-fullwidth",
+                                        disabled: uploading(),
+                                        onclick: {
+                                            #[cfg(target_os = "android")]
+                                            let create_photo_collection_camera = create_photo_collection.clone();
+                                            #[cfg(target_os = "android")]
+                                            let create_photo_camera = create_photo.clone();
+                                            move |_| {
+                                                uploading.set(true);
+                                                error.set(String::new());
+                                                #[cfg(target_os = "android")]
+                                                let event_id_clone = event_id_for_camera.clone();
+                                                #[cfg(target_os = "android")]
+                                                let create_photo_collection_camera_call =
+                                                    create_photo_collection_camera.clone();
+                                                #[cfg(target_os = "android")]
+                                                let create_photo_camera_call = create_photo_camera.clone();
+                                                spawn(async move {
+                                                    #[cfg(target_os = "android")]
+                                                    {
+                                                        let device_id = crate::services::device_id_service::get_device_id()
+                                                            .unwrap_or_else(|_| "unknown-device".to_string());
+                                                        match crate::camera::capture_photo() {
+                                                            Ok(path) => {
+                                                                if let Ok(event_uuid) = uuid::Uuid::parse_str(&event_id_clone) {
+                                                                    let collection_uuid = event_uuid.to_string();
+
+                                                                    if let Err(err) = create_photo_collection_camera_call(spacetime::CreatePhotoCollectionArgs {
+                                                                        uuid: collection_uuid.clone(),
+                                                                        quail_uuid: None,
+                                                                        event_uuid: Some(event_uuid.to_string()),
+                                                                        name: format!(
+                                                                            "Event-{}",
+                                                                            event_uuid.to_string().chars().take(8).collect::<String>()
+                                                                        ),
+                                                                        device_id: device_id.clone(),
                                                                     }) {
                                                                         error.set(format!(
                                                                             "{}: {}",
                                                                             tid!("error-capture-photo", error: ""),
                                                                             err
                                                                         ));
+                                                                        uploading.set(false);
+                                                                        return;
                                                                     }
+
+                                                                    let source = path.to_string_lossy().to_string();
+                                                                    match crate::services::photo_service::process_photo(source).await {
+                                                                        Ok((relative_original, _, _)) => {
+                                                                            if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                                                                .file_stem()
+                                                                                .and_then(|s| s.to_str())
+                                                                            {
+                                                                                if let Err(err) = create_photo_camera_call(spacetime::CreatePhotoArgs {
+                                                                                    uuid: photo_uuid.to_string(),
+                                                                                    collection_uuid,
+                                                                                    relative_path: relative_original,
+                                                                                    device_id,
+                                                                                }) {
+                                                                                    error.set(format!(
+                                                                                        "{}: {}",
+                                                                                        tid!("error-capture-photo", error: ""),
+                                                                                        err
+                                                                                    ));
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        Err(err) => {
+                                                                            error.set(format!(
+                                                                                "{}: {}",
+                                                                                tid!("error-capture-photo", error: ""),
+                                                                                err
+                                                                            ));
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    error.set(tid!("error-invalid-event-id"));
                                                                 }
                                                             }
-                                                            Err(err) => {
-                                                                error.set(format!(
-                                                                    "{}: {}",
-                                                                    tid!("error-capture-photo", error: ""),
-                                                                    err
-                                                                ));
+                                                            Err(e) => {
+                                                                error.set(tid!("error-capture-photo", error : e.to_string()));
                                                             }
                                                         }
-                                                    } else {
-                                                        error.set(tid!("error-invalid-event-id"));
                                                     }
-                                                }
-                                                Err(e) => {
-                                                    error.set(tid!("error-capture-photo", error : e.to_string()));
-                                                }
+                                                    #[cfg(not(target_os = "android"))]
+                                                    {
+                                                        error.set(tid!("error-android-only-camera"));
+                                                    }
+                                                    uploading.set(false);
+                                                });
                                             }
+                                        },
+                                        if uploading() {
+                                            "⏳"
+                                        } else {
+                                            "📷 "
+                                            {tid!("action-photo")}
                                         }
-                                        #[cfg(not(target_os = "android"))]
-                                        {
-                                            error.set(tid!("error-android-only-camera"));
-                                        }
-                                        uploading.set(false);
-                                    });
+                                    }
                                 }
-                            },
-                            if uploading() {
-                                "⏳"
-                            } else {
-                                "📷 "
-                                {tid!("action-photo")}
+                            }
+                        }
+
+                        div { class: "field is-grouped mt-5",
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-primary is-fullwidth",
+                                    disabled: saving(),
+                                    onclick: move |_| handle_save(),
+                                    if saving() {
+                                        "⏳ "
+                                        {tid!("action-saving")}
+                                    } else {
+                                        "✓ "
+                                        {tid!("action-save")}
+                                    }
+                                }
+                            }
+
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-light is-fullwidth",
+                                    disabled: saving(),
+                                    onclick: {
+                                        let quail_id_for_cancel = quail_id.clone();
+                                        move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
+                                    },
+                                    {tid!("action-cancel")}
+                                }
+                            }
+
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-danger is-light is-fullwidth",
+                                    disabled: saving(),
+                                    onclick: move |_| handle_delete(),
+                                    "🗑️ "
+                                    {tid!("action-delete")}
+                                }
                             }
                         }
                     }
+                } else {
+                    div { class: "notification is-light has-text-centered", {tid!("loading-event")} }
                 }
-                // Action buttons
-                div { style: "display:flex; gap:12px;",
-                    button {
-                        disabled: saving(),
-                        style: "flex:1; padding:14px; background:#0066cc; color:white; border-radius:8px; font-weight:600;",
-                        onclick: move |_| handle_save(),
-                        if saving() {
-                            "⏳ "
-                            {tid!("action-saving")}
-                        } else {
-                            "✓ "
-                            {tid!("action-save")}
-                        }
-                    }
-                    button {
-                        disabled: saving(),
-                        style: "flex:1; padding:14px; background:#e0e0e0; color:#333; border-radius:8px; font-weight:600;",
-                        onclick: {
-                            let quail_id_for_cancel = quail_id.clone();
-                            move |_| on_navigate.call(Screen::ProfileDetail(quail_id_for_cancel.clone()))
-                        },
-                        {tid!("action-cancel")}
-                    }
-                    button {
-                        disabled: saving(),
-                        style: "flex:1; padding:14px; background:#ffdddd; color:#cc0000; border-radius:8px; font-weight:600;",
-                        onclick: move |_| handle_delete(),
-                        "🗑️ "
-                        {tid!("action-delete")}
-                    }
-                }
-            } else {
-                div { style: "padding:40px; text-align:center; color:#666;", {tid!("loading-event")} }
             }
         }
     }

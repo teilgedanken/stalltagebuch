@@ -5,7 +5,7 @@ use crate::error::AppError;
 use std::path::PathBuf;
 
 #[cfg(target_os = "android")]
-use jni::{jni_sig, jni_str};
+use ::jni::{jni_sig, jni_str};
 
 // Helper function to convert PickerError to AppError
 fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {
@@ -104,22 +104,22 @@ pub fn get_last_error() -> Option<String> {
 
 #[cfg(target_os = "android")]
 fn with_android_env<T>(
-    f: impl FnOnce(&mut jni::Env<'_>) -> Result<T, AppError>,
+    f: impl FnOnce(&mut ::jni::Env<'_>) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
     use ndk_context::android_context;
 
     let ctx = android_context();
-    let vm_ptr = ctx.vm() as *mut jni::sys::JavaVM;
+    let vm_ptr = ctx.vm() as *mut ::jni::sys::JavaVM;
     if vm_ptr.is_null() {
         return Err(AppError::PermissionDenied("JavaVM unavailable".to_string()));
     }
 
-    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr) };
+    let vm = unsafe { ::jni::JavaVM::from_raw(vm_ptr) };
     vm.attach_current_thread(f)
 }
 
 #[cfg(target_os = "android")]
-fn clear_pending_exception(env: &mut jni::Env<'_>) {
+fn clear_pending_exception(env: &mut ::jni::Env<'_>) {
     if env.exception_check() {
         let _ = env.exception_clear();
     }
@@ -127,19 +127,21 @@ fn clear_pending_exception(env: &mut jni::Env<'_>) {
 
 #[cfg(target_os = "android")]
 fn load_main_activity_class<'a>(
-    env: &mut jni::Env<'a>,
+    env: &mut ::jni::Env<'a>,
 ) -> Result<jni::objects::JClass<'a>, AppError> {
     use jni::objects::{JClass, JObject, JString, JValue};
 
     let at_cls = env
-        .find_class(jni_str!("android/app/ActivityThread"))
+        .find_class(::jni::strings::JNIString::new("android/app/ActivityThread"))
         .map_err(|e| AppError::PermissionDenied(format!("ActivityThread missing: {}", e)))?;
 
     let at = env
         .call_static_method(
             &at_cls,
-            jni_str!("currentActivityThread"),
-            jni_sig!("()Landroid/app/ActivityThread;"),
+            ::jni::strings::JNIString::new("currentActivityThread"),
+            ::jni::signature::RuntimeMethodSignature::from_str("()Landroid/app/ActivityThread;")
+                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
+                .method_signature(),
             &[],
         )
         .map_err(|e| {
@@ -152,8 +154,10 @@ fn load_main_activity_class<'a>(
     let app = env
         .call_method(
             &at,
-            jni_str!("getApplication"),
-            jni_sig!("()Landroid/app/Application;"),
+            ::jni::strings::JNIString::new("getApplication"),
+            ::jni::signature::RuntimeMethodSignature::from_str("()Landroid/app/Application;")
+                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
+                .method_signature(),
             &[],
         )
         .map_err(|e| {
@@ -166,8 +170,10 @@ fn load_main_activity_class<'a>(
     let loader = env
         .call_method(
             &app,
-            jni_str!("getClassLoader"),
-            jni_sig!("()Ljava/lang/ClassLoader;"),
+            ::jni::strings::JNIString::new("getClassLoader"),
+            ::jni::signature::RuntimeMethodSignature::from_str("()Ljava/lang/ClassLoader;")
+                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
+                .method_signature(),
             &[],
         )
         .map_err(|e| {

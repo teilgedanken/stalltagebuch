@@ -96,14 +96,14 @@ impl From<std::io::Error> for AppError {
 }
 
 #[cfg(target_os = "android")]
-impl From<jni::errors::Error> for AppError {
-    fn from(e: jni::errors::Error) -> Self {
+impl From<::jni::errors::Error> for AppError {
+    fn from(e: ::jni::errors::Error) -> Self {
         AppError::PermissionDenied(format!("JNI error: {}", e))
     }
 }
 
 #[cfg(target_os = "android")]
-impl From<jni::errors::Error> for StalltagebuchError {
+impl From<::jni::errors::Error> for StalltagebuchError {
     fn from(e: jni::errors::Error) -> Self {
         StalltagebuchError::JniError(format!("JNI error: {}", e))
     }
