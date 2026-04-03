@@ -58,13 +58,13 @@ app-title = Quail Stable Logbook
 backup-card-actions-description = Backup actions: The option "Include photo files in backup" applies to both buttons.
 
 # Source: ./src/components/settings/backup_card.rs:512
-backup-card-button-file = 💾 Backup to file
+backup-card-button-file = 💾 to file
 
 # Source: ./src/components/settings/backup_card.rs:512
-backup-card-button-file-running = ⏳ Creating backup file…
+backup-card-button-file-running = ⏳ Creating file…
 
 # Source: ./src/components/settings/backup_card.rs:523
-backup-card-button-nextcloud = ☁️ Backup to Nextcloud
+backup-card-button-nextcloud = ☁️ to Nextcloud
 
 # Source: ./src/components/settings/backup_card.rs:553
 backup-card-history-empty = No backups logged yet.
@@ -625,6 +625,8 @@ spacetime-card-connection-disconnected = Not connected
 # Source: ./src/components/settings/spacetime_db_card.rs:51
 spacetime-card-connection-error = Connection error
 
+spacetime-card-connection-retry-failed = Connection failed after { $attempts } retries. Please re-check your SpacetimeDB settings and edit credentials.
+
 # Source: ./src/components/settings/spacetime_db_card.rs:244
 spacetime-card-connection-info = Connection info
 
@@ -639,7 +641,7 @@ spacetime-card-database-label = Database name
 spacetime-card-database-value = Database: { $value }
 
 # Source: ./src/components/settings/spacetime_db_card.rs:258
-spacetime-card-edit-credentials = Edit credentials
+spacetime-card-edit-credentials = Edit
 
 # Source: ./src/components/settings/spacetime_db_card.rs:125
 spacetime-card-fill-required = Please fill server URL, database name, and auth token

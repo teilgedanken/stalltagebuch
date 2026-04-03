@@ -503,19 +503,15 @@ pub fn BackupCard(
                     }
                 }
 
-                div { class: "field is-grouped",
-                    p { class: "control is-expanded",
+                div { class: "buttons has-addons is-centered",
                         button {
-                            class: "button is-link is-fullwidth is-small",
+                            class: "button is-link is-small",
                             disabled: is_exporting(),
                             onclick: handle_export,
                             if is_exporting() { {tid!("backup-card-button-file-running")} } else { {tid!("backup-card-button-file")} }
                         }
-                    }
-
-                    p { class: "control is-expanded",
                         button {
-                            class: "button is-info is-fullwidth is-small",
+                            class: "button is-info is-small",
                             disabled: is_backup_uploading() || !is_nextcloud_configured,
                             onclick: upload_backup,
                             if is_backup_uploading() {
@@ -523,7 +519,6 @@ pub fn BackupCard(
                             } else {
                                 {tid!("backup-card-button-nextcloud")}
                             }
-                        }
                     }
                 }
 

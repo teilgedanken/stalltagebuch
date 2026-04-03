@@ -4,6 +4,8 @@ use crate::spacetime::{ConnectionState, use_spacetimedb_context};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
+const SPACETIME_RECONNECT_EDIT_THRESHOLD: u32 = 3;
+
 // ─── SpacetimeDB settings card ────────────────────────────────────────────────
 
 /// Card component that displays connection status and allows configuring
@@ -28,6 +30,19 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
     let quails = ctx.tables.quails;
     let events = ctx.tables.quail_events;
     let egg_records = ctx.tables.egg_records;
+
+    use_effect(move || {
+        if let ConnectionState::Reconnecting { attempt, .. } = conn_state() {
+            if attempt >= SPACETIME_RECONNECT_EDIT_THRESHOLD && is_logged_in() {
+                is_logged_in.set(false);
+                show_details.set(false);
+                status_msg.set(format!(
+                    "⚠️ {}",
+                    tid!("spacetime-card-connection-retry-failed", attempts: attempt)
+                ));
+            }
+        }
+    });
 
     let connection_label = move || {
         let state = conn_state();
@@ -77,12 +92,10 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
         }
 
         match state {
-            ConnectionState::Connected(_, _) => "button is-fullwidth is-success",
-            ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => {
-                "button is-fullwidth is-warning"
-            }
-            ConnectionState::Error => "button is-fullwidth is-danger",
-            ConnectionState::Disconnected => "button is-fullwidth is-dark",
+            ConnectionState::Connected(_, _) => "is-success",
+            ConnectionState::Connecting | ConnectionState::Reconnecting { .. } => "is-warning",
+            ConnectionState::Error => "is-danger",
+            ConnectionState::Disconnected => "is-dark",
         }
     };
 
@@ -143,12 +156,49 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
     };
 
     let toggle_details = move |_| {
-        show_details.set(!show_details());
+        if matches!(conn_state(), ConnectionState::Connected(_, _)) {
+            show_details.set(!show_details());
+    }
     };
 
     rsx! {
         div { class: "box mb-4",
             h2 { class: "title is-5 mb-4", "🗄️ {tid!(\"spacetime-card-title\")}" }
+
+            div { class: "field has-addons mt-4 is-fullwidth",
+                p { class: "control is-expanded",
+                    button {
+                        class: "{status_button_class()} button is-fullwidth is-small is-light",
+                        onclick: toggle_details,
+                        div { class: "is-flex is-align-items-center is-justify-content-space-between is-fullwidth",
+                            span { "{connection_icon()} {connection_label()}" }
+                        }
+                    }
+                }
+                if show_details() {
+                    p { class: "control",
+                        button {
+                            class: "button is-warning is-light is-small",
+                            onclick: open_login_form,
+                            "✏️ {tid!(\"spacetime-card-edit-credentials\")}"
+                        }
+                    }
+                }
+                if matches!(conn_state(), ConnectionState::Connected(_, _)) {p { class: "control",
+                    button {
+                        class: "{status_button_class()} button is-small is-light",
+                        onclick: toggle_details,
+                        
+                            span {
+                            if show_details(){
+                                "▼"
+                            } else {
+                                "▶"
+                            }}
+                        }
+                    }
+                }
+            }
 
             if !is_logged_in() {
                 div { class: "field",
@@ -204,20 +254,6 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
                     }
                 }
             } else {
-                button {
-                    class: "{status_button_class()}",
-                    onclick: toggle_details,
-                    div { class: "is-flex is-align-items-center is-justify-content-space-between is-fullwidth",
-                        span { "{connection_icon()} {connection_label()}" }
-                        span {
-                            {if show_details() {
-                                tid!("spacetime-card-hide-details")
-                            } else {
-                                tid!("spacetime-card-show-details")
-                            }}
-                        }
-                    }
-                }
 
                 if show_details() {
                     div { class: "{details_panel_class()} mt-3",
@@ -230,12 +266,6 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
                         p { class: "mb-1", {tid!("spacetime-card-stats-quails", count: quails().len())} }
                         p { class: "mb-1", {tid!("spacetime-card-stats-events", count: events().len())} }
                         p { {tid!("spacetime-card-stats-egg-records", count: egg_records().len())} }
-
-                        button {
-                            class: "button is-link is-light mt-3",
-                            onclick: open_login_form,
-                            "🔄 {tid!(\"spacetime-card-edit-credentials\")}"
-                        }
                     }
                 }
             }

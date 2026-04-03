@@ -58,13 +58,13 @@ app-title = Wachtel-Stallbuch
 backup-card-actions-description = Backup-Aktionen: Die Option "Bilddateien im Backup enthalten" gilt für beide Buttons.
 
 # Source: ./src/components/settings/backup_card.rs:512
-backup-card-button-file = 💾 Backup in Datei
+backup-card-button-file = 💾 in Datei
 
 # Source: ./src/components/settings/backup_card.rs:512
-backup-card-button-file-running = ⏳ Backup-Datei…
+backup-card-button-file-running = ⏳ Erstellen…
 
 # Source: ./src/components/settings/backup_card.rs:523
-backup-card-button-nextcloud = ☁️ Backup zu Nextcloud
+backup-card-button-nextcloud = ☁️ zu Nextcloud
 
 # Source: ./src/components/settings/backup_card.rs:553
 backup-card-history-empty = Noch keine Backups protokolliert.
@@ -625,6 +625,8 @@ spacetime-card-connection-disconnected = Nicht verbunden
 # Source: ./src/components/settings/spacetime_db_card.rs:51
 spacetime-card-connection-error = Verbindungsfehler
 
+spacetime-card-connection-retry-failed = Verbindung nach { $attempts } Versuchen fehlgeschlagen. Bitte SpacetimeDB-Einstellungen prüfen und Zugangsdaten neu eingeben.
+
 # Source: ./src/components/settings/spacetime_db_card.rs:244
 spacetime-card-connection-info = Verbindungsinfo
 
@@ -639,7 +641,7 @@ spacetime-card-database-label = Datenbankname
 spacetime-card-database-value = Datenbank: { $value }
 
 # Source: ./src/components/settings/spacetime_db_card.rs:258
-spacetime-card-edit-credentials = Zugangsdaten bearbeiten
+spacetime-card-edit-credentials = Bearbeiten
 
 # Source: ./src/components/settings/spacetime_db_card.rs:125
 spacetime-card-fill-required = Bitte Server-URL, Datenbankname und Auth-Token ausfuellen

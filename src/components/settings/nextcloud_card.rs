@@ -286,17 +286,22 @@ pub fn NextcloudCard(
                         onclick: move |_| details_expanded.set(!details_expanded()),
                         button { class: "button is-success is-light is-small is-fullwidth",
                             span { "✅ Verbunden" }
-                            span { if details_expanded() { "▾" } else { "▸" } }
                         }
                     }
                     if details_expanded() {
-                        p { class: "control is-expanded",
+                        p { class: "control",
                             button {
-                                class: "button is-danger is-light is-small is-fullwidth",
+                                class: "button is-danger is-light is-small",
                                 onclick: delete_settings,
                                 span { class: "icon is-small", "🗑️" }
                                 span { {tid!("sync-delete-config")} }
                             }
+                        }
+                    }
+                    p { class: "control",
+                        onclick: move |_| details_expanded.set(!details_expanded()),
+                        button { class: "button is-success is-light is-small",
+                            span { if details_expanded() { "▼" } else { "▶" } }
                         }
                     }
 
@@ -317,18 +322,14 @@ pub fn NextcloudCard(
                             "{settings.nextcloud_remote_path}"
                         }
 
-                        div { class: "field has-addons mt-4",
-                            p { class: "control",
+
                                 button {
-                                    class: "button is-link is-small",
+                                    class: "button is-link is-small is-fullwidth mt-4",
                                     disabled: is_syncing(),
                                     onclick: run_sync,
                                     span { class: "icon is-small", if is_syncing() { "⏳" } else { "🔄" } }
                                     span { {tid!("sync-now")} }
                                 }
-                            }
-
-                        }
 
                         div { class: "message is-info mt-4",
                             div { class: "message-header", {tid!("sync-photo-status-title")} }
