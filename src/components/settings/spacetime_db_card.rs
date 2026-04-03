@@ -158,6 +158,7 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
     let toggle_details = move |_| {
         if matches!(conn_state(), ConnectionState::Connected(_, _)) {
             show_details.set(!show_details());
+            is_logged_in.set(true);
     }
     };
 
