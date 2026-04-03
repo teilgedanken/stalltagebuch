@@ -49,13 +49,10 @@ hostname = "0.4"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.22"
 ndk-context = "0.1"
 android_logger = "0.15"
 rustls-platform-verifier = "0.6.2"
 
-[patch.crates-io]
-rustls-platform-verifier = { git = "https://github.com/rustls/rustls-platform-verifier.git", branch = "jni-0.22" }
 
 [features]
 default = ["mobile"]

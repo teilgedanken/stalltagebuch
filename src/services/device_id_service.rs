@@ -6,10 +6,9 @@
 use crate::error::StalltagebuchError;
 
 #[cfg(target_os = "android")]
-use jni::{
-    Env, jni_sig, jni_str,
-    objects::{JObject, JString, JValue},
-};
+use dioxus::prelude::jni::objects::{JObject, JString, JValue};
+#[cfg(target_os = "android")]
+use dioxus::prelude::jni::JavaVM;
 #[cfg(target_os = "android")]
 use ndk_context::android_context;
 
@@ -21,7 +20,6 @@ use ndk_context::android_context;
 /// On non-Android platforms, returns a default value for testing.
 #[cfg(target_os = "android")]
 pub fn get_device_id() -> Result<String, StalltagebuchError> {
-    use jni::JavaVM;
     use std::sync::OnceLock;
 
     static DEVICE_ID: OnceLock<String> = OnceLock::new();
@@ -32,31 +30,34 @@ pub fn get_device_id() -> Result<String, StalltagebuchError> {
     }
 
     // Get the device ID via JNI
-    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
+    let vm_ptr = android_context().vm() as *mut dioxus::prelude::jni::sys::JavaVM;
     if vm_ptr.is_null() {
         return Err(StalltagebuchError::JniError(
             "Failed to get JavaVM: null pointer".to_string(),
         ));
     }
-    let vm = unsafe { JavaVM::from_raw(vm_ptr) };
+    let vm = unsafe { JavaVM::from_raw(vm_ptr) }
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get JavaVM: {}", e)))?;
 
-    let device_id = vm.attach_current_thread(|env| {
-        let context_ptr = android_context().context() as jni::sys::jobject;
-        if context_ptr.is_null() {
-            return Err(StalltagebuchError::JniError(
-                "Android context is null".to_string(),
-            ));
-        }
-
-        // Create a local ref from the global context ref; don't drop the global handle.
-        let context_global = unsafe { JObject::from_raw(env, context_ptr) };
-        let context_local = env.new_local_ref(&context_global).map_err(|e| {
-            StalltagebuchError::JniError(format!("Failed to get local context ref: {}", e))
-        })?;
-        std::mem::forget(context_global);
-
-        get_android_id(env, &context_local)
+    let mut env = vm.attach_current_thread().map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e))
     })?;
+
+    let context_ptr = android_context().context() as dioxus::prelude::jni::sys::jobject;
+    if context_ptr.is_null() {
+        return Err(StalltagebuchError::JniError(
+            "Android context is null".to_string(),
+        ));
+    }
+
+    // Create a local ref from the global context ref; don't drop the global handle.
+    let context_global = unsafe { JObject::from_raw(context_ptr) };
+    let context_local = env.new_local_ref(&context_global).map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to get local context ref: {}", e))
+    })?;
+    std::mem::forget(context_global);
+
+    let device_id = get_android_id(&mut env, &context_local)?;
 
     // Cache the device ID
     let _ = DEVICE_ID.set(device_id.clone());
@@ -66,15 +67,15 @@ pub fn get_device_id() -> Result<String, StalltagebuchError> {
 
 #[cfg(target_os = "android")]
 fn get_android_id(
-    env: &mut Env<'_>,
+    env: &mut dioxus::prelude::jni::JNIEnv<'_>,
     context_obj: &JObject<'_>,
 ) -> Result<String, StalltagebuchError> {
     // Get ContentResolver from context
     let content_resolver = env
         .call_method(
             context_obj,
-            jni_str!("getContentResolver"),
-            jni_sig!("()Landroid/content/ContentResolver;"),
+            "getContentResolver",
+            "()Landroid/content/ContentResolver;",
             &[],
         )
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to get ContentResolver: {}", e)))?
@@ -85,7 +86,7 @@ fn get_android_id(
 
     // Get android_id string constant
     let secure_class = env
-        .find_class(jni_str!("android/provider/Settings$Secure"))
+        .find_class("android/provider/Settings$Secure")
         .map_err(|e| {
             StalltagebuchError::JniError(format!("Failed to find Settings.Secure class: {}", e))
         })?;
@@ -93,8 +94,8 @@ fn get_android_id(
     let android_id_field = env
         .get_static_field(
             &secure_class,
-            jni_str!("ANDROID_ID"),
-            jni_sig!("Ljava/lang/String;"),
+            "ANDROID_ID",
+            "Ljava/lang/String;",
         )
         .map_err(|e| {
             StalltagebuchError::JniError(format!("Failed to get ANDROID_ID field: {}", e))
@@ -105,9 +106,9 @@ fn get_android_id(
     // Call Settings.Secure.getString(contentResolver, ANDROID_ID)
     let device_id_obj = env
         .call_static_method(
-            secure_class,
-            jni_str!("getString"),
-            jni_sig!("(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;"),
+            &secure_class,
+            "getString",
+            "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;",
             &[
                 JValue::Object(&content_resolver),
                 JValue::Object(&android_id_field),
@@ -118,12 +119,11 @@ fn get_android_id(
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast result: {}", e)))?;
 
     // Convert to Rust string
-    let device_id_jstring = env.cast_local::<JString<'_>>(device_id_obj).map_err(|e| {
-        StalltagebuchError::JniError(format!("Failed to cast result string: {}", e))
-    })?;
-    let device_id: String = device_id_jstring
-        .try_to_string(env)
-        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?;
+    let device_id_jstring = JString::from(device_id_obj);
+    let device_id: String = env
+        .get_string(&device_id_jstring)
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?
+        .into();
 
     Ok(device_id)
 }
@@ -135,43 +135,39 @@ fn get_android_id(
 /// On non-Android platforms, returns a default value for testing.
 #[cfg(target_os = "android")]
 pub fn get_device_model() -> Result<String, StalltagebuchError> {
-    use jni::JavaVM;
-
-    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
+    let vm_ptr = android_context().vm() as *mut dioxus::prelude::jni::sys::JavaVM;
     if vm_ptr.is_null() {
         return Err(StalltagebuchError::JniError(
             "Failed to get JavaVM: null pointer".to_string(),
         ));
     }
-    let vm = unsafe { JavaVM::from_raw(vm_ptr) };
+    let vm = unsafe { JavaVM::from_raw(vm_ptr) }
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get JavaVM: {}", e)))?;
 
-    vm.attach_current_thread(|env| {
-        // Get android.os.Build class
-        let build_class = env.find_class(jni_str!("android/os/Build")).map_err(|e| {
-            StalltagebuchError::JniError(format!("Failed to find Build class: {}", e))
-        })?;
+    let mut env = vm.attach_current_thread().map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e))
+    })?;
 
-        // Get the MODEL static field
-        let model_field = env
-            .get_static_field(
-                &build_class,
-                jni_str!("MODEL"),
-                jni_sig!("Ljava/lang/String;"),
-            )
-            .map_err(|e| StalltagebuchError::JniError(format!("Failed to get MODEL field: {}", e)))?
-            .l()
-            .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast MODEL: {}", e)))?;
+    // Get android.os.Build class
+    let build_class = env.find_class("android/os/Build").map_err(|e| {
+        StalltagebuchError::JniError(format!("Failed to find Build class: {}", e))
+    })?;
 
-        // Convert to Rust string
-        let model_jstring = env.cast_local::<JString<'_>>(model_field).map_err(|e| {
-            StalltagebuchError::JniError(format!("Failed to cast MODEL string: {}", e))
-        })?;
-        let model: String = model_jstring
-            .try_to_string(env)
-            .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?;
+    // Get the MODEL static field
+    let model_field = env
+        .get_static_field(&build_class, "MODEL", "Ljava/lang/String;")
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get MODEL field: {}", e)))?
+        .l()
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to cast MODEL: {}", e)))?;
 
-        Ok(model)
-    })
+    // Convert to Rust string
+    let model_jstring = JString::from(model_field);
+    let model: String = env
+        .get_string(&model_jstring)
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to get string: {}", e)))?
+        .into();
+
+    Ok(model)
 }
 
 /// Non-Android implementation for testing/development

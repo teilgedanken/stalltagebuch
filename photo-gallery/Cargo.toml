@@ -23,7 +23,6 @@ rand = { version = "0.9", optional = true }
 
 # Android picker dependencies
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.22"
 ndk-context = "0.1"
 
 [features]

@@ -5,7 +5,7 @@ use crate::error::AppError;
 use std::path::PathBuf;
 
 #[cfg(target_os = "android")]
-use ::jni::{jni_sig, jni_str};
+use dioxus::prelude::jni::objects::{JClass, JObject, JString, JValue};
 
 // Helper function to convert PickerError to AppError
 fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {
@@ -61,8 +61,8 @@ pub fn launch_document_picker() -> Result<(), AppError> {
         let instance = env
             .call_static_method(
                 &activity_class,
-                jni_str!("getInstance"),
-                jni_sig!("()Ldev/dioxus/main/MainActivity;"),
+                "getInstance",
+                "()Ldev/dioxus/main/MainActivity;",
                 &[],
             )
             .map_err(|e| {
@@ -83,8 +83,8 @@ pub fn launch_document_picker() -> Result<(), AppError> {
 
         env.call_method(
             &instance,
-            jni_str!("launchDocumentPicker"),
-            jni_sig!("()V"),
+            "launchDocumentPicker",
+            "()V",
             &[],
         )
         .map_err(|e| {
@@ -104,44 +104,45 @@ pub fn get_last_error() -> Option<String> {
 
 #[cfg(target_os = "android")]
 fn with_android_env<T>(
-    f: impl FnOnce(&mut ::jni::Env<'_>) -> Result<T, AppError>,
+    f: impl FnOnce(&mut dioxus::prelude::jni::JNIEnv<'_>) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
     use ndk_context::android_context;
 
     let ctx = android_context();
-    let vm_ptr = ctx.vm() as *mut ::jni::sys::JavaVM;
+    let vm_ptr = ctx.vm() as *mut dioxus::prelude::jni::sys::JavaVM;
     if vm_ptr.is_null() {
         return Err(AppError::PermissionDenied("JavaVM unavailable".to_string()));
     }
 
-    let vm = unsafe { ::jni::JavaVM::from_raw(vm_ptr) };
-    vm.attach_current_thread(f)
+    let vm = unsafe { dioxus::prelude::jni::JavaVM::from_raw(vm_ptr) }
+        .map_err(|e| AppError::PermissionDenied(format!("JavaVM init failed: {}", e)))?;
+    let mut guard = vm
+        .attach_current_thread()
+        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    f(&mut *guard)
 }
 
 #[cfg(target_os = "android")]
-fn clear_pending_exception(env: &mut ::jni::Env<'_>) {
-    if env.exception_check() {
+fn clear_pending_exception(env: &mut dioxus::prelude::jni::JNIEnv<'_>) {
+    if env.exception_check().unwrap_or(false) {
         let _ = env.exception_clear();
     }
 }
 
 #[cfg(target_os = "android")]
 fn load_main_activity_class<'a>(
-    env: &mut ::jni::Env<'a>,
-) -> Result<jni::objects::JClass<'a>, AppError> {
-    use jni::objects::{JClass, JObject, JString, JValue};
+    env: &mut dioxus::prelude::jni::JNIEnv<'a>,
+) -> Result<JClass<'a>, AppError> {
 
     let at_cls = env
-        .find_class(::jni::strings::JNIString::new("android/app/ActivityThread"))
+        .find_class("android/app/ActivityThread")
         .map_err(|e| AppError::PermissionDenied(format!("ActivityThread missing: {}", e)))?;
 
     let at = env
         .call_static_method(
             &at_cls,
-            ::jni::strings::JNIString::new("currentActivityThread"),
-            ::jni::signature::RuntimeMethodSignature::from_str("()Landroid/app/ActivityThread;")
-                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
-                .method_signature(),
+            "currentActivityThread",
+            "()Landroid/app/ActivityThread;",
             &[],
         )
         .map_err(|e| {
@@ -154,10 +155,8 @@ fn load_main_activity_class<'a>(
     let app = env
         .call_method(
             &at,
-            ::jni::strings::JNIString::new("getApplication"),
-            ::jni::signature::RuntimeMethodSignature::from_str("()Landroid/app/Application;")
-                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
-                .method_signature(),
+            "getApplication",
+            "()Landroid/app/Application;",
             &[],
         )
         .map_err(|e| {
@@ -170,10 +169,8 @@ fn load_main_activity_class<'a>(
     let loader = env
         .call_method(
             &app,
-            ::jni::strings::JNIString::new("getClassLoader"),
-            ::jni::signature::RuntimeMethodSignature::from_str("()Ljava/lang/ClassLoader;")
-                .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?
-                .method_signature(),
+            "getClassLoader",
+            "()Ljava/lang/ClassLoader;",
             &[],
         )
         .map_err(|e| {
@@ -190,8 +187,8 @@ fn load_main_activity_class<'a>(
     let cls_obj = env
         .call_method(
             &loader,
-            jni_str!("loadClass"),
-            jni_sig!("(Ljava/lang/String;)Ljava/lang/Class;"),
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
             &[JValue::Object(&JObject::from(class_name))],
         )
         .map_err(|e| {
@@ -201,22 +198,18 @@ fn load_main_activity_class<'a>(
         .l()
         .map_err(|e| AppError::PermissionDenied(format!("Loaded class invalid: {}", e)))?;
 
-    env.cast_local::<JClass<'a>>(cls_obj)
-        .map_err(|e| AppError::PermissionDenied(format!("Loaded class cast failed: {}", e)))
+    Ok(JClass::from(cls_obj))
 }
 
 #[cfg(target_os = "android")]
 fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
     with_android_env(|env| {
-        let method_name = jni::strings::JNIString::new(method);
-        let method_sig = jni::signature::RuntimeMethodSignature::from_str(sig)
-            .map_err(|e| AppError::PermissionDenied(format!("Invalid method signature: {}", e)))?;
         let activity_class = load_main_activity_class(env)?;
         let result = env
             .call_static_method(
                 &activity_class,
-                &method_name,
-                method_sig.method_signature(),
+                method,
+                sig,
                 &[],
             )
             .map_err(|e| {
@@ -233,18 +226,13 @@ fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
             return Ok(None);
         }
 
-        let obj_str = env
-            .cast_local::<jni::objects::JString<'_>>(obj)
-            .map_err(|e| {
-                clear_pending_exception(env);
-                AppError::PermissionDenied(format!("{} string cast failed: {}", method, e))
-            })?;
+        let obj_str: JString<'_> = JString::from(obj);
 
-        let s = obj_str.try_to_string(env).map_err(|e| {
+        let s: String = env.get_string(&obj_str).map_err(|e| {
             clear_pending_exception(env);
             AppError::PermissionDenied(format!("{} string conversion failed: {}", method, e))
-        })?;
-        Ok(Some::<String>(s.into()))
+        })?.into();
+        Ok(Some::<String>(s))
     })
     .ok()
     .flatten()
