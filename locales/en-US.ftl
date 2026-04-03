@@ -374,7 +374,7 @@ export-in-progress = Export in progress...
 export-success = Data backup created successfully
 
 # Source: ./src/components/event_add.rs:122
-field-date = Date
+field-date = Birthday
 
 # Source: ./src/components/egg_tracking.rs:194
 field-date-format-hint = Format: YYYY-MM-DD

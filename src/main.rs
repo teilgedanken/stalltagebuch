@@ -68,7 +68,10 @@ fn init_android_tls_verifier() {
     let vm = match unsafe { dioxus::prelude::jni::JavaVM::from_raw(vm_ptr) } {
         Ok(vm) => vm,
         Err(error) => {
-            log::error!("Android TLS verifier init failed: JavaVM from_raw error: {}", error);
+            log::error!(
+                "Android TLS verifier init failed: JavaVM from_raw error: {}",
+                error
+            );
             return;
         }
     };
@@ -76,7 +79,10 @@ fn init_android_tls_verifier() {
     let mut env = match vm.attach_current_thread() {
         Ok(guard) => guard,
         Err(error) => {
-            log::error!("Android TLS verifier init failed: attach thread error: {}", error);
+            log::error!(
+                "Android TLS verifier init failed: attach thread error: {}",
+                error
+            );
             return;
         }
     };

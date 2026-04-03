@@ -541,14 +541,15 @@ class MainActivity : WryActivity() {
     }
     
     /**
-     * Erstelle eindeutige Datei für Foto mit Timestamp im Namen.
+     * Erstelle eindeutige Datei für Foto mit UUID im Namen.
      * - Zielverzeichnis: app-spezifischer Cache (`cacheDir`)
-     * - Dateiname: JPEG mit Timestamp (z.B. "IMG_20260309_140523.jpg")
+     * - Dateiname: JPEG mit Timestamp + vollständigem UUID (z.B. "IMG_20260309_140523_123e4567-e89b-12d3-a456-426614174000.jpg")
      * - Rückgabe: File-Objekt (existiert nach Ausführung)
      */
     private fun createImageFile(): File {
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val imageFileName = "IMG_${timeStamp}.jpg"
+        val uuidPart: String = UUID.randomUUID().toString()
+        val imageFileName = "IMG_${timeStamp}_${uuidPart}.jpg"
         val storageDir: File = cacheDir
         return File(storageDir, imageFileName).apply {
             // Stelle sicher, dass die Datei existiert

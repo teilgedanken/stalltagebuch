@@ -81,16 +81,11 @@ pub fn launch_document_picker() -> Result<(), AppError> {
             ));
         }
 
-        env.call_method(
-            &instance,
-            "launchDocumentPicker",
-            "()V",
-            &[],
-        )
-        .map_err(|e| {
-            clear_pending_exception(env);
-            AppError::PermissionDenied(format!("launchDocumentPicker failed: {}", e))
-        })?;
+        env.call_method(&instance, "launchDocumentPicker", "()V", &[])
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("launchDocumentPicker failed: {}", e))
+            })?;
 
         clear_pending_exception(env);
         Ok(())
@@ -133,7 +128,6 @@ fn clear_pending_exception(env: &mut dioxus::prelude::jni::JNIEnv<'_>) {
 fn load_main_activity_class<'a>(
     env: &mut dioxus::prelude::jni::JNIEnv<'a>,
 ) -> Result<JClass<'a>, AppError> {
-
     let at_cls = env
         .find_class("android/app/ActivityThread")
         .map_err(|e| AppError::PermissionDenied(format!("ActivityThread missing: {}", e)))?;
@@ -153,12 +147,7 @@ fn load_main_activity_class<'a>(
         .map_err(|e| AppError::PermissionDenied(format!("ActivityThread invalid: {}", e)))?;
 
     let app = env
-        .call_method(
-            &at,
-            "getApplication",
-            "()Landroid/app/Application;",
-            &[],
-        )
+        .call_method(&at, "getApplication", "()Landroid/app/Application;", &[])
         .map_err(|e| {
             clear_pending_exception(env);
             AppError::PermissionDenied(format!("getApplication failed: {}", e))
@@ -167,12 +156,7 @@ fn load_main_activity_class<'a>(
         .map_err(|e| AppError::PermissionDenied(format!("Application invalid: {}", e)))?;
 
     let loader = env
-        .call_method(
-            &app,
-            "getClassLoader",
-            "()Ljava/lang/ClassLoader;",
-            &[],
-        )
+        .call_method(&app, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
         .map_err(|e| {
             clear_pending_exception(env);
             AppError::PermissionDenied(format!("getClassLoader failed: {}", e))
@@ -206,12 +190,7 @@ fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
     with_android_env(|env| {
         let activity_class = load_main_activity_class(env)?;
         let result = env
-            .call_static_method(
-                &activity_class,
-                method,
-                sig,
-                &[],
-            )
+            .call_static_method(&activity_class, method, sig, &[])
             .map_err(|e| {
                 clear_pending_exception(env);
                 AppError::PermissionDenied(format!("{} failed: {}", method, e))
@@ -228,10 +207,13 @@ fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
 
         let obj_str: JString<'_> = JString::from(obj);
 
-        let s: String = env.get_string(&obj_str).map_err(|e| {
-            clear_pending_exception(env);
-            AppError::PermissionDenied(format!("{} string conversion failed: {}", method, e))
-        })?.into();
+        let s: String = env
+            .get_string(&obj_str)
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("{} string conversion failed: {}", method, e))
+            })?
+            .into();
         Ok(Some::<String>(s))
     })
     .ok()

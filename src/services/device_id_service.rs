@@ -6,9 +6,9 @@
 use crate::error::StalltagebuchError;
 
 #[cfg(target_os = "android")]
-use dioxus::prelude::jni::objects::{JObject, JString, JValue};
-#[cfg(target_os = "android")]
 use dioxus::prelude::jni::JavaVM;
+#[cfg(target_os = "android")]
+use dioxus::prelude::jni::objects::{JObject, JString, JValue};
 #[cfg(target_os = "android")]
 use ndk_context::android_context;
 
@@ -39,9 +39,9 @@ pub fn get_device_id() -> Result<String, StalltagebuchError> {
     let vm = unsafe { JavaVM::from_raw(vm_ptr) }
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to get JavaVM: {}", e)))?;
 
-    let mut env = vm.attach_current_thread().map_err(|e| {
-        StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e))
-    })?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e)))?;
 
     let context_ptr = android_context().context() as dioxus::prelude::jni::sys::jobject;
     if context_ptr.is_null() {
@@ -92,11 +92,7 @@ fn get_android_id(
         })?;
 
     let android_id_field = env
-        .get_static_field(
-            &secure_class,
-            "ANDROID_ID",
-            "Ljava/lang/String;",
-        )
+        .get_static_field(&secure_class, "ANDROID_ID", "Ljava/lang/String;")
         .map_err(|e| {
             StalltagebuchError::JniError(format!("Failed to get ANDROID_ID field: {}", e))
         })?
@@ -144,14 +140,14 @@ pub fn get_device_model() -> Result<String, StalltagebuchError> {
     let vm = unsafe { JavaVM::from_raw(vm_ptr) }
         .map_err(|e| StalltagebuchError::JniError(format!("Failed to get JavaVM: {}", e)))?;
 
-    let mut env = vm.attach_current_thread().map_err(|e| {
-        StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e))
-    })?;
+    let mut env = vm
+        .attach_current_thread()
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to attach JNI thread: {}", e)))?;
 
     // Get android.os.Build class
-    let build_class = env.find_class("android/os/Build").map_err(|e| {
-        StalltagebuchError::JniError(format!("Failed to find Build class: {}", e))
-    })?;
+    let build_class = env
+        .find_class("android/os/Build")
+        .map_err(|e| StalltagebuchError::JniError(format!("Failed to find Build class: {}", e)))?;
 
     // Get the MODEL static field
     let model_field = env

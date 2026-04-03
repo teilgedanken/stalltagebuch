@@ -15,14 +15,18 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let quails = spacetime::use_table_quails();
     let photos_table = spacetime::use_table_photos();
     let photo_collections_table = spacetime::use_table_photo_collections();
+    let quail_events_table = spacetime::use_table_quail_events();
     let connection = spacetime::use_connection();
     let update_quail_reducer = spacetime::use_reducer_update_quail();
+    let create_event_reducer = spacetime::use_reducer_create_event();
+    let update_event_reducer = spacetime::use_reducer_update_event();
     let delete_quail_reducer = spacetime::use_reducer_delete_quail();
     let delete_photo = spacetime::use_reducer_delete_photo();
 
     // Subscribe to quails and photos tables
     spacetime::use_subscription(&[
         "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
         "SELECT * FROM photo_collections",
         "SELECT * FROM photos",
     ]);
@@ -31,10 +35,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
     let mut profile = use_signal(|| None::<Quail>);
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
+    let mut birthday = use_signal(|| String::new());
     let mut ring_color_left = use_signal(|| String::new());
     let mut ring_color_right = use_signal(|| String::new());
     let mut photos = use_signal(|| Vec::<Photo>::new());
     let mut selected_profile_photo_id = use_signal(|| None::<String>);
+    let mut existing_birthday_event_id = use_signal(|| None::<String>);
     let mut show_delete_confirm = use_signal(|| false);
     let mut error = use_signal(|| String::new());
     let mut success = use_signal(|| false);
@@ -82,10 +88,24 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 if let Some(profile_uuid) = local_quail.profile_photo {
                     selected_profile_photo_id.set(Some(profile_uuid.to_string()));
                 }
+
+                let quail_uuid_str = quail.uuid.clone();
+
+                // Find existing birth event, if present
+                if let Some(born_event) = quail_events_table()
+                    .into_iter()
+                    .find(|e| e.quail_uuid == quail_uuid_str && e.event_type == "born")
+                {
+                    birthday.set(born_event.event_date.clone());
+                    existing_birthday_event_id.set(Some(born_event.uuid.clone()));
+                } else {
+                    birthday.set(String::new());
+                    existing_birthday_event_id.set(None);
+                }
+
                 profile.set(Some(local_quail));
 
                 // Load photos for this quail from SpacetimeDB
-                let quail_uuid_str = quail.uuid.clone();
                 let collection_ids: std::collections::HashSet<String> = photo_collections_table()
                     .iter()
                     .filter(|c| c.quail_uuid.as_ref() == Some(&quail_uuid_str))
@@ -117,6 +137,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
         saving.set(true);
 
+        let device_id = crate::services::device_id_service::get_device_id()
+            .unwrap_or_else(|_| "unknown-device".to_string());
+
         if let Some(updated_profile) = profile() {
             let updated_name = name().trim().to_string();
             let updated_gender = match gender().as_str() {
@@ -127,10 +150,14 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
             let updated_ring_color_left = normalize_ring_color_selection(&ring_color_left());
             let updated_ring_color_right = normalize_ring_color_selection(&ring_color_right());
+            let updated_birthday = normalize_optional_date_input(&birthday());
+            let existing_event_id = existing_birthday_event_id();
 
             let quail_uuid = updated_profile.uuid.to_string();
             let selected_photo = selected_profile_photo_id();
             let update_reducer = update_quail_reducer.clone();
+            let create_event_reducer = create_event_reducer.clone();
+            let update_event_reducer = update_event_reducer.clone();
             let on_navigate_submit = on_navigate.clone();
             let quail_id_clone = quail_id_for_submit.clone();
 
@@ -147,6 +174,31 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     error.set(err.to_string());
                     saving.set(false);
                     return;
+                }
+
+                if let Some(event_date_inner) = updated_birthday {
+                    let event_date_owned = event_date_inner;
+                    if let Some(event_uuid) = existing_event_id {
+                        if let Err(err) = update_event_reducer(spacetime::UpdateEventArgs {
+                            uuid: event_uuid.clone(),
+                            event_type: "born".to_string(),
+                            event_date: event_date_owned.clone(),
+                            notes: None,
+                            photos: None,
+                        }) {
+                            log::warn!("Failed to update birth event for {}: {}", quail_uuid, err);
+                        }
+                    } else if let Err(err) = create_event_reducer(spacetime::CreateEventArgs {
+                        uuid: uuid::Uuid::new_v4().to_string(),
+                        quail_uuid: quail_uuid.clone(),
+                        event_type: "born".to_string(),
+                        event_date: event_date_owned.clone(),
+                        notes: None,
+                        photos: None,
+                        device_id: device_id.clone(),
+                    }) {
+                        log::warn!("Failed to create birth event for {}: {}", quail_uuid, err);
+                    }
                 }
 
                 success.set(true);
@@ -245,6 +297,18 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     option { value: "female", {tid!("gender-female")} }
                                     option { value: "male", {tid!("gender-male")} }
                                 }
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-date")} }
+                        div { class: "control",
+                            input {
+                                r#type: "date",
+                                class: "input",
+                                value: "{birthday}",
+                                oninput: move |e| birthday.set(e.value()),
                             }
                         }
                     }
@@ -509,5 +573,14 @@ fn ring_color_select_bg(value: &str) -> &'static str {
         "schwarz" => "#f5f5f5",
         "weiss" => "#ffffff",
         _ => "#ffffff",
+    }
+}
+
+fn normalize_optional_date_input(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
     }
 }
