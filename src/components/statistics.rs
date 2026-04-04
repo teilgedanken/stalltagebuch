@@ -21,12 +21,13 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
     spacetime::use_subscription(&["SELECT * FROM egg_records"]);
 
     let mut stats = use_signal(|| None::<EggStatistics>);
-    let mut trend = use_signal(|| Vec::<(String, i32)>::new());
+    let mut period_records = use_signal(|| Vec::<(String, i32)>::new());
     let mut error = use_signal(|| String::new());
-    let mut selected_period = use_signal(|| "all".to_string());
+    let mut selected_period = use_signal(|| "month".to_string());
 
     let mut load_statistics = move || {
         let today = chrono::Local::now().date_naive();
+        let date_format = tid!("stats-date-format-short");
         let period_start = match selected_period().as_str() {
             "week" => Some(today - chrono::Duration::days(7)),
             "month" => Some(today - chrono::Duration::days(30)),
@@ -51,7 +52,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
         if valid_records.is_empty() {
             stats.set(None);
-            trend.set(Vec::new());
+            period_records.set(Vec::new());
             error.set(String::new());
             return;
         }
@@ -96,12 +97,12 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
             .iter()
             .map(|(date, _)| *date)
             .min()
-            .map(|date| date.format("%Y-%m-%d").to_string());
+            .map(|date| format_display_date(date, &date_format));
         let last_date = valid_records
             .iter()
             .map(|(date, _)| *date)
             .max()
-            .map(|date| date.format("%Y-%m-%d").to_string());
+            .map(|date| format_display_date(date, &date_format));
 
         stats.set(Some(EggStatistics {
             total_records,
@@ -115,11 +116,10 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
             last_date,
         }));
 
-        trend.set(
+        period_records.set(
             valid_records
                 .iter()
-                .take(30)
-                .map(|(date, eggs)| (date.format("%Y-%m-%d").to_string(), *eggs))
+                .map(|(date, eggs)| (format_display_date(*date, &date_format), *eggs))
                 .collect(),
         );
         error.set(String::new());
@@ -133,27 +133,31 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
     rsx! {
         section { class: "section",
             div { class: "container",
+                div { class: "mt-1",
+                    button {
+                        class: "button is-primary is-fullwidth mb-4 is-large",
+                        onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
+                        span { class: "icon is-small", "➕ " }
+                        span { {tid!("stats-add-entry")} }
+                    }
+                }
 
                 div { class: "mb-5",
-                    h1 { class: "title is-4 mb-4",
+                    h1 { class: "title is-4 mb-2",
                         "📊 "
                         {tid!("stats-title")}
                     }
 
-                    div { class: "buttons",
+                    div { class: "buttons has-addons is-centered",
                         for (label , value) in [
-                            (tid!("period-all"), "all"),
                             (tid!("period-week"), "week"),
                             (tid!("period-month"), "month"),
                             (tid!("period-year"), "year"),
+                            (tid!("period-all"), "all"),
                         ]
                         {
                             button {
-                                class: if selected_period() == value {
-                                    "button is-link"
-                                } else {
-                                    "button is-link is-light"
-                                },
+                                class: if selected_period() == value { "button is-link is-small" } else { "button is-link is-light is-small" },
                                 onclick: move |_| selected_period.set(value.to_string()),
                                 "{label}"
                             }
@@ -166,96 +170,96 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 if let Some(s) = stats() {
-                    div { class: "is-flex is-flex-direction-column", style: "gap: 12px;",
-
+                    div { class: "is-flex is-flex-direction-column",
                         div { class: "box",
-                            h2 { class: "title is-6 mb-4",
-                                "📈 "
-                                {tid!("stats-overview")}
+                            div { class: "is-flex is-justify-content-space-between is-align-items-center mb-4",
+                                h2 { class: "title is-7 mb-0",
+                                    "📈 "
+                                    {tid!("stats-overview")}
+                                }
+                                if let (Some(first), Some(last)) = (&s.first_date, &s.last_date) {
+                                    span { class: "tag is-info is-light",
+                                        "📅 "
+                                        "{first} "
+                                        {tid!("stats-until")}
+                                        " {last}"
+                                    }
+                                }
                             }
-                            div { class: "columns is-multiline",
-                                div { class: "column is-half-mobile is-one-quarter-tablet",
-                                    StatCard {
-                                        label: tid!("stats-total-records"),
-                                        value: format!("{}", s.total_records),
-                                        icon: "📋",
-                                    }
+                            div { class: "columns is-multiline is-mobile is-align-items-stretch",
+                                StatCard {
+                                    label: tid!("stats-total-records"),
+                                    value: format!("{}", s.total_records),
+                                    icon: "📋",
                                 }
-                                div { class: "column is-half-mobile is-one-quarter-tablet",
-                                    StatCard {
-                                        label: tid!("stats-total-eggs"),
-                                        value: format!("{}", s.total_eggs),
-                                        icon: "🥚",
-                                    }
+
+                                StatCard {
+                                    label: tid!("stats-total-eggs"),
+                                    value: format!("{}", s.total_eggs),
+                                    icon: "🥚",
                                 }
-                                div { class: "column is-half-mobile is-one-quarter-tablet",
-                                    StatCard {
-                                        label: tid!("stats-min"),
-                                        value: format!("{}", s.min_eggs),
-                                        icon: "⬇️",
-                                    }
+                                StatCard {
+                                    label: tid!("stats-min"),
+                                    value: format!("{}", s.min_eggs),
+                                    icon: "⬇️",
                                 }
-                                div { class: "column is-half-mobile is-one-quarter-tablet",
-                                    StatCard {
-                                        label: tid!("stats-max"),
-                                        value: format!("{}", s.max_eggs),
-                                        icon: "⬆️",
-                                    }
+                                StatCard {
+                                    label: tid!("stats-max"),
+                                    value: format!("{}", s.max_eggs),
+                                    icon: "⬆️",
                                 }
                             }
                         }
 
                         div { class: "box",
-                            h2 { class: "title is-6 mb-4",
+                            h2 { class: "title is-7 mb-4",
                                 "📊 "
                                 {tid!("stats-averages")}
                             }
-                            div { class: "columns is-multiline",
-                                div { class: "column is-full-mobile is-one-third-tablet",
-                                    StatCard {
-                                        label: tid!("stats-daily-avg"),
-                                        value: format!("{:.1}", s.daily_average),
-                                        icon: "📅",
-                                    }
+                            div { class: "columns is-multiline is-mobile is-align-items-stretch",
+                                StatCard {
+                                    label: tid!("stats-daily-avg"),
+                                    value: format!("{:.1}", s.daily_average),
+                                    icon: "📅",
                                 }
-                                div { class: "column is-full-mobile is-one-third-tablet",
-                                    StatCard {
-                                        label: tid!("stats-weekly-avg"),
-                                        value: format!("{:.1}", s.weekly_average),
-                                        icon: "📆",
-                                    }
+                                StatCard {
+                                    label: tid!("stats-weekly-avg"),
+                                    value: format!("{:.1}", s.weekly_average),
+                                    icon: "📆",
                                 }
-                                div { class: "column is-full-mobile is-one-third-tablet",
-                                    StatCard {
-                                        label: tid!("stats-monthly-avg"),
-                                        value: format!("{:.1}", s.monthly_average),
-                                        icon: "🗓️",
-                                    }
+                                StatCard {
+                                    label: tid!("stats-monthly-avg"),
+                                    value: format!("{:.1}", s.monthly_average),
+                                    icon: "🗓️",
                                 }
                             }
                         }
 
-                        if let (Some(first), Some(last)) = (&s.first_date, &s.last_date) {
-                            div { class: "notification is-info is-light",
-                                "📅 "
-                                {tid!("stats-period")}
-                                ": {first} "
-                                {tid!("stats-until")}
-                                " {last}"
-                            }
-                        }
-
-                        if !trend().is_empty() {
+                        if !period_records().is_empty() {
                             div { class: "box",
                                 h2 { class: "title is-6 mb-4",
-                                    "📈 "
-                                    {tid!("stats-last-10-days")}
+                                    "🥚 "
+                                    {tid!("egg-history-title")}
                                 }
-                                div { class: "is-flex is-flex-direction-column", style: "gap: 8px;",
-                                    for (date , eggs) in trend().iter().take(10) {
-                                        div { class: "is-flex is-align-items-center is-justify-content-space-between p-2 has-background-light",
-                                            span { class: "has-text-grey", "{date}" }
-                                            span { class: "has-text-weight-semibold", "🥚 {eggs}" }
+                                div { class: "table-container",
+                                    table { class: "table is-bordered is-striped is-narrow is-hoverable is-fullwidth",
+                                        thead {
+                                            tr {
+                                                th { {tid!("stats-period")} }
+                                                th { class: "has-text-right",
+                                                    {tid!("stats-total-eggs")}
+                                                }
+                                            }
+                                        }
+                                        tbody {
+                                            for (date , eggs) in period_records().iter() {
+                                                tr {
+                                                    td { "{date}" }
+                                                    td { class: "has-text-right has-text-weight-semibold",
+                                                        "{eggs}"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -265,27 +269,24 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 } else {
                     div { class: "notification is-light has-text-centered", {tid!("stats-no-data")} }
                 }
-
-                div { class: "mt-5",
-                    button {
-                        class: "button is-link is-fullwidth",
-                        onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
-                        "➕ "
-                        {tid!("stats-add-entry")}
-                    }
-                }
             }
         }
     }
 }
 
+fn format_display_date(date: chrono::NaiveDate, date_format: &str) -> String {
+    date.format(date_format).to_string()
+}
+
 #[component]
 fn StatCard(label: String, value: String, icon: String) -> Element {
     rsx! {
-        div { class: "box has-background-light has-text-centered",
-            div { class: "is-size-4 mb-1", "{icon}" }
-            div { class: "title is-4 has-text-link mb-1", "{value}" }
-            div { class: "is-size-7 has-text-grey", "{label}" }
+        div { class: "column is-4 is-6-mobile is-flex",
+            div { class: "box has-background-light has-text-centered is-flex is-flex-direction-column is-justify-content-center is-flex-grow-1",
+                div { class: "is-size-4 mb-1", "{icon}" }
+                div { class: "title is-6 has-text-link mb-1", "{value}" }
+                div { class: "is-size-7 has-text-grey", "{label}" }
+            }
         }
     }
 }

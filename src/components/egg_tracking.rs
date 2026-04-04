@@ -136,7 +136,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
             }
 
             success.set(true);
-            on_navigate_submit.call(Screen::EggHistory);
+            on_navigate_submit.call(Screen::Statistics);
         });
     };
 
@@ -148,14 +148,6 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                         h1 { class: "title is-4 mb-0",
                             "🥚 "
                             {tid!("egg-tracking-title")}
-                        }
-                    }
-                    div { class: "level-right",
-                        button {
-                            class: "button is-light",
-                            onclick: move |_| on_navigate.call(Screen::EggHistory),
-                            "📋 "
-                            {tid!("egg-tracking-show-history")}
                         }
                     }
                 }
@@ -193,7 +185,6 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                                 autofocus: true,
                             }
                         }
-                        p { class: "help", {tid!("field-date-format-hint")} }
                     }
 
                     div { class: "field",

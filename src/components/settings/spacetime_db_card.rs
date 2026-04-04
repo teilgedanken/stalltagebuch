@@ -159,7 +159,7 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
         if matches!(conn_state(), ConnectionState::Connected(_, _)) {
             show_details.set(!show_details());
             is_logged_in.set(true);
-    }
+        }
     };
 
     rsx! {
@@ -189,7 +189,7 @@ pub fn SpacetimeDbCard(on_spacetime_settings_saved: EventHandler<SpacetimeSettin
                     button {
                         class: "{status_button_class()} button is-small is-light",
                         onclick: toggle_details,
-                        
+
                             span {
                             if show_details(){
                                 "▼"

@@ -709,6 +709,9 @@ stats-averages = Durchschnitte
 # Source: ./src/components/statistics.rs:212
 stats-daily-avg = Täglich
 
+# Source: ./src/components/statistics.rs
+stats-date-format-short = %d.%m.%y
+
 # Source: ./src/components/statistics.rs:247
 stats-last-10-days = Letzte 10 Tage
 

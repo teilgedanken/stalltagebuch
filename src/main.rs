@@ -14,9 +14,8 @@ mod services;
 mod spacetime;
 
 use components::{
-    AddProfileScreen, EggHistoryScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
-    NavigationBar, ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, SettingsScreen,
-    StatisticsScreen,
+    AddProfileScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen, NavigationBar,
+    ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, SettingsScreen, StatisticsScreen,
 };
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -153,7 +152,6 @@ pub enum Screen {
         quail_id: String,
     },
     EggTracking(Option<String>), // Date in YYYY-MM-DD format
-    EggHistory,
     Statistics,
     Settings,
 }
@@ -296,9 +294,6 @@ fn SpacetimeSession(
                 },
                 Screen::EggTracking(date_opt) => rsx! {
                     EggTrackingScreen { date: date_opt, on_navigate: move |s| current_screen.set(s) }
-                },
-                Screen::EggHistory => rsx! {
-                    EggHistoryScreen { on_navigate: move |s| current_screen.set(s) }
                 },
                 Screen::Statistics => rsx! {
                     StatisticsScreen { on_navigate: move |s| current_screen.set(s) }
