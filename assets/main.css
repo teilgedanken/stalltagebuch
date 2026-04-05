@@ -141,6 +141,10 @@ body {
     font-weight: 500;
 }
 
+.is-male {
+    border: #000735 solid 2px
+}
+
 /* Responsive adjustments */
 @media (min-width: 600px) {
     .profile-grid {

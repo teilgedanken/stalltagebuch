@@ -190,7 +190,9 @@ pub fn ProfileCard(
     });
 
     rsx! {
-        div { class: "profile-card", onclick: move |_| on_click.call(()),
+        div {
+            class: if profile.gender == Gender::Male { "profile-card is-male" } else { "profile-card" },
+            onclick: move |_| on_click.call(()),
             div { class: "profile-image",
                 if let Some(photo_path) = effective_photo_path() {
                     SyncedThumbnailImage {
