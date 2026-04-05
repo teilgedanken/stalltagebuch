@@ -22,9 +22,7 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     rsx! {
         section { class: "section pt-5 pb-3",
             div { class: "container is-max-tablet",
-                h1 { class: "title is-3 has-text-centered mb-5",
-                    {format!("🥚 {}", tid!("app-title"))}
-                }
+                h1 { class: "title is-4 has-text-centered mb-5", {tid!("app-title")} }
 
                 if let Err(db_status) = db_status() {
                     div { class: "notification is-warning is-light",
@@ -34,20 +32,20 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 div { class: "box",
-                    h2 { class: "title is-5", "Schnellzugriff" }
-                    div { class: "buttons are-medium",
+                    h2 { class: "title is-5", {tid!("quick-access")} }
+                    div { class: "buttons",
                         button {
-                            class: "button is-primary is-fullwidth",
+                            class: "button is-fullwidth",
                             onclick: move |_| on_navigate.call(Screen::ProfileList),
                             {format!("🐦 {}", tid!("profile-list-title"))}
                         }
                         button {
-                            class: "button is-primary is-fullwidth",
+                            class: "button is-fullwidth",
                             onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
                             {format!("🥚 {}", tid!("egg-tracking-title"))}
                         }
                         button {
-                            class: "button is-primary is-fullwidth",
+                            class: "button is-fullwidth",
                             onclick: move |_| on_navigate.call(Screen::Statistics),
                             {format!("📊 {}", tid!("stats-title"))}
                         }
@@ -62,8 +60,8 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                     }
                 }
 
-                article { class: "message is-info is-light mt-4",
-                    div { class: "message-header", "ℹ️ System-Info" }
+                article { class: "message is-info is-small",
+                    div { class: "message-header", {tid!("system-info")} }
                     div { class: "message-body",
                         p {
                             strong { "OS: " }

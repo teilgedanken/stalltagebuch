@@ -1,10 +1,11 @@
+use super::profile_i18n::{format_age_years_months, gender_label};
 use super::profile_photo_card::ProfilePhotoCard;
 use super::synced_photo::{SyncedCollectionFullscreen, SyncedThumbnailImage};
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
 use crate::Screen;
 use crate::models::{EventType, Gender};
 use crate::spacetime;
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
@@ -183,7 +184,9 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                 }
 
                 if let Some(p) = profile() {
-                    div { class: "is-flex is-flex-direction-column", style: "gap: 24px;",
+                    div {
+                        class: "is-flex is-flex-direction-column",
+                        style: "gap: 24px;",
                         ProfilePhotoCard {
                             quail_id: quail_id.clone(),
                             profile_photo: p.profile_photo.clone(),
@@ -193,30 +196,55 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                             h2 { class: "title is-3 mb-3", "{p.name}" }
 
                             div { class: "tags mb-3",
-                                span { class: "tag is-info is-light", "ID {p.uuid.chars().take(8).collect::<String>()}" }
-                                span { class: "tag is-warning is-light", "{Gender::from_str(&p.gender).display_name()}" }
+                                span { class: "tag is-info is-light",
+                                    "ID {p.uuid.chars().take(8).collect::<String>()}"
+                                }
+                                span { class: "tag is-warning is-light",
+                                    "{gender_label(&Gender::from_str(&p.gender))}"
+                                }
                                 if let Some(latest_event) = events().first() {
                                     match EventType::from_str(&latest_event.event_type) {
                                         EventType::Born => rsx! {
-                                            span { class: "tag is-success is-light", "🐣 " {tid!("status-born")} }
+                                            span { class: "tag is-success is-light",
+                                                "🐣 "
+                                                {tid!("status-born")}
+                                            }
                                         },
                                         EventType::Alive => rsx! {
-                                            span { class: "tag is-success is-light", "✅ " {tid!("status-alive")} }
+                                            span { class: "tag is-success is-light",
+                                                "✅ "
+                                                {tid!("status-alive")}
+                                            }
                                         },
                                         EventType::Sick => rsx! {
-                                            span { class: "tag is-danger is-light", "🤒 " {tid!("status-sick")} }
+                                            span { class: "tag is-danger is-light",
+                                                "🤒 "
+                                                {tid!("status-sick")}
+                                            }
                                         },
                                         EventType::Healthy => rsx! {
-                                            span { class: "tag is-success is-light", "💪 " {tid!("status-healthy")} }
+                                            span { class: "tag is-success is-light",
+                                                "💪 "
+                                                {tid!("status-healthy")}
+                                            }
                                         },
                                         EventType::MarkedForSlaughter => rsx! {
-                                            span { class: "tag is-warning is-light", "🥩 " {tid!("status-marked")} }
+                                            span { class: "tag is-warning is-light",
+                                                "🥩 "
+                                                {tid!("status-marked")}
+                                            }
                                         },
                                         EventType::Slaughtered => rsx! {
-                                            span { class: "tag is-dark is-light", "🥩 " {tid!("status-slaughtered")} }
+                                            span { class: "tag is-dark is-light",
+                                                "🥩 "
+                                                {tid!("status-slaughtered")}
+                                            }
                                         },
                                         EventType::Died => rsx! {
-                                            span { class: "tag is-dark is-light", "🪦 " {tid!("status-died")} }
+                                            span { class: "tag is-dark is-light",
+                                                "🪦 "
+                                                {tid!("status-died")}
+                                            }
                                         },
                                     }
                                 }
@@ -227,8 +255,12 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     div { class: "column is-half",
                                         article { class: "message is-light",
                                             div { class: "message-body",
-                                                p { class: "is-size-7 has-text-grey mb-1", "Alter" }
-                                                p { class: "has-text-weight-semibold", "{age}" }
+                                                p { class: "is-size-7 has-text-grey mb-1",
+                                                    {tid!("field-age")}
+                                                }
+                                                p { class: "has-text-weight-semibold",
+                                                    "{age}"
+                                                }
                                             }
                                         }
                                     }
@@ -237,8 +269,14 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                 div { class: "column is-half",
                                     article { class: "message is-light",
                                         div { class: "message-body",
-                                            p { class: "is-size-7 has-text-grey mb-1", "UUID" }
-                                            p { class: "is-size-7 has-text-grey", style: "word-break: break-all;", "{p.uuid}" }
+                                            p { class: "is-size-7 has-text-grey mb-1",
+                                                "UUID"
+                                            }
+                                            p {
+                                                class: "is-size-7 has-text-grey",
+                                                style: "word-break: break-all;",
+                                                "{p.uuid}"
+                                            }
                                         }
                                     }
                                 }
@@ -258,10 +296,13 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
 
                                 rsx! {
                                     div { class: "box",
-                                        h3 { class: "title is-5 mb-3", "📸 " {tid!("photos-title")} }
+                                        h3 { class: "title is-5 mb-3",
+                                            "📸 "
+                                            {tid!("photos-title")}
+                                        }
 
                                         div { style: "display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:12px;",
-                                            for (idx, (photo_uuid, photo_path, _created_at)) in photo_items.iter().enumerate() {
+                                            for (idx , (photo_uuid , photo_path , _created_at)) in photo_items.iter().enumerate() {
                                                 div {
                                                     key: "{photo_uuid}",
                                                     style: "cursor: pointer; position: relative;",
@@ -293,24 +334,30 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     }
                                 }
                             } else {
-                                rsx! { div {} }
+                                rsx! {
+                                    div {}
+                                }
                             }
                         }
 
                         div { class: "box",
                             div { class: "level mb-3",
                                 div { class: "level-left",
-                                    h3 { class: "title is-5 mb-0", "📅 " {tid!("events-timeline-title")} }
+                                    h3 { class: "title is-5 mb-0",
+                                        "📅 "
+                                        {tid!("events-timeline-title")}
+                                    }
                                 }
                                 div { class: "level-right",
                                     button {
                                         class: "button is-primary is-small",
                                         onclick: move |_| {
                                             if let Some(p) = profile() {
-                                                on_navigate.call(Screen::EventAdd {
-                                                    quail_id: p.uuid.to_string(),
-                                                    quail_name: p.name.clone(),
-                                                });
+                                                on_navigate
+                                                    .call(Screen::EventAdd {
+                                                        quail_id: p.uuid.to_string(),
+                                                        quail_name: p.name.clone(),
+                                                    });
                                             }
                                         },
                                         "+ "
@@ -320,9 +367,13 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                             }
 
                             if events().is_empty() {
-                                div { class: "notification is-light has-text-centered", {tid!("events-empty")} }
+                                div { class: "notification is-light has-text-centered",
+                                    {tid!("events-empty")}
+                                }
                             } else {
-                                div { class: "is-flex is-flex-direction-column", style: "gap: 12px;",
+                                div {
+                                    class: "is-flex is-flex-direction-column",
+                                    style: "gap: 12px;",
                                     for event in events() {
                                         div {
                                             key: "{event.uuid}",
@@ -331,14 +382,19 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                             onclick: {
                                                 let quail_id_for_event = quail_id.clone();
                                                 move |_| {
-                                                    on_navigate.call(Screen::EventEdit {
-                                                        event_id: event.uuid.to_string(),
-                                                        quail_id: quail_id_for_event.clone(),
-                                                    });
+                                                    on_navigate
+                                                        .call(Screen::EventEdit {
+                                                            event_id: event.uuid.to_string(),
+                                                            quail_id: quail_id_for_event.clone(),
+                                                        });
                                                 }
                                             },
-                                            div { class: "is-flex is-align-items-center mb-2", style: "gap: 10px;",
-                                                span { class: "tag is-light", style: "font-size: 18px;",
+                                            div {
+                                                class: "is-flex is-align-items-center mb-2",
+                                                style: "gap: 10px;",
+                                                span {
+                                                    class: "tag is-light",
+                                                    style: "font-size: 18px;",
                                                     match EventType::from_str(&event.event_type) {
                                                         EventType::Born => "🐣",
                                                         EventType::Alive => "✅",
@@ -350,12 +406,20 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                                     }
                                                 }
                                                 div {
-                                                    p { class: "has-text-weight-semibold mb-0", "{EventType::from_str(&event.event_type).display_name()}" }
-                                                    p { class: "is-size-7 has-text-grey mb-0", {format_event_date(&event.event_date)} }
+                                                    p { class: "has-text-weight-semibold mb-0",
+                                                        "{EventType::from_str(&event.event_type).display_name()}"
+                                                    }
+                                                    p { class: "is-size-7 has-text-grey mb-0",
+                                                        {format_event_date(&event.event_date)}
+                                                    }
                                                 }
                                             }
                                             if let Some(notes) = &event.notes {
-                                                p { class: "is-size-7", style: "white-space: pre-wrap;", "{notes}" }
+                                                p {
+                                                    class: "is-size-7",
+                                                    style: "white-space: pre-wrap;",
+                                                    "{notes}"
+                                                }
                                             }
                                         }
                                     }
@@ -397,37 +461,4 @@ fn age_display_from_events(events: &[spacetime::QuailEvent], today: NaiveDate) -
         .min()?;
 
     Some(format_age_years_months(birth_date, today))
-}
-
-fn format_age_years_months(birth_date: NaiveDate, today: NaiveDate) -> String {
-    if birth_date > today {
-        return "0 Monate".to_string();
-    }
-
-    let mut total_months = (today.year() - birth_date.year()) * 12
-        + (today.month() as i32 - birth_date.month() as i32);
-
-    if today.day() < birth_date.day() {
-        total_months -= 1;
-    }
-
-    if total_months < 0 {
-        total_months = 0;
-    }
-
-    let years = total_months / 12;
-    let months = total_months % 12;
-
-    if years > 0 {
-        let years_label = if years == 1 { "Jahr" } else { "Jahre" };
-        if months > 0 {
-            let months_label = if months == 1 { "Monat" } else { "Monate" };
-            format!("{} {} {} {}", years, years_label, months, months_label)
-        } else {
-            format!("{} {}", years, years_label)
-        }
-    } else {
-        let months_label = if months == 1 { "Monat" } else { "Monate" };
-        format!("{} {}", months, months_label)
-    }
 }

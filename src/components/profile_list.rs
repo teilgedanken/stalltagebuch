@@ -1,8 +1,9 @@
+use super::profile_i18n::{format_age_years_months, gender_label};
 use super::synced_photo::SyncedThumbnailImage;
 use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
@@ -210,7 +211,7 @@ pub fn ProfileCard(
                         style: "gap: 3px;",
                         div {
                             div { class: "profile-name", "{profile.name}" }
-                            div { class: "profile-gender", "{profile.gender.display_name()}" }
+                            div { class: "profile-gender", "{gender_label(&profile.gender)}" }
                         }
                         if let Some(age) = age_display {
                             span {
@@ -295,39 +296,6 @@ fn earliest_born_dates_by_quail(
     }
 
     map
-}
-
-fn format_age_years_months(birth_date: NaiveDate, today: NaiveDate) -> String {
-    if birth_date > today {
-        return "0 Monate".to_string();
-    }
-
-    let mut total_months = (today.year() - birth_date.year()) * 12
-        + (today.month() as i32 - birth_date.month() as i32);
-
-    if today.day() < birth_date.day() {
-        total_months -= 1;
-    }
-
-    if total_months < 0 {
-        total_months = 0;
-    }
-
-    let years = total_months / 12;
-    let months = total_months % 12;
-
-    if years > 0 {
-        let years_label = if years == 1 { "Jahr" } else { "Jahre" };
-        if months > 0 {
-            let months_label = if months == 1 { "Monat" } else { "Monate" };
-            format!("{} {} {} {}", years, years_label, months, months_label)
-        } else {
-            format!("{} {}", years, years_label)
-        }
-    } else {
-        let months_label = if months == 1 { "Monat" } else { "Monate" };
-        format!("{} {}", months, months_label)
-    }
 }
 
 fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {

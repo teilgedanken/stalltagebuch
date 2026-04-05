@@ -97,6 +97,16 @@ pub fn get_last_error() -> Option<String> {
     get_main_activity_static_string("getLastError", "()Ljava/lang/String;")
 }
 
+/// Returns the current Android system language tag (for example `de-DE` or `en-US`).
+/// Falls back to `en-US` if JNI access fails or returns an empty value.
+#[cfg(target_os = "android")]
+pub fn get_system_language_tag() -> String {
+    get_main_activity_static_string("getSystemLanguageTag", "()Ljava/lang/String;")
+        .map(|tag| tag.trim().replace('_', "-"))
+        .filter(|tag| !tag.is_empty())
+        .unwrap_or_else(|| "en-US".to_string())
+}
+
 #[cfg(target_os = "android")]
 fn with_android_env<T>(
     f: impl FnOnce(&mut dioxus::prelude::jni::JNIEnv<'_>) -> Result<T, AppError>,
@@ -237,4 +247,9 @@ pub fn launch_document_picker() -> Result<(), AppError> {
 #[cfg(not(target_os = "android"))]
 pub fn get_last_error() -> Option<String> {
     None
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn get_system_language_tag() -> String {
+    "en-US".to_string()
 }

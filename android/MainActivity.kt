@@ -111,6 +111,34 @@ class MainActivity : WryActivity() {
         fun clearLastError() {
             lastError = null
         }
+
+        /**
+         * Returns the current Android system language tag, e.g. "de-DE" or "en-US".
+         * Falls back to "en-US" if the locale cannot be resolved.
+         */
+        @JvmStatic
+        fun getSystemLanguageTag(): String {
+            return try {
+                val locale: Locale = instance?.resources?.configuration?.let { config ->
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                        config.locales.get(0) ?: Locale.getDefault()
+                    } else {
+                        @Suppress("DEPRECATION")
+                        config.locale ?: Locale.getDefault()
+                    }
+                } ?: Locale.getDefault()
+
+                val tag = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    locale.toLanguageTag()
+                } else {
+                    locale.toString().replace('_', '-')
+                }
+
+                if (tag.isBlank()) "en-US" else tag
+            } catch (_: Exception) {
+                "en-US"
+            }
+        }
     }
     
     // ActivityResultLauncher für Gallery-Auswahl (single)

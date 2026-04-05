@@ -21,9 +21,10 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
     spacetime::use_subscription(&["SELECT * FROM egg_records"]);
 
     let mut stats = use_signal(|| None::<EggStatistics>);
-    let mut period_records = use_signal(|| Vec::<(String, i32)>::new());
+    let mut period_records = use_signal(|| Vec::<(String, String, i32)>::new());
     let mut error = use_signal(|| String::new());
     let mut selected_period = use_signal(|| "month".to_string());
+    let on_navigate_add = on_navigate.clone();
 
     let mut load_statistics = move || {
         let today = chrono::Local::now().date_naive();
@@ -119,7 +120,13 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         period_records.set(
             valid_records
                 .iter()
-                .map(|(date, eggs)| (format_display_date(*date, &date_format), *eggs))
+                .map(|(date, eggs)| {
+                    (
+                        format_display_date(*date, &date_format),
+                        date.format("%Y-%m-%d").to_string(),
+                        *eggs,
+                    )
+                })
                 .collect(),
         );
         error.set(String::new());
@@ -136,7 +143,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 div { class: "mt-1",
                     button {
                         class: "button is-primary is-fullwidth mb-4 is-large",
-                        onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
+                        onclick: move |_| on_navigate_add.call(Screen::EggTracking(None)),
                         span { class: "icon is-small", "+" }
                         span { {tid!("stats-add-entry")} }
                     }
@@ -252,9 +259,16 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                             }
                                         }
                                         tbody {
-                                            for (date , eggs) in period_records().iter() {
+                                            for (display_date , iso_date , eggs) in period_records().iter() {
                                                 tr {
-                                                    td { "{date}" }
+                                                    class: "is-clickable",
+                                                    style: "cursor: pointer;",
+                                                    onclick: {
+                                                        let edit_date = iso_date.clone();
+                                                        let on_navigate_row = on_navigate.clone();
+                                                        move |_| on_navigate_row.call(Screen::EggTracking(Some(edit_date.clone())))
+                                                    },
+                                                    td { "{display_date}" }
                                                     td { class: "has-text-right has-text-weight-semibold",
                                                         "{eggs}"
                                                     }
@@ -281,7 +295,7 @@ fn format_display_date(date: chrono::NaiveDate, date_format: &str) -> String {
 #[component]
 fn StatCard(label: String, value: String, icon: String) -> Element {
     rsx! {
-        div { class: "column is-4 is-6-mobile is-flex",
+        div { class: "column is-4 is-6-mobile is-flex p-1",
             div { class: "box has-background-light has-text-centered is-flex is-flex-direction-column is-justify-content-center is-flex-grow-1",
                 div { class: "is-size-4 mb-1", "{icon}" }
                 div { class: "title is-6 has-text-link mb-1", "{value}" }

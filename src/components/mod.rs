@@ -6,6 +6,7 @@ pub mod navigation;
 pub mod profile_add;
 pub mod profile_detail;
 pub mod profile_edit;
+pub mod profile_i18n;
 pub mod profile_list;
 pub mod profile_photo_card;
 pub mod settings;

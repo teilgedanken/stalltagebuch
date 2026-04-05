@@ -1,177 +1,175 @@
 # Generated translation template by dx-i18n
-# Contains 279 translation keys
+# Contains 286 translation keys
 
-# Add event
-# Source: ./src/components/profile_detail.rs:339
+# Source: ./src/components/profile_detail.rs:318
 action-add-event = Event
 
-# Source: ./src/components/profile_add.rs:157
+# Source: ./src/components/event_edit.rs:298
 action-back = Back
 
-# Source: ./src/components/profile_add.rs:372
+# Source: ./src/components/profile_add.rs:405
 action-camera = Camera
 
-# Cancel
-# Source: ./src/components/event_add.rs:166
+# Source: ./src/components/event_add.rs:165
 action-cancel = Cancel
 
-# Source: ./src/components/event_edit.rs:605
+# Source: ./src/components/event_edit.rs:626
 action-delete = Delete
 
-# Source: ./src/components/profile_edit.rs:453
+# Source: ./src/components/profile_edit.rs:511
 action-delete-permanently = Delete permanently
 
-# Source: ./src/components/profile_edit.rs:467
+# Source: ./src/components/profile_edit.rs:528
 action-delete-quail = Delete quail
 
-# Source: ./src/components/profile_detail.rs:405
+# Source: ./src/components/profile_detail.rs:374
 action-edit = Edit
 
-# Source: ./src/components/event_edit.rs:472
+# Source: ./src/components/event_edit.rs:482
 action-gallery = Gallery
 
-# Source: ./src/components/profile_add.rs:339
+# Source: ./src/components/profile_add.rs:370
 action-loading = Loading...
 
-# Source: ./src/components/egg_history.rs:47
+# Source: ./src/components/profile_list.rs:114
 action-new = New
 
-# Source: ./src/components/event_edit.rs:572
+# Source: ./src/components/event_edit.rs:585
 action-photo = Photo
 
-# Source: ./src/components/settings/network_check_card.rs:132
+# Source: ./src/components/settings/network_check_card.rs:126
 action-retry = Retry
 
-# Source: ./src/components/egg_tracking.rs:237
+# Source: ./src/components/egg_tracking.rs:226
 action-save = Save
 
-# Source: ./src/components/event_add.rs:153
+# Source: ./src/components/event_add.rs:150
 action-saving = Saving...
 
-# Source: ./src/components/egg_tracking.rs:235
+# Source: ./src/components/egg_tracking.rs:224
 action-update = Update
 
 # Source: ./src/components/home.rs:25
 app-title = Quail Stable Logbook
 
-# Source: ./src/components/settings/backup_card.rs:493
+# Source: ./src/components/settings/backup_card.rs:492
 backup-card-actions-description = Backup actions: The option "Include photo files in backup" applies to both buttons.
 
-# Source: ./src/components/settings/backup_card.rs:512
+# Source: ./src/components/settings/backup_card.rs:511
 backup-card-button-file = 💾 to file
 
-# Source: ./src/components/settings/backup_card.rs:512
+# Source: ./src/components/settings/backup_card.rs:511
 backup-card-button-file-running = ⏳ Creating file…
 
-# Source: ./src/components/settings/backup_card.rs:523
+# Source: ./src/components/settings/backup_card.rs:520
 backup-card-button-nextcloud = ☁️ to Nextcloud
 
-# Source: ./src/components/settings/backup_card.rs:553
+# Source: ./src/components/settings/backup_card.rs:550
 backup-card-history-empty = No backups logged yet.
 
-# Source: ./src/components/settings/backup_card.rs:631
+# Source: ./src/components/settings/backup_card.rs:629
 # Parameters: $error
 backup-card-history-error = Error: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:616
+# Source: ./src/components/settings/backup_card.rs:614
 # Parameters: $path
 backup-card-history-file = File: { $path }
 
-# Source: ./src/components/settings/backup_card.rs:612
+# Source: ./src/components/settings/backup_card.rs:610
 # Parameters: $include_images
 backup-card-history-include-images = With images: { $include_images }
 
-# Source: ./src/components/settings/backup_card.rs:625
-# Parameters: $quails, $egg_records, $events
+# Source: ./src/components/settings/backup_card.rs:623
+# Parameters: $egg_records, $quails, $events
 backup-card-history-items = Items: { $quails } quails, { $events } events, { $egg_records } egg records
 
-# Source: ./src/components/settings/backup_card.rs:644
+# Source: ./src/components/settings/backup_card.rs:640
 # Parameters: $count
 backup-card-history-more = More ({ $count })
 
-# Source: ./src/components/settings/backup_card.rs:619
+# Source: ./src/components/settings/backup_card.rs:617
 # Parameters: $name
 backup-card-history-nextcloud = Nextcloud: { $name }
 
-# Source: ./src/components/settings/backup_card.rs:628
-# Parameters: $photos_meta, $photos_files_missing, $photos_files_included
+# Source: ./src/components/settings/backup_card.rs:626
+# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
 backup-card-history-photos = Photos: { $photos_meta } entries, { $photos_files_included } files included, { $photos_files_missing } missing
 
-# Source: ./src/components/settings/backup_card.rs:622
+# Source: ./src/components/settings/backup_card.rs:620
 # Parameters: $size
 backup-card-history-size = Size: { $size } B
 
-# Source: ./src/components/settings/backup_card.rs:602
+# Source: ./src/components/settings/backup_card.rs:600
 # Parameters: $status
 backup-card-history-status = Status: { $status }
 
-# Source: ./src/components/settings/backup_card.rs:550
+# Source: ./src/components/settings/backup_card.rs:547
 backup-card-history-title = Backup history
 
-# Source: ./src/components/settings/backup_card.rs:666
+# Source: ./src/components/settings/backup_card.rs:661
 backup-card-import-button = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:666
+# Source: ./src/components/settings/backup_card.rs:661
 backup-card-import-button-running = ⏳ Importing…
 
-# Source: ./src/components/settings/backup_card.rs:652
+# Source: ./src/components/settings/backup_card.rs:648
 backup-card-import-title = 📥 Import
 
-# Source: ./src/components/settings/backup_card.rs:503
+# Source: ./src/components/settings/backup_card.rs:502
 backup-card-include-photo-files = Include photo files in backup
 
-# Source: ./src/components/settings/backup_card.rs:530
+# Source: ./src/components/settings/backup_card.rs:527
 backup-card-nextcloud-not-connected = Nextcloud not connected
 
-# Source: ./src/components/settings/backup_card.rs:610
+# Source: ./src/components/settings/backup_card.rs:608
 backup-card-no = No
 
-# Source: ./src/components/settings/backup_card.rs:543
+# Source: ./src/components/settings/backup_card.rs:540
 backup-card-progress-complete = ✅ Complete!
 
-# Source: ./src/components/settings/backup_card.rs:542
+# Source: ./src/components/settings/backup_card.rs:539
 backup-card-progress-packing-zip = 📦 Creating ZIP…
 
-# Source: ./src/components/settings/backup_card.rs:540
+# Source: ./src/components/settings/backup_card.rs:537
 backup-card-progress-reading-egg-records = 🥚 Reading egg records…
 
-# Source: ./src/components/settings/backup_card.rs:539
+# Source: ./src/components/settings/backup_card.rs:536
 backup-card-progress-reading-events = 📅 Reading events…
 
-# Source: ./src/components/settings/backup_card.rs:541
+# Source: ./src/components/settings/backup_card.rs:538
 backup-card-progress-reading-photos = 📷 Reading photos…
 
-# Source: ./src/components/settings/backup_card.rs:538
+# Source: ./src/components/settings/backup_card.rs:535
 backup-card-progress-reading-quails = 📚 Reading quails…
 
-# Source: ./src/components/settings/backup_card.rs:537
+# Source: ./src/components/settings/backup_card.rs:534
 backup-card-progress-starting = 🔄 Initializing…
 
-# Source: ./src/components/settings/backup_card.rs:599
+# Source: ./src/components/settings/backup_card.rs:597
 backup-card-status-failed = Failed
 
-# Source: ./src/components/settings/backup_card.rs:600
+# Source: ./src/components/settings/backup_card.rs:598
 backup-card-status-pending = Pending
 
-# Source: ./src/components/settings/backup_card.rs:598
+# Source: ./src/components/settings/backup_card.rs:596
 backup-card-status-success = Successful
 
-# Source: ./src/components/settings/backup_card.rs:489
+# Source: ./src/components/settings/backup_card.rs:488
 backup-card-title = 💾 Backup
 
-# Source: ./src/components/settings/backup_card.rs:587
+# Source: ./src/components/settings/backup_card.rs:584
 backup-card-unknown = unknown
 
-# Source: ./src/components/settings/backup_card.rs:608
+# Source: ./src/components/settings/backup_card.rs:606
 backup-card-yes = Yes
 
-# Source: ./src/components/settings/nextcloud_card.rs:367
+# Source: ./src/components/settings/nextcloud_card.rs:382
 backup-cleanup-button = 🧹 Delete orphaned photos
 
-# Source: ./src/components/settings/nextcloud_card.rs:383
+# Source: ./src/components/settings/nextcloud_card.rs:399
 backup-cleanup-review-description = These files exist in Nextcloud under /sync/photos but no longer have a matching photo record in SpacetimeDB. Please review the list and confirm permanent deletion.
 
-# Source: ./src/components/settings/nextcloud_card.rs:380
+# Source: ./src/components/settings/nextcloud_card.rs:396
 # Parameters: $count
 backup-cleanup-review-title = ⚠️ Orphaned photos found: { $count }
 
@@ -206,70 +204,74 @@ backup-cleanup-status-success = ✅ Deleted { $count } orphaned photos from Next
 # UNUSED: This key is no longer used in the code
 backup-db-error = ❌ Database error: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:340
+# Source: ./src/components/settings/backup_card.rs:339
 backup-import-android-only = ⚠️ File picker is only available on Android
 
-# Source: ./src/components/settings/backup_card.rs:333
+# Source: ./src/components/settings/backup_card.rs:332
 backup-import-no-file-selected = ❌ No file selected
 
-# Source: ./src/components/settings/backup_card.rs:317
-# Parameters: $count, $photos
+# Source: ./src/components/settings/backup_card.rs:316
+# Parameters: $photos, $count
 backup-import-success-with-counts = ✅ Imported { $count } items and { $photos } photos
 
-# Source: ./src/components/settings/backup_card.rs:521
+# Source: ./src/components/settings/backup_card.rs:518
 backup-upload-button-running = ⏳ Backup upload in progress...
 
-# Source: ./src/components/settings/backup_card.rs:379
+# Source: ./src/components/settings/backup_card.rs:378
 # Parameters: $error
 backup-upload-failed = ❌ Backup upload failed: { $error }
 
-# Source: ./src/components/settings/backup_card.rs:359
+# Source: ./src/components/settings/backup_card.rs:358
 backup-upload-running = 🔄 Creating and uploading backup...
 
-# Source: ./src/components/settings/backup_card.rs:425
+# Source: ./src/components/settings/backup_card.rs:424
 # Parameters: $filename
 backup-upload-success = ✅ Backup uploaded successfully: { $filename }
 
-# Source: ./src/components/profile_edit.rs:445
+# Source: ./src/components/profile_edit.rs:503
 confirm-delete-quail = Are you sure you want to delete this quail? This action cannot be undone.
 
 # Source: ./src/components/egg_history.rs:109
 # Parameters: $count
+# UNUSED: This key is no longer used in the code
 egg-history-eggs-count = { $count } eggs
 
 # Source: ./src/components/egg_history.rs:61
+# UNUSED: This key is no longer used in the code
 egg-history-empty = No entries available
 
 # Source: ./src/components/egg_history.rs:31
 # Parameters: $count
+# UNUSED: This key is no longer used in the code
 egg-history-loaded = { $count } entries loaded
 
-# Source: ./src/components/egg_history.rs:40
+# Source: ./src/components/statistics.rs:249
 egg-history-title = Egg History
 
-# Source: ./src/components/egg_tracking.rs:174
+# Source: ./src/components/egg_tracking.rs:172
 egg-tracking-exists-warning = An entry already exists for this date - changes will overwrite the existing entry
 
 # Source: ./src/components/egg_tracking.rs:250
+# UNUSED: This key is no longer used in the code
 egg-tracking-show-history = Show history
 
-# Source: ./src/components/egg_tracking.rs:166
+# Source: ./src/components/egg_tracking.rs:165
 egg-tracking-success = Entry saved successfully!
 
 # Source: ./src/components/egg_tracking.rs:150
 egg-tracking-title = Enter eggs
 
-# Source: ./src/components/profile_add.rs:38
+# Source: ./src/components/profile_add.rs:40
 # Parameters: $error
 error = Error
 
-# Source: ./src/components/profile_add.rs:332
+# Source: ./src/components/profile_add.rs:363
 error-android-only = Only available on Android
 
-# Source: ./src/components/event_edit.rs:562
+# Source: ./src/components/event_edit.rs:575
 error-android-only-camera = Camera only available on Android
 
-# Source: ./src/components/event_edit.rs:462
+# Source: ./src/components/event_edit.rs:472
 error-android-only-gallery = Gallery only available on Android
 
 # Source: ./src/components/profile_photo_card.rs:330
@@ -278,7 +280,7 @@ error-camera-android-only = Camera only available on Android
 # Source: ./src/components/profile_photo_card.rs:271
 error-capture-failed = Capture failed
 
-# Source: ./src/components/event_edit.rs:515
+# Source: ./src/components/event_edit.rs:528
 # Parameters: $error
 error-capture-photo = Capture error: { $error }
 
@@ -303,14 +305,14 @@ error-empty-date = Date must not be empty
 # Source: ./src/components/event_add.rs:40
 error-invalid-date = Invalid date format
 
-# Source: ./src/components/event_edit.rs:452
+# Source: ./src/components/event_edit.rs:462
 error-invalid-event-id = Invalid event ID
 
 # Source: ./src/components/profile_photo_card.rs:202
 error-multiselect-android-only = Multi-select only available on Android
 
 # Name cannot be empty
-# Source: ./src/components/profile_add.rs:33
+# Source: ./src/components/profile_add.rs:35
 error-name-required = Name must not be empty
 
 # Source: ./src/components/settings/network_check_card.rs:14
@@ -319,471 +321,463 @@ error-network = Error
 # Source: ./src/components/egg_tracking.rs:52
 error-not-connected = Not connected to SpacetimeDB
 
-# Source: ./src/components/event_edit.rs:413
+# Source: ./src/components/event_edit.rs:423
 # Parameters: $error
 error-pick-images = Selection error: { $error }
 
 # Source: ./src/components/profile_photo_card.rs:138
 error-selection-failed = Selection error
 
-# Source: ./src/components/event_add.rs:85
+# Source: ./src/components/event_add.rs:86
 # Parameters: $name
 event-add-for = for { $name }
 
-# Source: ./src/components/event_add.rs:83
+# Source: ./src/components/event_add.rs:84
 event-add-title = Add event
 
-# Source: ./src/components/event_edit.rs:298
+# Source: ./src/components/event_edit.rs:302
 event-edit-title = Edit event
 
-# Source: ./src/components/event_add.rs:110
+# Source: ./src/components/event_add.rs:107
 event-type-alive = ✅ Alive
 
-# Source: ./src/components/event_add.rs:109
+# Source: ./src/components/event_add.rs:106
 event-type-born = 🐣 Born
 
-# Source: ./src/components/event_add.rs:115
+# Source: ./src/components/event_add.rs:112
 event-type-died = 🪦 Died
 
-# Source: ./src/components/event_add.rs:112
+# Source: ./src/components/event_add.rs:109
 event-type-healthy = 💪 Healthy
 
-# Source: ./src/components/event_add.rs:113
+# Source: ./src/components/event_add.rs:110
 event-type-marked = 🥩 Marked for slaughter
 
-# Source: ./src/components/event_add.rs:111
+# Source: ./src/components/event_add.rs:108
 event-type-sick = 🤒 Sick
 
-# Source: ./src/components/event_add.rs:114
+# Source: ./src/components/event_add.rs:111
 event-type-slaughtered = 🥩 Slaughtered
 
-# No events available
-# Source: ./src/components/profile_detail.rs:346
+# Source: ./src/components/profile_detail.rs:324
 events-empty = No events available
 
-# Source: ./src/components/profile_detail.rs:325
+# Source: ./src/components/profile_detail.rs:304
 events-timeline-title = Events
 
-# Source: ./src/components/settings/backup_card.rs:196
+# Source: ./src/components/settings/backup_card.rs:195
 export-failed = Export failed
 
-# Source: ./src/components/settings/backup_card.rs:179
+# Source: ./src/components/settings/backup_card.rs:178
 export-in-progress = Export in progress...
 
-# Source: ./src/components/settings/backup_card.rs:239
+# Source: ./src/components/settings/backup_card.rs:238
 export-success = Data backup created successfully
 
-# Source: ./src/components/event_add.rs:122
+# Source: ./src/components/profile_detail.rs:231
+field-age = Age
+
+# Source: ./src/components/event_add.rs:119
 field-date = Birthday
 
 # Source: ./src/components/egg_tracking.rs:194
+# UNUSED: This key is no longer used in the code
 field-date-format-hint = Format: YYYY-MM-DD
 
-# Source: ./src/components/egg_tracking.rs:184
+# Source: ./src/components/egg_tracking.rs:178
 field-date-required = Date *
 
-# Source: ./src/components/egg_tracking.rs:206
+# Source: ./src/components/egg_tracking.rs:196
 field-eggs-count-placeholder = e.g. 12
 
-# Source: ./src/components/egg_tracking.rs:201
+# Source: ./src/components/egg_tracking.rs:191
 field-eggs-count-required = Egg count *
 
-# Source: ./src/components/event_add.rs:99
+# Source: ./src/components/event_add.rs:96
 field-event-type = Event type
 
-# Gender
-# Source: ./src/components/profile_edit.rs:245
+# Source: ./src/components/profile_edit.rs:290
 field-gender = Gender
 
-# e.g. Hen 1
-# Source: ./src/components/profile_edit.rs:234
+# Source: ./src/components/profile_edit.rs:281
 field-name-placeholder = e.g. Flecki
 
-# Name *
-# Source: ./src/components/profile_edit.rs:229
+# Source: ./src/components/profile_edit.rs:276
 field-name-required = Name *
 
-# Source: ./src/components/egg_tracking.rs:216
+# Source: ./src/components/egg_tracking.rs:205
 field-notes = Notes
 
-# Source: ./src/components/event_add.rs:135
+# Source: ./src/components/event_add.rs:131
 field-notes-optional = Notes (optional)
 
-# Source: ./src/components/egg_tracking.rs:221
+# Source: ./src/components/egg_tracking.rs:210
 field-notes-placeholder = Special notes, observations, etc.
 
-# Photos count
-# Source: ./src/components/profile_edit.rs:330
+# Source: ./src/components/profile_edit.rs:393
 field-photos = Photos
 
-# Ring color
-# Source: ./src/components/profile_edit.rs:261
+# Source: ./src/components/profile_edit.rs:317
 field-ring-color = Ring color
 
-# Source: ./src/components/event_edit.rs:316
+# Source: ./src/components/event_edit.rs:324
 field-type = Type
 
-# Female gender option
-# Source: ./src/components/profile_add.rs:205
+# Source: ./src/components/profile_add.rs:224
 gender-female = Female
 
-# Male gender option
-# Source: ./src/components/profile_add.rs:206
+# Source: ./src/components/profile_add.rs:225
 gender-male = Male
 
-# Unknown gender option
-# Source: ./src/components/profile_add.rs:204
+# Source: ./src/components/profile_add.rs:223
 gender-unknown = Unknown
 
-# Source: ./src/components/settings/backup_card.rs:653
+# Source: ./src/components/settings/backup_card.rs:649
 import-description = Import data from a ZIP backup file (v1 or v2 format).
 
-# Source: ./src/components/settings/backup_card.rs:282
+# Source: ./src/components/settings/backup_card.rs:281
 import-failed = Import failed
 
-# Source: ./src/components/settings/backup_card.rs:303
+# Source: ./src/components/settings/backup_card.rs:302
 import-in-progress = Import in progress...
 
-# Source: ./src/components/profile_edit.rs:323
+# Source: ./src/components/profile_edit.rs:388
 info-photos-detail-view = Photos are added in the detail view. Here you can only select the profile photo or delete photos.
 
-# Source: ./src/components/home.rs:91
+# Source: ./src/components/home.rs:87
 info-spacetimedb-connected = SpacetimeDB: connected
 
-# Source: ./src/components/home.rs:86
+# Source: ./src/components/home.rs:81
 info-spacetimedb-connecting = SpacetimeDB: connecting...
 
-# Source: ./src/components/home.rs:84
+# Source: ./src/components/home.rs:78
 info-spacetimedb-disconnected = SpacetimeDB: not connected
 
-# Source: ./src/components/home.rs:93
+# Source: ./src/components/home.rs:89
 info-spacetimedb-error = SpacetimeDB: connection error
 
-# Tap a photo to mark it as profile photo.
-# Source: ./src/components/profile_edit.rs:410
+# Source: ./src/components/profile_edit.rs:468
 info-tap-photo-to-mark = Tap a photo to mark it as profile photo.
 
-# Source: ./src/components/event_edit.rs:609
+# Source: ./src/components/event_edit.rs:632
 loading-event = Loading event...
 
-# Loading profile...
-# Source: ./src/components/profile_detail.rs:411
+# Source: ./src/components/profile_detail.rs:380
 loading-profile = Loading profile...
 
-# Eier
-# Source: ./src/components/navigation.rs:40
+# Source: ./src/components/navigation.rs:33
 nav-eggs = Eggs
 
-# Home / Startseite
-# Source: ./src/components/navigation.rs:20
+# Source: ./src/components/navigation.rs:15
 nav-home = Home
 
-# Profile
-# Source: ./src/components/navigation.rs:30
+# Source: ./src/components/navigation.rs:24
 nav-profiles = Profiles
 
 # Statistik
 # Source: ./src/components/navigation.rs:50
+# UNUSED: This key is no longer used in the code
 nav-statistics = Statistics
 
-# Network connectivity check in progress
-# Source: ./src/components/settings/network_check_card.rs:111
+# Source: ./src/components/settings/network_check_card.rs:110
 network-checking = Checking network connection...
 
-# No internet connection message
-# Source: ./src/components/settings/network_check_card.rs:125
+# Source: ./src/components/settings/network_check_card.rs:120
 network-offline = No internet connection
 
-# Source: ./src/components/statistics.rs:146
+# Source: ./src/components/statistics.rs:163
 period-all = All
 
-# Source: ./src/components/statistics.rs:148
+# Source: ./src/components/statistics.rs:161
 period-month = Month
 
-# Source: ./src/components/statistics.rs:147
+# Source: ./src/components/profile_i18n.rs:15
+period-months = Months
+
+# Source: ./src/components/statistics.rs:160
 period-week = Week
 
-# Source: ./src/components/statistics.rs:149
+# Source: ./src/components/statistics.rs:162
 period-year = Year
 
-# No photo selected message
-# Source: ./src/components/profile_add.rs:309
+# Source: ./src/components/profile_i18n.rs:36
+period-years = Years
+
+# Source: ./src/components/profile_add.rs:341
 photo-none-selected = No photo selected
 
-# Photo selected status message
-# Source: ./src/components/profile_add.rs:293
+# Source: ./src/components/profile_add.rs:327
 photo-selected = Photo selected
 
-# Source: ./src/components/event_edit.rs:360
+# Source: ./src/components/event_edit.rs:370
 # Parameters: $count
 photos-count = Photos ({ $count })
 
-# Fotos
-# Source: ./src/components/profile_detail.rs:277
+# Source: ./src/components/profile_detail.rs:262
 photos-title = Photos
 
-# Source: ./src/components/event_add.rs:141
+# Source: ./src/components/event_add.rs:137
 placeholder-event-notes = Additional information about the event...
 
-# Source: ./src/components/profile_add.rs:275
+# Source: ./src/components/profile_add.rs:315
 profile-add-info = Notes can be added as events after creation.
 
-# New profile page title
-# Source: ./src/components/profile_add.rs:161
+# Source: ./src/components/profile_add.rs:182
 profile-add-title = Add quail
 
-# Source: ./src/components/profile_add.rs:174
+# Source: ./src/components/profile_add.rs:197
 profile-created-success = Profile created!
 
-# Profile
-# Source: ./src/components/profile_detail.rs:173
+# Source: ./src/components/profile_detail.rs:181
 profile-detail-title = Profile
 
-# Source: ./src/components/profile_edit.rs:202
+# Source: ./src/components/profile_edit.rs:254
 profile-edit-title = Edit profile
 
-# Gender field label
-# Source: ./src/components/profile_add.rs:198
+# Source: ./src/components/profile_add.rs:217
 profile-gender-label = Gender
 
-# Source: ./src/components/profile_list.rs:117
+# Source: ./src/components/profile_list.rs:135
 profile-list-empty = No profiles available
 
-# Source: ./src/components/home.rs:44
+# Source: ./src/components/home.rs:40
 profile-list-title = Quail profiles
 
-# Name field label with required marker
-# Source: ./src/components/profile_add.rs:183
+# Source: ./src/components/profile_add.rs:203
 profile-name-label = Name *
 
-# Example name placeholder
-# Source: ./src/components/profile_add.rs:188
+# Source: ./src/components/profile_add.rs:208
 profile-name-placeholder = e.g. Flecki
 
-# Photo field label
-# Source: ./src/components/profile_add.rs:281
+# Source: ./src/components/profile_add.rs:320
 profile-photo-label = Photo
 
-# Ring color field label
-# Source: ./src/components/profile_add.rs:213
+# Source: ./src/components/profile_add.rs:244
 profile-ring-color-label = Ring color
 
-# Source: ./src/components/profile_add.rs:235
+# Source: ./src/components/home.rs:35
+quick-access = Quick Access
+
+# Source: ./src/components/profile_add.rs:264
 ring-color-black = Black
 
-# Source: ./src/components/profile_add.rs:230
+# Source: ./src/components/profile_add.rs:259
 ring-color-dark-blue = Dark blue
 
-# Source: ./src/components/profile_add.rs:236
+# Source: ./src/components/profile_add.rs:265
 ring-color-green = Green
 
-# Source: ./src/components/profile_add.rs:229
+# Source: ./src/components/profile_add.rs:258
 ring-color-light-blue = Light blue
 
-# Source: ./src/components/profile_add.rs:226
+# Source: ./src/components/profile_add.rs:255
 ring-color-none = None
 
-# Source: ./src/components/profile_add.rs:232
+# Source: ./src/components/profile_add.rs:261
 ring-color-orange = Orange
 
-# Source: ./src/components/profile_add.rs:228
+# Source: ./src/components/profile_add.rs:257
 ring-color-pink = Pink
 
-# Source: ./src/components/profile_add.rs:227
+# Source: ./src/components/profile_add.rs:256
 ring-color-purple = Purple
 
-# Source: ./src/components/profile_add.rs:231
+# Source: ./src/components/profile_add.rs:260
 ring-color-red = Red
 
-# Source: ./src/components/profile_add.rs:219
+# Source: ./src/components/profile_add.rs:247
 ring-color-side-left = Left
 
-# Source: ./src/components/profile_add.rs:246
+# Source: ./src/components/profile_add.rs:279
 ring-color-side-right = Right
 
-# Source: ./src/components/profile_add.rs:233
+# Source: ./src/components/profile_add.rs:262
 ring-color-white = White
 
-# Source: ./src/components/profile_add.rs:234
+# Source: ./src/components/profile_add.rs:263
 ring-color-yellow = Yellow
 
-# Source: ./src/components/profile_list.rs:109
+# Source: ./src/components/profile_list.rs:125
 search-placeholder-name = Search by name...
 
-# Source: ./src/components/home.rs:65
+# Source: ./src/components/home.rs:59
 settings-title = Settings
 
-# Source: ./src/components/settings/spacetime_db_card.rs:49
+# Source: ./src/components/settings/spacetime_db_card.rs:64
 spacetime-card-connection-connected = Connected
 
-# Source: ./src/components/settings/spacetime_db_card.rs:44
+# Source: ./src/components/settings/spacetime_db_card.rs:59
 spacetime-card-connection-connecting = Connecting
 
-# Source: ./src/components/settings/spacetime_db_card.rs:37
+# Source: ./src/components/settings/spacetime_db_card.rs:52
 spacetime-card-connection-disconnected = Not connected
 
-# Source: ./src/components/settings/spacetime_db_card.rs:51
+# Source: ./src/components/settings/spacetime_db_card.rs:66
 spacetime-card-connection-error = Connection error
 
-spacetime-card-connection-retry-failed = Connection failed after { $attempts } retries. Please re-check your SpacetimeDB settings and edit credentials.
-
-# Source: ./src/components/settings/spacetime_db_card.rs:244
+# Source: ./src/components/settings/spacetime_db_card.rs:261
 spacetime-card-connection-info = Connection info
 
-# Source: ./src/components/settings/spacetime_db_card.rs:198
+# Source: ./src/components/settings/spacetime_db_card.rs:41
+# Parameters: $attempts
+spacetime-card-connection-retry-failed = Connection failed after { $attempts } retries. Please re-check your SpacetimeDB settings and edit credentials.
+
+# Source: ./src/components/settings/spacetime_db_card.rs:230
 spacetime-card-database-hint = Must match the module name used with spacetime publish
 
-# Source: ./src/components/settings/spacetime_db_card.rs:187
+# Source: ./src/components/settings/spacetime_db_card.rs:220
 spacetime-card-database-label = Database name
 
-# Source: ./src/components/settings/spacetime_db_card.rs:246
+# Source: ./src/components/settings/spacetime_db_card.rs:263
 # Parameters: $value
 spacetime-card-database-value = Database: { $value }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:258
+# Source: ./src/components/settings/spacetime_db_card.rs:184
 spacetime-card-edit-credentials = Edit
 
-# Source: ./src/components/settings/spacetime_db_card.rs:125
+# Source: ./src/components/settings/spacetime_db_card.rs:126
 spacetime-card-fill-required = Please fill server URL, database name, and auth token
 
 # Source: ./src/components/settings/spacetime_db_card.rs:234
+# UNUSED: This key is no longer used in the code
 spacetime-card-hide-details = Hide details
 
-# Source: ./src/components/settings/spacetime_db_card.rs:249
+# Source: ./src/components/settings/spacetime_db_card.rs:266
 spacetime-card-live-stats = Live stats
 
-# Source: ./src/components/settings/spacetime_db_card.rs:224
+# Source: ./src/components/settings/spacetime_db_card.rs:253
 spacetime-card-login-button = Save and log in
 
-# Source: ./src/components/settings/spacetime_db_card.rs:145
+# Source: ./src/components/settings/spacetime_db_card.rs:146
 # Parameters: $error
 spacetime-card-save-failed = Save failed: { $error }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:137
+# Source: ./src/components/settings/spacetime_db_card.rs:138
 spacetime-card-saved = SpacetimeDB credentials saved
 
-# Source: ./src/components/settings/spacetime_db_card.rs:180
+# Source: ./src/components/settings/spacetime_db_card.rs:216
 spacetime-card-server-hint = Your SpacetimeDB server URL, e.g. testnet or self-hosted
 
-# Source: ./src/components/settings/spacetime_db_card.rs:169
+# Source: ./src/components/settings/spacetime_db_card.rs:206
 spacetime-card-server-label = Server URL
 
-# Source: ./src/components/settings/spacetime_db_card.rs:245
+# Source: ./src/components/settings/spacetime_db_card.rs:262
 # Parameters: $value
 spacetime-card-server-value = Server: { $value }
 
 # Source: ./src/components/settings/spacetime_db_card.rs:236
+# UNUSED: This key is no longer used in the code
 spacetime-card-show-details = Show details
 
-# Source: ./src/components/settings/spacetime_db_card.rs:252
+# Source: ./src/components/settings/spacetime_db_card.rs:269
 # Parameters: $count
 spacetime-card-stats-egg-records = Egg records: { $count }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:251
+# Source: ./src/components/settings/spacetime_db_card.rs:268
 # Parameters: $count
 spacetime-card-stats-events = Events: { $count }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:250
+# Source: ./src/components/settings/spacetime_db_card.rs:267
 # Parameters: $count
 spacetime-card-stats-quails = Quails: { $count }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:247
+# Source: ./src/components/settings/spacetime_db_card.rs:264
 # Parameters: $value
 spacetime-card-status-value = Status: { $value }
 
-# Source: ./src/components/settings/spacetime_db_card.rs:163
+# Source: ./src/components/settings/spacetime_db_card.rs:167
 spacetime-card-title = SpacetimeDB
 
-# Source: ./src/components/settings/spacetime_db_card.rs:216
+# Source: ./src/components/settings/spacetime_db_card.rs:244
 spacetime-card-token-hint = Stored locally and reused for reconnect
 
-# Source: ./src/components/settings/spacetime_db_card.rs:205
+# Source: ./src/components/settings/spacetime_db_card.rs:234
 spacetime-card-token-label = Auth token
 
-# Source: ./src/components/statistics.rs:277
+# Source: ./src/components/statistics.rs:148
 stats-add-entry = Add entry
 
-# Source: ./src/components/statistics.rs:207
+# Source: ./src/components/statistics.rs:224
 stats-averages = Averages
 
-# Source: ./src/components/statistics.rs:212
+# Source: ./src/components/statistics.rs:228
 stats-daily-avg = Daily avg
 
-# Source: ./src/components/statistics.rs
+# Source: ./src/components/statistics.rs:31
 stats-date-format-short = %y-%m-%d
 
 # Source: ./src/components/statistics.rs:247
+# UNUSED: This key is no longer used in the code
 stats-last-10-days = Last 10 days
 
-# Source: ./src/components/statistics.rs:196
+# Source: ./src/components/statistics.rs:214
 stats-max = Max
 
-# Source: ./src/components/statistics.rs:191
+# Source: ./src/components/statistics.rs:209
 stats-min = Min
 
-# Source: ./src/components/statistics.rs:222
+# Source: ./src/components/statistics.rs:238
 stats-monthly-avg = Monthly avg
 
-# Empty state when no statistics data available
-# Source: ./src/components/statistics.rs:266
+# Source: ./src/components/statistics.rs:284
 stats-no-data = No data available
 
-# Source: ./src/components/statistics.rs:176
+# Source: ./src/components/statistics.rs:185
 stats-overview = Overview
 
-# Source: ./src/components/statistics.rs:234
+# Source: ./src/components/statistics.rs:255
 stats-period = Period
 
-# Source: ./src/components/home.rs:55
+# Source: ./src/components/home.rs:50
 stats-title = Statistics
 
-# Source: ./src/components/statistics.rs:186
+# Source: ./src/components/statistics.rs:204
 stats-total-eggs = Total eggs
 
-# Source: ./src/components/statistics.rs:181
+# Source: ./src/components/statistics.rs:198
 stats-total-records = Total records
 
-# Source: ./src/components/statistics.rs:236
+# Source: ./src/components/statistics.rs:191
 stats-until = Until
 
-# Source: ./src/components/statistics.rs:217
+# Source: ./src/components/statistics.rs:233
 stats-weekly-avg = Weekly avg
 
-# Source: ./src/components/profile_detail.rs:209
+# Source: ./src/components/profile_detail.rs:205
 status-alive = Alive
 
-# Source: ./src/components/profile_detail.rs:203
+# Source: ./src/components/profile_detail.rs:202
 status-born = Born
 
 # Source: ./src/components/home.rs:19
 # Parameters: $count
 status-db-ready = DB ready ({ $count } profiles)
 
-# Source: ./src/components/profile_detail.rs:241
+# Source: ./src/components/profile_detail.rs:220
 status-died = Died
 
-# Source: ./src/components/profile_detail.rs:221
+# Source: ./src/components/profile_detail.rs:211
 status-healthy = Healthy
 
 # Source: ./src/components/home.rs:11
 status-initializing = Initializing...
 
-# Source: ./src/components/profile_detail.rs:228
+# Source: ./src/components/profile_detail.rs:214
 status-marked = Marked for slaughter
 
-# Source: ./src/components/profile_detail.rs:215
+# Source: ./src/components/profile_detail.rs:208
 status-sick = Sick
 
-# Source: ./src/components/profile_detail.rs:235
+# Source: ./src/components/profile_detail.rs:217
 status-slaughtered = Slaughtered
 
-# Source: ./src/components/profile_edit.rs:210
+# Source: ./src/components/profile_edit.rs:263
 success-profile-updated = Profile updated
 
-# Source: ./src/components/settings/nextcloud_card.rs:463
+# Source: ./src/components/settings/nextcloud_card.rs:475
 sync-connecting = Connecting...
 
-# Source: ./src/components/settings/nextcloud_card.rs:322
+# Source: ./src/components/settings/nextcloud_card.rs:297
 sync-delete-config = Log out
 
 # Source: ./src/components/settings/nextcloud_card.rs:133
@@ -792,84 +786,83 @@ sync-error = Sync error
 # Source: ./src/components/settings/nextcloud_card.rs:165
 sync-failed = Sync failed
 
-# Source: ./src/components/settings/nextcloud_card.rs:452
+# Source: ./src/components/settings/nextcloud_card.rs:464
 sync-login = Login
 
-# Source: ./src/components/settings/nextcloud_card.rs:467
+# Source: ./src/components/settings/nextcloud_card.rs:479
 sync-login-browser = Open login in browser
 
-# Source: ./src/components/settings/nextcloud_card.rs:471
+# Source: ./src/components/settings/nextcloud_card.rs:483
 sync-login-info-title = Login instructions
 
-# Source: ./src/components/settings/nextcloud_card.rs:466
+# Source: ./src/components/settings/nextcloud_card.rs:478
 sync-login-instructions = Follow these steps to sign in to Nextcloud:
 
-# Source: ./src/components/settings/nextcloud_card.rs:472
+# Source: ./src/components/settings/nextcloud_card.rs:484
 sync-login-step1 = 1. Tap the login button.
 
-# Source: ./src/components/settings/nextcloud_card.rs:473
+# Source: ./src/components/settings/nextcloud_card.rs:485
 sync-login-step2 = 2. Open the browser link.
 
-# Source: ./src/components/settings/nextcloud_card.rs:474
+# Source: ./src/components/settings/nextcloud_card.rs:486
 sync-login-step3 = 3. Sign in to Nextcloud.
 
-# Source: ./src/components/settings/nextcloud_card.rs:475
+# Source: ./src/components/settings/nextcloud_card.rs:487
 sync-login-step4 = 4. Confirm access.
 
-# Source: ./src/components/settings/nextcloud_card.rs:476
+# Source: ./src/components/settings/nextcloud_card.rs:488
 sync-login-step5 = 5. Return to the app.
 
-# Source: ./src/components/settings/nextcloud_card.rs:468
+# Source: ./src/components/settings/nextcloud_card.rs:480
 sync-login-success = Login successful
 
 # Source: ./src/components/settings/nextcloud_card.rs:128
 sync-login-success-folder = Login successful (folder set)
 
-# seconds will be replaced with the numerical value of the seconds to wait
-# Source: ./src/components/settings/nextcloud_card.rs:477
+# Source: ./src/components/settings/nextcloud_card.rs:489
 sync-next-check-in = Next check in seconds s
 
-# Source: ./src/components/settings/nextcloud_card.rs:315
+# Source: ./src/components/settings/nextcloud_card.rs:331
 sync-now = Sync now
 
-# Source: ./src/components/settings/nextcloud_card.rs:303
+# Source: ./src/components/settings/nextcloud_card.rs:321
 sync-path = Remote path
 
-# Source: ./src/components/settings/nextcloud_card.rs:436
+# Source: ./src/components/settings/nextcloud_card.rs:447
 sync-path-label = Path
 
-# Source: ./src/components/settings/nextcloud_card.rs:329
+# Source: ./src/components/settings/nextcloud_card.rs:338
 # Parameters: $count
 sync-photo-status-active = Active: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:332
+# Source: ./src/components/settings/nextcloud_card.rs:341
 # Parameters: $count
 sync-photo-status-error = Errors: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:328
+# Source: ./src/components/settings/nextcloud_card.rs:337
 # Parameters: $count
 sync-photo-status-pending = Pending: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:330
+# Source: ./src/components/settings/nextcloud_card.rs:339
 # Parameters: $count
 sync-photo-status-synced = Synced: { $count }
 
-# Source: ./src/components/settings/nextcloud_card.rs:327
+# Source: ./src/components/settings/nextcloud_card.rs:335
 sync-photo-status-title = 📷 Photo sync status
 
-# Source: ./src/components/settings/nextcloud_card.rs:465
+# Source: ./src/components/settings/nextcloud_card.rs:477
 sync-polling-background = Polling in background
 
-# Source: ./src/components/settings/nextcloud_card.rs:295
+# Source: ./src/components/settings/nextcloud_card.rs:313
 sync-server = Server
 
-# Source: ./src/components/settings/nextcloud_card.rs:422
+# Source: ./src/components/settings/nextcloud_card.rs:434
 sync-server-url = Server URL
 
 # Source: ./src/components/settings/nextcloud_card.rs:150
 sync-settings-deleted = Sync settings deleted
 
-# Source: ./src/components/settings/backup_card.rs:354
+# Source: ./src/components/settings/backup_card.rs:353
 sync-setup-title = Set up sync
 
 # Source: ./src/components/settings/nextcloud_card.rs:156
@@ -879,40 +872,50 @@ sync-status-running-full = 🔄 Running full synchronization...
 # Parameters: $count
 sync-status-success-photos = ✅ Sync complete: uploaded { $count } photos
 
-# Source: ./src/components/settings/nextcloud_card.rs:347
+# Source: ./src/components/settings/nextcloud_card.rs:358
 # Parameters: $percent, $total, $current
 sync-upload-progress-detail = Uploaded { $current } of { $total } photos ({ $percent }%)
 
-# Source: ./src/components/settings/nextcloud_card.rs:346
+# Source: ./src/components/settings/nextcloud_card.rs:356
 sync-upload-progress-title = Uploading photos...
 
-# Source: ./src/components/settings/nextcloud_card.rs:299
+# Source: ./src/components/settings/nextcloud_card.rs:317
 sync-username = Username
 
-# Source: ./src/components/settings/nextcloud_card.rs:464
+# Source: ./src/components/settings/nextcloud_card.rs:476
 sync-waiting = Waiting for login...
 
-# Source: ./src/components/event_edit.rs:309
+# Source: ./src/components/home.rs:64
+system-info = System Information
+
+# Source: ./src/components/event_edit.rs:317
 updated = Updated
 
 # Source: ./src/components/egg_history.rs:86
+# UNUSED: This key is no longer used in the code
 weekday-fri = Fri
 
 # Source: ./src/components/egg_history.rs:82
+# UNUSED: This key is no longer used in the code
 weekday-mon = Mon
 
 # Source: ./src/components/egg_history.rs:87
+# UNUSED: This key is no longer used in the code
 weekday-sat = Sat
 
 # Source: ./src/components/egg_history.rs:88
+# UNUSED: This key is no longer used in the code
 weekday-sun = Sun
 
 # Source: ./src/components/egg_history.rs:85
+# UNUSED: This key is no longer used in the code
 weekday-thu = Thu
 
 # Source: ./src/components/egg_history.rs:83
+# UNUSED: This key is no longer used in the code
 weekday-tue = Tue
 
 # Source: ./src/components/egg_history.rs:84
+# UNUSED: This key is no longer used in the code
 weekday-wed = Wed
 
