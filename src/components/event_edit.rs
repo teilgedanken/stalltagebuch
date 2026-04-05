@@ -589,7 +589,7 @@ pub fn EventEditScreen(
                             }
                         }
 
-                        div { class: "field is-grouped mt-5",
+                        div { class: "field has-addons mt-5",
                             p { class: "control is-expanded",
                                 button {
                                     class: "button is-primary is-fullwidth",

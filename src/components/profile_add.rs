@@ -178,17 +178,13 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                         }
                     }
                     div { class: "level-item",
-                        h1 { class: "title is-4 mb-0",
-                            {tid!("profile-add-title")}
-                        }
+                        h1 { class: "title is-4 mb-0", {tid!("profile-add-title")} }
                     }
                     div { class: "level-right" }
                 }
 
                 if let Some(err) = error() {
-                    div { class: "notification is-danger is-light",
-                        "⚠️ {err}"
-                    }
+                    div { class: "notification is-danger is-light", "⚠️ {err}" }
                 }
 
                 if success() {
@@ -255,8 +251,12 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                 option { value: "", {tid!("ring-color-none")} }
                                                 option { value: "lila", {tid!("ring-color-purple")} }
                                                 option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "hellblau",
+                                                    {tid!("ring-color-light-blue")}
+                                                }
+                                                option { value: "dunkelblau",
+                                                    {tid!("ring-color-dark-blue")}
+                                                }
                                                 option { value: "rot", {tid!("ring-color-red")} }
                                                 option { value: "orange", {tid!("ring-color-orange")} }
                                                 option { value: "weiss", {tid!("ring-color-white")} }
@@ -269,7 +269,10 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     p { class: "control",
                                         span {
                                             class: "tag",
-                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_left())),
+                                            style: format!(
+                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
+                                                ring_color_preview_bg(&ring_color_left()),
+                                            ),
                                         }
                                     }
                                 }
@@ -287,8 +290,12 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                                 option { value: "", {tid!("ring-color-none")} }
                                                 option { value: "lila", {tid!("ring-color-purple")} }
                                                 option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "hellblau",
+                                                    {tid!("ring-color-light-blue")}
+                                                }
+                                                option { value: "dunkelblau",
+                                                    {tid!("ring-color-dark-blue")}
+                                                }
                                                 option { value: "rot", {tid!("ring-color-red")} }
                                                 option { value: "orange", {tid!("ring-color-orange")} }
                                                 option { value: "weiss", {tid!("ring-color-white")} }
@@ -301,7 +308,10 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     p { class: "control",
                                         span {
                                             class: "tag",
-                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                            style: format!(
+                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
+                                                ring_color_preview_bg(&ring_color_right()),
+                                            ),
                                         }
                                     }
                                 }
@@ -325,12 +335,14 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     div {
                                         strong { "📷 " }
                                         {tid!("photo-selected")}
-                                        p { class: "help", {path.file_name().and_then(|n| n.to_str()).unwrap_or("Unbekannt")} }
+                                        p { class: "help",
+                                            {path.file_name().and_then(|n| n.to_str()).unwrap_or("Unbekannt")}
+                                        }
                                     }
                                     button {
                                         class: "button is-small is-light",
                                         onclick: move |_| photo_path.set(None),
-                                        "🗑️"
+                                        span { class: "icon", "🗑️" }
                                     }
                                 }
                             }
@@ -366,11 +378,11 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                         });
                                     },
                                     if uploading() {
-                                        "⏳ "
-                                        {tid!("action-loading")}
+                                        span { class: "icon", "⏳ " }
+                                        span { {tid!("action-loading")} }
                                     } else {
-                                        "🖼️ "
-                                        {tid!("action-gallery")}
+                                        span { class: "icon", "🖼️ " }
+                                        span { {tid!("action-gallery")} }
                                     }
                                 }
                             }
@@ -398,29 +410,29 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                         });
                                     },
                                     if uploading() {
-                                        "⏳ "
-                                        {tid!("action-loading")}
+                                        span { class: "icon", "⏳ " }
+                                        span { {tid!("action-loading")} }
                                     } else {
-                                        "📷 "
-                                        {tid!("action-camera")}
+                                        span { class: "icon", "📷 " }
+                                        span { {tid!("action-camera")} }
                                     }
                                 }
                             }
                         }
                     }
 
-                    div { class: "field is-grouped mt-5",
+                    div { class: "field has-addons mt-5",
                         p { class: "control is-expanded",
                             button {
                                 class: "button is-primary is-fullwidth",
                                 disabled: saving(),
                                 onclick: move |_| handle_submit(),
                                 if saving() {
-                                    "⏳ "
-                                    {tid!("action-saving")}
+                                    span { class: "icon", "⏳ " }
+                                    span { {tid!("action-saving")} }
                                 } else {
-                                    "💾 "
-                                    {tid!("action-save")}
+                                    span { class: "icon", "💾 " }
+                                    span { {tid!("action-save")} }
                                 }
                             }
                         }
@@ -429,8 +441,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 class: "button is-light is-fullwidth",
                                 disabled: saving(),
                                 onclick: move |_| on_navigate.call(Screen::ProfileList),
-                                "❌ "
-                                {tid!("action-cancel")}
+                                span { class: "icon", "❌ " }
+                                span { {tid!("action-cancel")} }
                             }
                         }
                     }

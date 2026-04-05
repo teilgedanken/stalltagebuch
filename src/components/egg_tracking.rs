@@ -214,18 +214,14 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                         }
                     }
 
-                    div { class: "field is-grouped mt-4",
-                        p { class: "control is-expanded",
-                            button {
-                                class: "button is-success is-fullwidth",
-                                onclick: move |_| handle_submit(),
-                                "💾 "
-                                if existing_record_uuid().is_some() {
-                                    {tid!("action-update")}
-                                } else {
-                                    {tid!("action-save")}
-                                }
-                            }
+                    button {
+                        class: "button is-success is-fullwidth",
+                        onclick: move |_| handle_submit(),
+                        "💾 "
+                        if existing_record_uuid().is_some() {
+                            {tid!("action-update")}
+                        } else {
+                            {tid!("action-save")}
                         }
                     }
                 }

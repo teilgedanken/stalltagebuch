@@ -328,8 +328,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                                 option { value: "", {tid!("ring-color-none")} }
                                                 option { value: "lila", {tid!("ring-color-purple")} }
                                                 option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "hellblau",
+                                                    {tid!("ring-color-light-blue")}
+                                                }
+                                                option { value: "dunkelblau",
+                                                    {tid!("ring-color-dark-blue")}
+                                                }
                                                 option { value: "rot", {tid!("ring-color-red")} }
                                                 option { value: "orange", {tid!("ring-color-orange")} }
                                                 option { value: "weiss", {tid!("ring-color-white")} }
@@ -342,7 +346,10 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     p { class: "control",
                                         span {
                                             class: "tag",
-                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_left())),
+                                            style: format!(
+                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
+                                                ring_color_preview_bg(&ring_color_left()),
+                                            ),
                                         }
                                     }
                                 }
@@ -360,8 +367,12 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                                 option { value: "", {tid!("ring-color-none")} }
                                                 option { value: "lila", {tid!("ring-color-purple")} }
                                                 option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau", {tid!("ring-color-light-blue")} }
-                                                option { value: "dunkelblau", {tid!("ring-color-dark-blue")} }
+                                                option { value: "hellblau",
+                                                    {tid!("ring-color-light-blue")}
+                                                }
+                                                option { value: "dunkelblau",
+                                                    {tid!("ring-color-dark-blue")}
+                                                }
                                                 option { value: "rot", {tid!("ring-color-red")} }
                                                 option { value: "orange", {tid!("ring-color-orange")} }
                                                 option { value: "weiss", {tid!("ring-color-white")} }
@@ -374,7 +385,10 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     p { class: "control",
                                         span {
                                             class: "tag",
-                                            style: format!("width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};", ring_color_preview_bg(&ring_color_right())),
+                                            style: format!(
+                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
+                                                ring_color_preview_bg(&ring_color_right()),
+                                            ),
                                         }
                                     }
                                 }
@@ -390,7 +404,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                     }
 
                     div { class: "field mt-4",
-                        label { class: "label", {format!("{} ({})", tid!("field-photos"), photos().len())} }
+                        label { class: "label",
+                            {format!("{} ({})", tid!("field-photos"), photos().len())}
+                        }
 
                         {
                             let photo_config = PhotoGalleryConfig {
@@ -406,18 +422,16 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     let thumb_or_original = photo_service
                                         .get_photo_file_path(&photo.relative_path, PhotoSize::Small)
                                         .or_else(|| {
-                                            photo_service.get_photo_file_path(
-                                                &photo.relative_path,
-                                                PhotoSize::Medium,
-                                            )
+                                            photo_service
+                                                .get_photo_file_path(&photo.relative_path, PhotoSize::Medium)
                                         })
                                         .or_else(|| {
-                                            photo_service.get_photo_file_path(
-                                                &photo.relative_path,
-                                                PhotoSize::Original,
-                                            )
+                                            photo_service
+                                                .get_photo_file_path(
+                                                    &photo.relative_path,
+                                                    PhotoSize::Original,
+                                                )
                                         });
-
                                     let abs_path = thumb_or_original?;
                                     match crate::image_processing::image_path_to_data_url(&abs_path) {
                                         Ok(data_url) => {
@@ -469,7 +483,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         }
                     }
 
-                    div { class: "field is-grouped mt-5",
+                    div { class: "field has-addons mt-5",
                         p { class: "control is-expanded",
                             button {
                                 class: "button is-success is-fullwidth",
@@ -495,17 +509,19 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                         }
                     }
 
-                    div { class: "mt-5 pt-4", style: "border-top: 1px solid var(--bulma-border);",
+                    div {
+                        class: "mt-5 pt-4",
+                        style: "border-top: 1px solid var(--bulma-border);",
                         if show_delete_confirm() {
                             div {
                                 div { class: "notification is-warning is-light",
                                     "⚠️ "
                                     {tid!("confirm-delete-quail")}
                                 }
-                                div { class: "field is-grouped",
+                                div { class: "field has-addons",
                                     p { class: "control is-expanded",
                                         button {
-                                            class: "button is-danger is-fullwidth",
+                                            class: "button is-danger is-small is-fullwidth",
                                             onclick: move |_| handle_delete(),
                                             "🗑️ "
                                             {tid!("action-delete-permanently")}
@@ -513,7 +529,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     }
                                     p { class: "control is-expanded",
                                         button {
-                                            class: "button is-light is-fullwidth",
+                                            class: "button is-light is-small is-fullwidth",
                                             onclick: move |_| show_delete_confirm.set(false),
                                             {tid!("action-cancel")}
                                         }

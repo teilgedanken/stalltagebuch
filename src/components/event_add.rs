@@ -82,14 +82,10 @@ pub fn EventAdd(
             div { class: "container is-max-tablet",
                 div { class: "box",
                     h2 { class: "title is-4", {tid!("event-add-title")} }
-                    p { class: "subtitle is-6",
-                        {tid!("event-add-for", name : quail_name.clone())}
-                    }
+                    p { class: "subtitle is-6", {tid!("event-add-for", name : quail_name.clone())} }
 
                     if let Some(error) = error_message() {
-                        div { class: "notification is-danger is-light",
-                            "{error}"
-                        }
+                        div { class: "notification is-danger is-light", "{error}" }
                     }
 
                     div { class: "field",
@@ -139,7 +135,7 @@ pub fn EventAdd(
                         }
                     }
 
-                    div { class: "field is-grouped mt-4",
+                    div { class: "field has-addons mt-4",
                         p { class: "control is-expanded",
                             button {
                                 class: "button is-primary is-fullwidth",
