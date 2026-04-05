@@ -138,7 +138,6 @@ fi
 
 DX_APP_DIR="$ROOT_DIR/target/dx/stalltagebuch/$BUILD_TYPE/android/app"
 APP_SRC_MAIN="$DX_APP_DIR/app/src/main"
-RES_XML_DIR="$APP_SRC_MAIN/res/xml"
 BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/dev/dioxus/main/BuildConfig.kt"
 BUNDLE_PATH="${BUNDLE_IDENTIFIER//./\/}"
 BUNDLE_BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/$BUNDLE_PATH/BuildConfig.kt"
@@ -147,8 +146,13 @@ prepare_android_overrides() {
     local step_label="$1"
     echo "$step_label Preparing Android overrides (resources & BuildConfig alias)"
 
-    mkdir -p "$RES_XML_DIR"
-    cp "$ROOT_DIR/android/res/xml/file_paths.xml" "$RES_XML_DIR/file_paths.xml"
+    local app_res_dir="$APP_SRC_MAIN/res"
+    mkdir -p "$app_res_dir"
+
+    # Remove stale custom launcher resources so file-type changes (png -> xml) don't collide.
+    find "$app_res_dir" -type f \( -name 'stalltagebuch_launcher*' -o -name 'stalltagebuch_launcher_*' \) -delete
+
+    cp -r "$ROOT_DIR/android/res/." "$app_res_dir/"
 
     # Copy project-level proguard rules into the generated app module so R8 keeps JNI-used members
     if [[ -f "$ROOT_DIR/android/proguard-rules.pro" ]]; then
