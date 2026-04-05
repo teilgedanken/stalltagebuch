@@ -168,7 +168,7 @@ pub fn ThumbnailImage(
     let container_style = if fill {
         "position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f0f0;"
     } else {
-        "width: 128px; height: 128px; border-radius: 8px; overflow: hidden; background: #f0f0f0;"
+        "width: 128px; height: 128px; overflow: hidden; background: #f0f0f0;"
     };
     let img_style = if fill {
         "width: 100%; height: 100%; object-fit: cover;"
@@ -185,11 +185,7 @@ pub fn ThumbnailImage(
                     }
                 },
                 Some(Some(url)) => rsx! {
-                    img {
-                        src: "{url}",
-                        alt: "{alt}",
-                        style: "{img_style}",
-                    }
+                    img { src: "{url}", alt: "{alt}", style: "{img_style}" }
                 },
                 Some(None) => rsx! {
                     div { style: "display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #999;",

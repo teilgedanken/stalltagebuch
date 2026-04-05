@@ -295,41 +295,39 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     .collect();
 
                                 rsx! {
-                                    div { class: "box",
-                                        h3 { class: "title is-5 mb-3",
-                                            "📸 "
-                                            {tid!("photos-title")}
-                                        }
+                                    h3 { class: "title is-5 mb-0",
+                                        "📸 "
+                                        {tid!("photos-title")}
+                                    }
 
-                                        div { style: "display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:12px;",
-                                            for (idx , (photo_uuid , photo_path , _created_at)) in photo_items.iter().enumerate() {
-                                                div {
-                                                    key: "{photo_uuid}",
-                                                    style: "cursor: pointer; position: relative;",
-                                                    onclick: {
-                                                        let all_photo_items_click = all_photo_items.clone();
-                                                        move |_| {
-                                                            if !all_photo_items_click.is_empty() {
-                                                                selected_photo_items.set(all_photo_items_click.clone());
-                                                                selected_index.set(idx);
-                                                                show_fullscreen.set(true);
-                                                            }
+                                    div { class: "grid is-col-min-5 is-gap-0",
+                                        for (idx , (photo_uuid , photo_path , _created_at)) in photo_items.iter().enumerate() {
+                                            div {
+                                                key: "{photo_uuid}",
+                                                class: "cell is-clickable",
+                                                onclick: {
+                                                    let all_photo_items_click = all_photo_items.clone();
+                                                    move |_| {
+                                                        if !all_photo_items_click.is_empty() {
+                                                            selected_photo_items.set(all_photo_items_click.clone());
+                                                            selected_index.set(idx);
+                                                            show_fullscreen.set(true);
                                                         }
-                                                    },
-                                                    SyncedThumbnailImage {
-                                                        photo_uuid: Some(photo_uuid.clone()),
-                                                        relative_path: photo_path.clone(),
                                                     }
+                                                },
+                                                SyncedThumbnailImage {
+                                                    photo_uuid: Some(photo_uuid.clone()),
+                                                    relative_path: photo_path.clone(),
                                                 }
                                             }
                                         }
+                                    }
 
-                                        if show_fullscreen() && !selected_photo_items().is_empty() {
-                                            SyncedCollectionFullscreen {
-                                                photo_items: selected_photo_items(),
-                                                initial_index: selected_index(),
-                                                on_close: move |_| show_fullscreen.set(false),
-                                            }
+                                    if show_fullscreen() && !selected_photo_items().is_empty() {
+                                        SyncedCollectionFullscreen {
+                                            photo_items: selected_photo_items(),
+                                            initial_index: selected_index(),
+                                            on_close: move |_| show_fullscreen.set(false),
                                         }
                                     }
                                 }
