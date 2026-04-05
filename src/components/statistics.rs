@@ -137,7 +137,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     button {
                         class: "button is-primary is-fullwidth mb-4 is-large",
                         onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
-                        span { class: "icon is-small", "➕ " }
+                        span { class: "icon is-small", "+" }
                         span { {tid!("stats-add-entry")} }
                     }
                 }

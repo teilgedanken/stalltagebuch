@@ -95,29 +95,22 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     rsx! {
         section { class: "section pt-4 pb-3",
             div { class: "container is-max-tablet",
-                div { class: "level mb-4",
+                div { class: "level is-mobile mb-4",
                     div { class: "level-left",
-                        h1 { class: "title is-4 mb-0",
-                            "🐦 "
-                            {tid!("profile-list-title")}
-                        }
+                        h1 { class: "title is-5 mb-0", {tid!("profile-list-title")} }
                     }
                     div { class: "level-right",
-                        div { class: "buttons mb-0",
+                        div { class: "buttons has-addons mb-0",
                             button {
-                                class: if show_dead() {
-                                    "button is-danger is-light"
-                                } else {
-                                    "button is-light"
-                                },
+                                class: if show_dead() { "button is-link" } else { "button is-link is-light" },
                                 onclick: move |_| show_dead.set(!show_dead()),
-                                "🪦"
+                                span { class: "icon is-small", "🪦" }
                             }
                             button {
                                 class: "button is-success",
                                 onclick: move |_| on_navigate.call(Screen::AddProfile),
-                                "+ "
-                                {tid!("action-new")}
+                                span { class: "icon is-small", "+ " }
+                                span { {tid!("action-new")} }
                             }
                         }
                     }
@@ -142,7 +135,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     }
                 } else {
                     div { class: "profile-grid",
-                        for (profile, status, profile_photo_uuid, profile_photo_path, age_display) in filtered_profiles() {
+                        for (profile , status , profile_photo_uuid , profile_photo_path , age_display) in filtered_profiles() {
                             ProfileCard {
                                 key: "{profile.uuid}",
                                 profile: profile.clone(),
@@ -212,7 +205,9 @@ pub fn ProfileCard(
                 div {
                     class: "profile-overlay",
                     style: format!("background: {};", overlay_bg),
-                    div { class: "is-flex is-align-items-flex-end is-justify-content-space-between", style: "gap: 12px;",
+                    div {
+                        class: "is-flex is-align-items-flex-end is-justify-content-space-between",
+                        style: "gap: 3px;",
                         div {
                             div { class: "profile-name", "{profile.name}" }
                             div { class: "profile-gender", "{profile.gender.display_name()}" }
@@ -231,13 +226,27 @@ pub fn ProfileCard(
                     if let Some(status) = status {
                         match status {
                             EventType::Sick => rsx! {
-                                span { class: "tag is-danger is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🤒" }
+                                span {
+                                    class: "tag is-danger is-light",
+                                    style: "position: absolute; top: 8px; right: 8px; font-size: 22px;",
+                                    "🤒"
+                                }
                             },
-                            EventType::MarkedForSlaughter | EventType::Slaughtered => rsx! {
-                                span { class: "tag is-warning is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🥩" }
-                            },
+                            EventType::MarkedForSlaughter | EventType::Slaughtered => {
+                                rsx! {
+                                    span {
+                                        class: "tag is-warning is-light",
+                                        style: "position: absolute; top: 8px; right: 8px; font-size: 22px;",
+                                        "🥩"
+                                    }
+                                }
+                            }
                             EventType::Died => rsx! {
-                                span { class: "tag is-dark is-light", style: "position: absolute; top: 8px; right: 8px; font-size: 22px;", "🪦" }
+                                span {
+                                    class: "tag is-dark is-light",
+                                    style: "position: absolute; top: 8px; right: 8px; font-size: 22px;",
+                                    "🪦"
+                                }
                             },
                             _ => rsx! {},
                         }

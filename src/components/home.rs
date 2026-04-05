@@ -42,12 +42,12 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                             {format!("🐦 {}", tid!("profile-list-title"))}
                         }
                         button {
-                            class: "button is-success is-fullwidth",
+                            class: "button is-primary is-fullwidth",
                             onclick: move |_| on_navigate.call(Screen::EggTracking(None)),
                             {format!("🥚 {}", tid!("egg-tracking-title"))}
                         }
                         button {
-                            class: "button is-warning is-fullwidth",
+                            class: "button is-primary is-fullwidth",
                             onclick: move |_| on_navigate.call(Screen::Statistics),
                             {format!("📊 {}", tid!("stats-title"))}
                         }
