@@ -1,6 +1,7 @@
 use crate::{Screen, spacetime};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
+use spacetimedb_sdk::DbContext;
 
 #[derive(Clone, Debug)]
 struct EggStatistics {
@@ -15,18 +16,47 @@ struct EggStatistics {
     last_date: Option<String>,
 }
 
+#[derive(Clone, Debug, Default)]
+struct PopulationStatistics {
+    total_quails: i32,
+    female_quails: i32,
+    male_quails: i32,
+    unknown_gender_quails: i32,
+    slaughtered_quails: i32,
+    hen_to_rooster_ratio: String,
+}
+
 #[component]
 pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
     let egg_records = spacetime::use_table_egg_records();
-    spacetime::use_subscription(&["SELECT * FROM egg_records"]);
+    let quails = spacetime::use_table_quails();
+    let quail_events = spacetime::use_table_quail_events();
+    let connection = spacetime::use_connection();
+    spacetime::use_subscription(&[
+        "SELECT * FROM egg_records",
+        "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
+    ]);
 
     let mut stats = use_signal(|| None::<EggStatistics>);
     let mut period_records = use_signal(|| Vec::<(String, String, i32)>::new());
+    let mut population_stats = use_signal(PopulationStatistics::default);
     let mut error = use_signal(|| String::new());
     let mut selected_period = use_signal(|| "month".to_string());
     let on_navigate_add = on_navigate.clone();
 
     let mut load_statistics = move || {
+        let owner = connection()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        population_stats.set(calculate_population_stats(
+            &quails(),
+            &quail_events(),
+            owner.as_ref(),
+        ));
+
         let today = chrono::Local::now().date_naive();
         let date_format = tid!("stats-date-format-short");
         let period_start = match selected_period().as_str() {
@@ -279,6 +309,42 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 }
                             }
                         }
+
+                        div { class: "box",
+                            h2 { class: "title is-7 mb-4", {tid!("stats-population-title")} }
+                            div { class: "columns is-multiline is-mobile is-align-items-stretch",
+                                StatCard {
+                                    label: tid!("stats-population-total-quails"),
+                                    value: format!("{}", population_stats().total_quails),
+                                    icon: "⚧️",
+                                }
+                                StatCard {
+                                    label: tid!("stats-population-hens"),
+                                    value: format!("{}", population_stats().female_quails),
+                                    icon: "🐦",
+                                }
+                                StatCard {
+                                    label: tid!("stats-population-roosters"),
+                                    value: format!("{}", population_stats().male_quails),
+                                    icon: "🐓",
+                                }
+                                StatCard {
+                                    label: format!("{} {}", tid!("field-gender"), tid!("gender-unknown")),
+                                    value: format!("{}", population_stats().unknown_gender_quails),
+                                    icon: "🐥",
+                                }
+                                StatCard {
+                                    label: tid!("event-type-slaughtered"),
+                                    value: format!("{}", population_stats().slaughtered_quails),
+                                    icon: "🥩",
+                                }
+                                StatCard {
+                                    label: tid!("stats-population-ratio"),
+                                    value: population_stats().hen_to_rooster_ratio,
+                                    icon: "⚖️",
+                                }
+                            }
+                        }
                     }
                 } else {
                     div { class: "notification is-light has-text-centered", {tid!("stats-no-data")} }
@@ -290,6 +356,90 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
 fn format_display_date(date: chrono::NaiveDate, date_format: &str) -> String {
     date.format(date_format).to_string()
+}
+
+fn calculate_population_stats(
+    quails: &[spacetime::Quail],
+    events: &[spacetime::QuailEvent],
+    owner: Option<&String>,
+) -> PopulationStatistics {
+    let mut total_quails = 0;
+    let mut female_quails = 0;
+    let mut male_quails = 0;
+    let mut unknown_gender_quails = 0;
+    let mut slaughtered_quails = 0;
+
+    for quail in quails {
+        if let Some(owner_value) = owner {
+            if &quail.owner != owner_value {
+                continue;
+            }
+        }
+
+        let latest_event_type = latest_event_type_for_quail(&quail.uuid, events);
+
+        if matches!(latest_event_type, Some("slaughtered" | "geschlachtet")) {
+            slaughtered_quails += 1;
+            continue;
+        }
+
+        if matches!(latest_event_type, Some("died" | "gestorben")) {
+            continue;
+        }
+
+        total_quails += 1;
+
+        match quail.gender.as_str() {
+            "female" | "weiblich" => female_quails += 1,
+            "male" | "maennlich" | "männlich" => male_quails += 1,
+            _ => unknown_gender_quails += 1,
+        }
+    }
+
+    PopulationStatistics {
+        total_quails,
+        female_quails,
+        male_quails,
+        unknown_gender_quails,
+        slaughtered_quails,
+        hen_to_rooster_ratio: format_ratio(female_quails, male_quails),
+    }
+}
+
+fn latest_event_type_for_quail<'a>(
+    quail_uuid: &str,
+    events: &'a [spacetime::QuailEvent],
+) -> Option<&'a str> {
+    events
+        .iter()
+        .filter(|event| event.quail_uuid == quail_uuid)
+        .max_by(|a, b| {
+            a.event_date
+                .cmp(&b.event_date)
+                .then_with(|| a.uuid.cmp(&b.uuid))
+        })
+        .map(|event| event.event_type.as_str())
+}
+
+fn format_ratio(hens: i32, roosters: i32) -> String {
+    if hens == 0 && roosters == 0 {
+        return "0:0".to_string();
+    }
+    if roosters == 0 {
+        return format!("{}:0", hens);
+    }
+
+    let divisor = gcd(hens, roosters);
+    format!("{}:{}", hens / divisor, roosters / divisor)
+}
+
+fn gcd(mut a: i32, mut b: i32) -> i32 {
+    while b != 0 {
+        let remainder = a % b;
+        a = b;
+        b = remainder;
+    }
+    a.abs().max(1)
 }
 
 #[component]
