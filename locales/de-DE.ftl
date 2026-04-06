@@ -339,25 +339,25 @@ event-add-title = Ereignis hinzufügen
 event-edit-title = Ereignis bearbeiten
 
 # Source: ./src/components/event_add.rs:103
-event-type-alive = ✅ Am Leben
+event-type-alive = Am Leben
 
 # Source: ./src/components/event_add.rs:102
-event-type-born = 🐣 Geboren
+event-type-born = Geboren
 
 # Source: ./src/components/event_add.rs:108
-event-type-died = 🪦 Gestorben
+event-type-died = Gestorben
 
 # Source: ./src/components/event_add.rs:105
-event-type-healthy = 💪 Gesund
+event-type-healthy = Gesund
 
 # Source: ./src/components/event_add.rs:106
-event-type-marked = 🥩 Markiert zum Schlachten
+event-type-marked = Markiert zum Schlachten
 
 # Source: ./src/components/event_add.rs:104
-event-type-sick = 🤒 Krank
+event-type-sick = Krank
 
 # Source: ./src/components/event_add.rs:107
-event-type-slaughtered = 🥩 Geschlachtet
+event-type-slaughtered = Geschlachtet
 
 # Source: ./src/components/profile_detail.rs:369
 events-empty = Keine Ereignisse vorhanden
@@ -732,7 +732,7 @@ stats-period = Zeitraum
 stats-population-hens = Hühnchen
 
 # Source: ./src/components/statistics.rs:229
-stats-population-ratio = Verhältnis Hühnchen:Hähnchen
+stats-population-ratio = Verhältnis
 
 # Source: ./src/components/statistics.rs:224
 stats-population-roosters = Hähnchen

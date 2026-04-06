@@ -446,10 +446,10 @@ fn gcd(mut a: i32, mut b: i32) -> i32 {
 fn StatCard(label: String, value: String, icon: String) -> Element {
     rsx! {
         div { class: "column is-4 is-6-mobile is-flex p-1",
-            div { class: "box has-background-light has-text-centered is-flex is-flex-direction-column is-justify-content-center is-flex-grow-1",
-                div { class: "is-size-4 mb-1", "{icon}" }
-                div { class: "title is-6 has-text-link mb-1", "{value}" }
-                div { class: "is-size-7 has-text-grey", "{label}" }
+            div { class: "box has-background-light has-text-centered is-flex is-flex-direction-column is-justify-content-center is-flex-grow-1 p-2 mb-0",
+                div { class: "is-size-5 mb-0", "{icon}" }
+                div { class: "title is-6 has-text-link mb-0 mt-1", "{value}" }
+                div { class: "is-size-7 has-text-grey mt-1 mb-0", "{label}" }
             }
         }
     }

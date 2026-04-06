@@ -732,7 +732,7 @@ stats-period = Period
 stats-population-hens = Hens
 
 # Source: ./src/components/statistics.rs:229
-stats-population-ratio = Hen:rooster ratio
+stats-population-ratio = Ratio
 
 # Source: ./src/components/statistics.rs:224
 stats-population-roosters = Roosters
