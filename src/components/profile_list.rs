@@ -4,6 +4,7 @@ use crate::Screen;
 use crate::models::{EventType, Gender, Quail, RingColor};
 use crate::spacetime;
 use chrono::{Local, NaiveDate};
+use dioxus::core::const_format::concatcp;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
@@ -47,6 +48,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             Option<String>,
             Option<String>,
             Option<String>,
+            Option<i64>,
         )>::new();
 
         for remote_quail in quails().iter() {
@@ -78,6 +80,9 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 let age_display = born_dates_by_quail
                     .get(&remote_quail.uuid)
                     .map(|birth_date| format_age_years_months(*birth_date, today));
+                let days_since_last_event =
+                    latest_event_date_for(&remote_quail.uuid, &all_events)
+                        .map(|d| today.signed_duration_since(d).num_days());
 
                 rows.push((
                     local_quail,
@@ -85,6 +90,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     profile_photo_uuid,
                     profile_photo_path,
                     age_display,
+                    days_since_last_event,
                 ));
             }
         }
@@ -136,7 +142,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     }
                 } else {
                     div { class: "profile-grid",
-                        for (profile , status , profile_photo_uuid , profile_photo_path , age_display) in filtered_profiles() {
+                        for (profile , status , profile_photo_uuid , profile_photo_path , age_display , days_since_last_event) in filtered_profiles() {
                             ProfileCard {
                                 key: "{profile.uuid}",
                                 profile: profile.clone(),
@@ -144,6 +150,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 profile_photo_uuid,
                                 age_display,
                                 status,
+                                days_since_last_event,
                                 on_click: move |_| on_navigate.call(Screen::ProfileDetail(profile.uuid.to_string())),
                             }
                         }
@@ -161,6 +168,7 @@ pub fn ProfileCard(
     profile_photo_uuid: Option<String>,
     age_display: Option<String>,
     status: Option<EventType>,
+    days_since_last_event: Option<i64>,
     on_click: EventHandler<()>,
 ) -> Element {
     // Subscribe to photos table to dynamically find photo path
@@ -189,9 +197,12 @@ pub fn ProfileCard(
         })
     });
 
+    let border = border_color(&profile.gender, days_since_last_event);
+
     rsx! {
         div {
-            class: if profile.gender == Gender::Male { "profile-card is-male" } else { "profile-card" },
+            class: "profile-card",
+            style: "border: 3px solid {border};",
             onclick: move |_| on_click.call(()),
             div { class: "profile-image",
                 if let Some(photo_path) = effective_photo_path() {
@@ -262,6 +273,18 @@ pub fn ProfileCard(
     }
 }
 
+fn latest_event_date_for(quail_uuid: &str, events: &[spacetime::QuailEvent]) -> Option<NaiveDate> {
+    events
+        .iter()
+        .filter(|event| event.quail_uuid == quail_uuid)
+        .max_by(|a, b| {
+            a.event_date
+                .cmp(&b.event_date)
+                .then_with(|| a.uuid.cmp(&b.uuid))
+        })
+        .and_then(|event| NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d").ok())
+}
+
 fn latest_status_for(quail_uuid: &str, events: &[spacetime::QuailEvent]) -> Option<EventType> {
     events
         .iter()
@@ -323,13 +346,31 @@ fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {
     })
 }
 
+fn border_color(gender: &Gender, days: Option<i64>) -> String {
+    match gender {
+        Gender::Unknown => "#ec4899".to_string(),
+        _ => {
+            let t = (days.unwrap_or(100).clamp(0, 100) as f32) / 100.0;
+            let (r0, g0, b0, r1, g1, b1) = match gender {
+                Gender::Male => (37u8, 99u8, 235u8, 153u8, 27u8, 27u8),
+                Gender::Female => (22u8, 163u8, 74u8, 234u8, 88u8, 12u8),
+                Gender::Unknown => unreachable!(),
+            };
+            let r = (r0 as f32 + (r1 as f32 - r0 as f32) * t).round() as u8;
+            let g = (g0 as f32 + (g1 as f32 - g0 as f32) * t).round() as u8;
+            let b = (b0 as f32 + (b1 as f32 - b0 as f32) * t).round() as u8;
+            format!("#{:02x}{:02x}{:02x}", r, g, b)
+        }
+    }
+}
+
 fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> String {
     let left_bg = left
         .map(get_light_color_for)
-        .unwrap_or("rgba(255, 255, 255, 0.9)");
+        .unwrap_or("rgba(255, 255, 255, 0.0)");
     let right_bg = right
         .map(get_light_color_for)
-        .unwrap_or("rgba(255, 255, 255, 0.9)");
+        .unwrap_or("rgba(255, 255, 255, 0.0)");
     format!(
         "linear-gradient(to right, {} 0%, {} 50%, {} 50%, {} 100%)",
         left_bg, left_bg, right_bg, right_bg
@@ -337,16 +378,17 @@ fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> Stri
 }
 
 fn get_light_color_for(color: &RingColor) -> &'static str {
+    const TRANSPARENCY: &str = "0.6"; // Adjust this value to make colors more or less transparent
     match color {
-        RingColor::Rot => "rgba(255, 200, 200, 0.9)",
-        RingColor::Dunkelblau => "rgba(200, 210, 245, 0.9)",
-        RingColor::Hellblau => "rgba(210, 230, 255, 0.9)",
-        RingColor::Gruen => "rgba(200, 255, 200, 0.9)",
-        RingColor::Gelb => "rgba(255, 255, 200, 0.9)",
-        RingColor::Orange => "rgba(255, 230, 200, 0.9)",
-        RingColor::Lila => "rgba(230, 200, 255, 0.9)",
-        RingColor::Rosa => "rgba(255, 200, 230, 0.9)",
-        RingColor::Schwarz => "rgba(220, 220, 220, 0.9)",
-        RingColor::Weiss => "rgba(255, 255, 255, 0.9)",
+        RingColor::Rot => concatcp!("rgba(255, 200, 200, ", TRANSPARENCY, ")"),
+        RingColor::Dunkelblau => concatcp!("rgba(200, 210, 245, ", TRANSPARENCY, ")"),
+        RingColor::Hellblau => concatcp!("rgba(210, 230, 255, ", TRANSPARENCY, ")"),
+        RingColor::Gruen => concatcp!("rgba(200, 255, 200, ", TRANSPARENCY, ")"),
+        RingColor::Gelb => concatcp!("rgba(255, 255, 200, ", TRANSPARENCY, ")"),
+        RingColor::Orange => concatcp!("rgba(255, 230, 200, ", TRANSPARENCY, ")"),
+        RingColor::Lila => concatcp!("rgba(230, 200, 255, ", TRANSPARENCY, ")"),
+        RingColor::Rosa => concatcp!("rgba(255, 200, 230, ", TRANSPARENCY, ")"),
+        RingColor::Schwarz => concatcp!("rgba(220, 220, 220, ", TRANSPARENCY, ")"),
+        RingColor::Weiss => concatcp!("rgba(255, 255, 255, ", TRANSPARENCY, ")"),
     }
 }
