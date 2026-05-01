@@ -109,8 +109,70 @@ pub fn normalize_ring_color_code(value: &str) -> Option<String> {
     }
 }
 
+pub fn ring_color_preview_bg(value: &str) -> &'static str {
+    match normalize_ring_color_code(value).as_deref() {
+        Some("rot") => "#ef5350",
+        Some("dunkelblau") => "#5c6bc0",
+        Some("hellblau") => "#64b5f6",
+        Some("gruen") => "#66bb6a",
+        Some("gelb") => "#fff176",
+        Some("orange") => "#ffb74d",
+        Some("lila") => "#ba68c8",
+        Some("rosa") => "#f48fb1",
+        Some("schwarz") => "#616161",
+        Some("weiss") => "#f5f5f5",
+        _ => "#ffffff",
+    }
+}
+
+pub fn ring_color_select_bg(value: &str) -> &'static str {
+    match normalize_ring_color_code(value).as_deref() {
+        Some("rot") => "#ffebee",
+        Some("dunkelblau") => "#e8eaf6",
+        Some("hellblau") => "#e3f2fd",
+        Some("gruen") => "#e8f5e9",
+        Some("gelb") => "#fffde7",
+        Some("orange") => "#fff3e0",
+        Some("lila") => "#f3e5f5",
+        Some("rosa") => "#fce4ec",
+        Some("schwarz") => "#f5f5f5",
+        Some("weiss") => "#ffffff",
+        _ => "#ffffff",
+    }
+}
+
 fn normalize_ring_color_option(value: Option<&str>) -> Option<String> {
     value.and_then(normalize_ring_color_code)
+}
+
+pub fn ring_color_filter_matches(
+    first: Option<&RingColor>,
+    second: Option<&RingColor>,
+    left: Option<&RingColor>,
+    right: Option<&RingColor>,
+) -> bool {
+    match (first, second) {
+        (None, None) => true,
+        (Some(color), None) | (None, Some(color)) => left == Some(color) || right == Some(color),
+        (Some(first), Some(second)) if first == second => {
+            [left, right]
+                .into_iter()
+                .flatten()
+                .filter(|color| *color == first)
+                .count()
+                == 2
+        }
+        (Some(first), Some(second)) => {
+            [left, right]
+                .into_iter()
+                .flatten()
+                .any(|color| color == first)
+                && [left, right]
+                    .into_iter()
+                    .flatten()
+                    .any(|color| color == second)
+        }
+    }
 }
 
 pub fn ring_color_combination_conflicts(
@@ -225,5 +287,49 @@ mod tests {
             Some("weiss".to_string())
         );
         assert_eq!(normalize_ring_color_code("grün"), Some("gruen".to_string()));
+    }
+
+    #[test]
+    fn test_ring_color_filter_single_color_matches_any_side() {
+        assert!(ring_color_filter_matches(
+            Some(&RingColor::Rot),
+            None,
+            Some(&RingColor::Hellblau),
+            Some(&RingColor::Rot)
+        ));
+        assert!(ring_color_filter_matches(
+            None,
+            Some(&RingColor::Rot),
+            Some(&RingColor::Rot),
+            None
+        ));
+        assert!(!ring_color_filter_matches(
+            Some(&RingColor::Rot),
+            None,
+            Some(&RingColor::Hellblau),
+            Some(&RingColor::Gelb)
+        ));
+    }
+
+    #[test]
+    fn test_ring_color_filter_two_colors_is_order_independent() {
+        assert!(ring_color_filter_matches(
+            Some(&RingColor::Rot),
+            Some(&RingColor::Hellblau),
+            Some(&RingColor::Hellblau),
+            Some(&RingColor::Rot)
+        ));
+        assert!(!ring_color_filter_matches(
+            Some(&RingColor::Rot),
+            Some(&RingColor::Hellblau),
+            Some(&RingColor::Rot),
+            None
+        ));
+        assert!(ring_color_filter_matches(
+            Some(&RingColor::Rot),
+            Some(&RingColor::Rot),
+            Some(&RingColor::Rot),
+            Some(&RingColor::Rot)
+        ));
     }
 }

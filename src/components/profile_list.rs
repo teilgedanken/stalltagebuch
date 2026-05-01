@@ -1,7 +1,10 @@
 use super::profile_i18n::{format_age_years_months, gender_label};
 use super::synced_photo::SyncedThumbnailImage;
 use crate::Screen;
-use crate::models::{EventType, Gender, Quail, RingColor};
+use crate::models::{
+    EventType, Gender, Quail, RingColor, ring_color_filter_matches, ring_color_preview_bg,
+    ring_color_select_bg,
+};
 use crate::spacetime;
 use chrono::{Local, NaiveDate};
 use dioxus::core::const_format::concatcp;
@@ -13,6 +16,9 @@ use spacetimedb_sdk::DbContext;
 pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut search_filter = use_signal(String::new);
     let mut show_dead = use_signal(|| false);
+    let mut first_ring_filter = use_signal(|| None::<RingColor>);
+    let mut second_ring_filter = use_signal(|| None::<RingColor>);
+    let mut active_ring_filter_slot = use_signal(|| None::<usize>);
     let quails = spacetime::use_table_quails();
     let events = spacetime::use_table_quail_events();
     let photos = spacetime::use_table_photos();
@@ -24,6 +30,12 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         "SELECT * FROM photos",
     ]);
 
+    use_effect(move || {
+        if show_dead() {
+            active_ring_filter_slot.set(None);
+        }
+    });
+
     let filtered_profiles = use_memo(move || {
         let owner = connection()
             .as_ref()
@@ -33,6 +45,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         let all_events = events().clone();
         let search = search_filter().to_lowercase();
         let dead_only = show_dead();
+        let first_ring = first_ring_filter();
+        let second_ring = second_ring_filter();
         let today = Local::now().date_naive();
 
         let born_dates_by_quail = earliest_born_dates_by_quail(&all_events);
@@ -72,6 +86,17 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             if let Some(local_quail) = to_local_quail(remote_quail) {
+                if !dead_only
+                    && !ring_color_filter_matches(
+                        first_ring.as_ref(),
+                        second_ring.as_ref(),
+                        local_quail.ring_color_left.as_ref(),
+                        local_quail.ring_color_right.as_ref(),
+                    )
+                {
+                    continue;
+                }
+
                 let profile_photo_uuid =
                     local_quail.profile_photo.as_ref().map(|id| id.to_string());
                 let profile_photo_path = profile_photo_uuid
@@ -98,6 +123,16 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         rows
     });
 
+    let dead_only = show_dead();
+    let active_palette_slot = active_ring_filter_slot();
+    let first_ring = first_ring_filter();
+    let second_ring = second_ring_filter();
+    let current_palette_selection = match active_palette_slot {
+        Some(0) => first_ring.clone(),
+        Some(1) => second_ring.clone(),
+        _ => None,
+    };
+
     rsx! {
         section { class: "section pt-4 pb-3",
             div { class: "container is-max-tablet",
@@ -108,15 +143,146 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { class: "level-right",
                         div { class: "buttons has-addons mb-0",
                             button {
-                                class: if show_dead() { "button is-link" } else { "button is-link is-light" },
-                                onclick: move |_| show_dead.set(!show_dead()),
+                                class: if dead_only { "button is-link" } else { "button is-link is-light" },
+                                onclick: move |_| {
+                                    let next_dead_only = !show_dead();
+                                    show_dead.set(next_dead_only);
+                                    if next_dead_only {
+                                        active_ring_filter_slot.set(None);
+                                    }
+                                },
                                 span { class: "icon is-small", "🪦" }
+                            }
+                            button {
+                                class: "button is-link is-light px-2",
+                                style: "height: 2.5em; min-height: 2.5em; min-width: 2.5em;",
+                                disabled: dead_only,
+                                title: format!("{} {}", tid!("field-ring-color"), tid!("ring-color-side-left")),
+                                aria_label: format!("{} {}", tid!("field-ring-color"), tid!("ring-color-side-left")),
+                                onclick: move |_| {
+                                    active_ring_filter_slot.set(if active_ring_filter_slot() == Some(0) {
+                                        None
+                                    } else {
+                                        Some(0)
+                                    });
+                                },
+                                if let Some(color) = first_ring.as_ref() {
+                                    span {
+                                        style: ring_filter_square_style(
+                                            Some(color),
+                                            active_palette_slot == Some(0),
+                                        ),
+                                    }
+                                } else {
+                                    span {
+                                        class: "icon is-small",
+                                        style: ring_filter_palette_icon_style(active_palette_slot == Some(0)),
+                                        "🎨"
+                                    }
+                                }
+                            }
+                            button {
+                                class: "button is-link is-light px-2",
+                                style: "height: 2.5em; min-height: 2.5em; min-width: 2.5em;",
+                                disabled: dead_only,
+                                title: format!("{} {}", tid!("field-ring-color"), tid!("ring-color-side-right")),
+                                aria_label: format!("{} {}", tid!("field-ring-color"), tid!("ring-color-side-right")),
+                                onclick: move |_| {
+                                    active_ring_filter_slot.set(if active_ring_filter_slot() == Some(1) {
+                                        None
+                                    } else {
+                                        Some(1)
+                                    });
+                                },
+                                if let Some(color) = second_ring.as_ref() {
+                                    span {
+                                        style: ring_filter_square_style(
+                                            Some(color),
+                                            active_palette_slot == Some(1),
+                                        ),
+                                    }
+                                } else {
+                                    span {
+                                        class: "icon is-small",
+                                        style: ring_filter_palette_icon_style(active_palette_slot == Some(1)),
+                                        "🎨"
+                                    }
+                                }
                             }
                             button {
                                 class: "button is-success",
                                 onclick: move |_| on_navigate.call(Screen::AddProfile),
-                                span { class: "icon is-small", "+ " }
-                                span { {tid!("action-new")} }
+                                span { class: "icon is-small", "+" }
+                            }
+                        }
+                    }
+                }
+
+                if !dead_only {
+                    if let Some(slot) = active_palette_slot {
+                        div {
+                            class: "box p-2 mb-4",
+                            style: "max-width: 16rem; margin-left: auto;",
+                            div {
+                                class: "buttons are-small mb-0",
+                                style: "display: flex; flex-wrap: wrap; gap: 0.35rem;",
+                                button {
+                                    class: "button is-light p-1",
+                                    title: tid!("ring-color-none"),
+                                    aria_label: tid!("ring-color-none"),
+                                    onclick: move |_| {
+                                        match slot {
+                                            0 => first_ring_filter.set(None),
+                                            1 => second_ring_filter.set(None),
+                                            _ => {}
+                                        }
+                                        active_ring_filter_slot.set(None);
+                                    },
+                                    span {
+                                        style: "display: inline-flex; align-items: center; justify-content: center; width: 1rem; height: 1rem; border: 1px dashed #bbb; border-radius: 2px; color: #777; font-size: 0.75rem;",
+                                        "×"
+                                    }
+                                }
+                                for color in RingColor::all().iter().cloned() {
+                                    {
+                                        let button_color = color.clone();
+                                        let button_label = color.display_name().to_string();
+                                        let preview_bg = ring_color_preview_bg(color.as_str());
+                                        let select_bg = ring_color_select_bg(color.as_str());
+
+                                        rsx! {
+                                            button {
+                                                key: "{slot}-{color.as_str()}",
+                                                class: "button is-light p-1",
+                                                style: format!(
+                                                    "background: {}; border: {};",
+                                                    select_bg,
+                                                    if current_palette_selection.as_ref() == Some(&color) {
+                                                        "2px solid #3273dc"
+                                                    } else {
+                                                        "1px solid #dbdbdb"
+                                                    },
+                                                ),
+                                                title: button_label.clone(),
+                                                aria_label: button_label,
+                                                onclick: move |_| {
+                                                    match slot {
+                                                        0 => first_ring_filter.set(Some(button_color.clone())),
+                                                        1 => second_ring_filter.set(Some(button_color.clone())),
+                                                        _ => {}
+                                                    }
+                                                    active_ring_filter_slot.set(None);
+                                                },
+                                                span {
+                                                    style: format!(
+                                                        "display: inline-block; width: 1rem; height: 1rem; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.2); background: {};",
+                                                        preview_bg,
+                                                    ),
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -369,6 +535,35 @@ fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> Stri
         "linear-gradient(to right, {} 0%, {} 50%, {} 50%, {} 100%)",
         left_bg, left_bg, right_bg, right_bg
     )
+}
+
+fn ring_filter_square_style(color: Option<&RingColor>, is_open: bool) -> String {
+    let border = if is_open {
+        "2px solid #3273dc"
+    } else if color.is_some() {
+        "1px solid rgba(0, 0, 0, 0.35)"
+    } else {
+        "1px dashed #bbb"
+    };
+    let background = color
+        .map(|selected| ring_color_preview_bg(selected.as_str()))
+        .unwrap_or("linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ececec 45%, #ececec 55%, #ffffff 55%, #ffffff 100%)");
+    let outer_background = color
+        .map(|selected| ring_color_select_bg(selected.as_str()))
+        .unwrap_or("#ffffff");
+
+    format!(
+        "display: inline-block; width: 1.5rem; height: 1.5rem; border-radius: 2px; border: {}; background: {}; box-shadow: inset 0 0 0 3px {};",
+        border, background, outer_background
+    )
+}
+
+fn ring_filter_palette_icon_style(is_open: bool) -> &'static str {
+    if is_open {
+        "color: #3273dc;"
+    } else {
+        "color: inherit;"
+    }
 }
 
 fn get_light_color_for(color: &RingColor) -> &'static str {

@@ -1,6 +1,9 @@
 use crate::{
     Screen,
-    models::{Gender, normalize_ring_color_code, ring_color_combination_conflicts},
+    models::{
+        Gender, normalize_ring_color_code, ring_color_combination_conflicts, ring_color_preview_bg,
+        ring_color_select_bg,
+    },
     spacetime,
 };
 use dioxus::prelude::*;
@@ -477,37 +480,5 @@ fn normalize_optional_date_input(value: &str) -> Option<String> {
         None
     } else {
         Some(trimmed.to_string())
-    }
-}
-
-fn ring_color_preview_bg(value: &str) -> &'static str {
-    match value.trim() {
-        "rot" => "#ef5350",
-        "dunkelblau" => "#5c6bc0",
-        "hellblau" => "#64b5f6",
-        "gruen" => "#66bb6a",
-        "gelb" => "#fff176",
-        "orange" => "#ffb74d",
-        "lila" => "#ba68c8",
-        "rosa" => "#f48fb1",
-        "schwarz" => "#616161",
-        "weiss" => "#f5f5f5",
-        _ => "#ffffff",
-    }
-}
-
-fn ring_color_select_bg(value: &str) -> &'static str {
-    match value.trim() {
-        "rot" => "#ffebee",
-        "dunkelblau" => "#e8eaf6",
-        "hellblau" => "#e3f2fd",
-        "gruen" => "#e8f5e9",
-        "gelb" => "#fffde7",
-        "orange" => "#fff3e0",
-        "lila" => "#f3e5f5",
-        "rosa" => "#fce4ec",
-        "schwarz" => "#f5f5f5",
-        "weiss" => "#ffffff",
-        _ => "#ffffff",
     }
 }
