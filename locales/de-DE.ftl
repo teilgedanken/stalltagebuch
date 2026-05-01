@@ -7,7 +7,7 @@ action-add-event = Ereignis
 # Source: ./src/components/event_edit.rs:298
 action-back = Zurück
 
-# Source: ./src/components/profile_add.rs:432
+# Source: ./src/components/profile_add.rs:395
 action-camera = Kamera
 
 # Source: ./src/components/event_add.rs:161
@@ -16,10 +16,10 @@ action-cancel = Abbrechen
 # Source: ./src/components/event_edit.rs:626
 action-delete = Löschen
 
-# Source: ./src/components/profile_edit.rs:544
+# Source: ./src/components/profile_edit.rs:503
 action-delete-permanently = Endgültig löschen
 
-# Source: ./src/components/profile_edit.rs:561
+# Source: ./src/components/profile_edit.rs:520
 action-delete-quail = Wachtel löschen
 
 # Source: ./src/components/profile_detail.rs:435
@@ -28,10 +28,11 @@ action-edit = Bearbeiten
 # Source: ./src/components/event_edit.rs:482
 action-gallery = Galerie
 
-# Source: ./src/components/profile_add.rs:397
+# Source: ./src/components/profile_add.rs:360
 action-loading = Lädt...
 
 # Source: ./src/components/profile_list.rs:120
+# UNUSED: This key is no longer used in the code
 action-new = Neu
 
 # Source: ./src/components/event_edit.rs:585
@@ -80,7 +81,7 @@ backup-card-history-file = Datei: { $path }
 backup-card-history-include-images = Mit Bildern: { $include_images }
 
 # Source: ./src/components/settings/backup_card.rs:623
-# Parameters: $quails, $events, $egg_records
+# Parameters: $egg_records, $quails, $events
 backup-card-history-items = Items: { $quails } Wachteln, { $events } Ereignisse, { $egg_records } Eiereinträge
 
 # Source: ./src/components/settings/backup_card.rs:640
@@ -92,7 +93,7 @@ backup-card-history-more = Mehr ({ $count })
 backup-card-history-nextcloud = Nextcloud: { $name }
 
 # Source: ./src/components/settings/backup_card.rs:626
-# Parameters: $photos_files_included, $photos_meta, $photos_files_missing
+# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
 backup-card-history-photos = Fotos: { $photos_meta } Einträge, { $photos_files_included } Dateien enthalten, { $photos_files_missing } fehlend
 
 # Source: ./src/components/settings/backup_card.rs:620
@@ -211,7 +212,7 @@ backup-import-android-only = ⚠️ Dateiauswahl ist nur auf Android verfügbar
 backup-import-no-file-selected = ❌ Keine Datei ausgewählt
 
 # Source: ./src/components/settings/backup_card.rs:316
-# Parameters: $photos, $count
+# Parameters: $count, $photos
 backup-import-success-with-counts = ✅ { $count } Einträge und { $photos } Fotos importiert
 
 # Source: ./src/components/settings/backup_card.rs:518
@@ -228,7 +229,7 @@ backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
 # Parameters: $filename
 backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
 
-# Source: ./src/components/profile_edit.rs:536
+# Source: ./src/components/profile_edit.rs:495
 confirm-delete-quail = Möchten Sie diese Wachtel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 
 # Source: ./src/components/egg_history.rs:109
@@ -261,11 +262,11 @@ egg-tracking-success = Eintrag erfolgreich gespeichert!
 # Source: ./src/components/egg_tracking.rs:150
 egg-tracking-title = Eier eintragen
 
-# Source: ./src/components/profile_add.rs:43
+# Source: ./src/components/profile_add.rs:45
 # Parameters: $error
 error = Fehler
 
-# Source: ./src/components/profile_add.rs:390
+# Source: ./src/components/profile_add.rs:353
 error-android-only = Nur auf Android verfügbar
 
 # Source: ./src/components/event_edit.rs:575
@@ -312,7 +313,7 @@ error-invalid-event-id = Ungueltige Ereignis-ID
 error-multiselect-android-only = Mehrfach-Auswahl nur auf Android verfügbar
 
 # Name cannot be empty
-# Source: ./src/components/profile_add.rs:38
+# Source: ./src/components/profile_add.rs:40
 error-name-required = Name darf nicht leer sein
 
 # Source: ./src/components/settings/network_check_card.rs:14
@@ -325,7 +326,7 @@ error-not-connected = Nicht mit SpacetimeDB verbunden
 # Parameters: $error
 error-pick-images = Auswahlfehler: { $error }
 
-# Source: ./src/components/profile_add.rs:58
+# Source: ./src/components/profile_add.rs:60
 error-ring-color-combination-not-unique = Diese Ringfarbkombination ist bereits einer anderen Wachtel zugeordnet
 
 # Source: ./src/components/profile_photo_card.rs:138
@@ -399,13 +400,13 @@ field-eggs-count-required = Anzahl Eier *
 # Source: ./src/components/event_add.rs:92
 field-event-type = Ereignistyp
 
-# Source: ./src/components/profile_edit.rs:307
+# Source: ./src/components/profile_edit.rs:305
 field-gender = Geschlecht
 
-# Source: ./src/components/profile_edit.rs:298
+# Source: ./src/components/profile_edit.rs:296
 field-name-placeholder = z.B. Flecki
 
-# Source: ./src/components/profile_edit.rs:293
+# Source: ./src/components/profile_edit.rs:291
 field-name-required = Name *
 
 # Source: ./src/components/egg_tracking.rs:205
@@ -417,22 +418,22 @@ field-notes-optional = Notizen (optional)
 # Source: ./src/components/egg_tracking.rs:210
 field-notes-placeholder = Besonderheiten, Auffälligkeiten, etc.
 
-# Source: ./src/components/profile_edit.rs:425
+# Source: ./src/components/profile_edit.rs:384
 field-photos = Fotos
 
-# Source: ./src/components/profile_edit.rs:334
+# Source: ./src/components/profile_edit.rs:332
 field-ring-color = Ringfarbe
 
 # Source: ./src/components/event_edit.rs:324
 field-type = Typ
 
-# Source: ./src/components/profile_add.rs:235
+# Source: ./src/components/profile_add.rs:237
 gender-female = Weiblich
 
-# Source: ./src/components/profile_add.rs:236
+# Source: ./src/components/profile_add.rs:238
 gender-male = Männlich
 
-# Source: ./src/components/profile_add.rs:234
+# Source: ./src/components/profile_add.rs:236
 gender-unknown = Unbekannt
 
 # Source: ./src/components/settings/backup_card.rs:649
@@ -444,7 +445,7 @@ import-failed = Fehler beim Importieren
 # Source: ./src/components/settings/backup_card.rs:302
 import-in-progress = Import läuft...
 
-# Source: ./src/components/profile_edit.rs:419
+# Source: ./src/components/profile_edit.rs:378
 info-photos-detail-view = Fotos werden in der Detailansicht hinzugefügt. Hier können Sie nur das Profilbild auswählen oder Fotos löschen.
 
 # Source: ./src/components/home.rs:87
@@ -459,7 +460,7 @@ info-spacetimedb-disconnected = SpacetimeDB: nicht verbunden
 # Source: ./src/components/home.rs:89
 info-spacetimedb-error = SpacetimeDB: Verbindungsfehler
 
-# Source: ./src/components/profile_edit.rs:499
+# Source: ./src/components/profile_edit.rs:458
 info-tap-photo-to-mark = Tippen Sie auf ein Foto, um es als Profilbild zu markieren.
 
 # Source: ./src/components/event_edit.rs:632
@@ -506,10 +507,10 @@ period-year = Jahr
 # Source: ./src/components/profile_i18n.rs:36
 period-years = Jahre
 
-# Source: ./src/components/profile_add.rs:368
+# Source: ./src/components/profile_add.rs:331
 photo-none-selected = Kein Foto ausgewählt
 
-# Source: ./src/components/profile_add.rs:352
+# Source: ./src/components/profile_add.rs:315
 photo-selected = Foto ausgewählt
 
 # Source: ./src/components/event_edit.rs:370
@@ -522,85 +523,85 @@ photos-title = Fotos
 # Source: ./src/components/event_add.rs:133
 placeholder-event-notes = Weitere Informationen zum Ereignis...
 
-# Source: ./src/components/profile_add.rs:340
+# Source: ./src/components/profile_add.rs:303
 profile-add-info = Notizen können nach dem Erstellen als Ereignisse hinzugefügt werden.
 
-# Source: ./src/components/profile_add.rs:196
+# Source: ./src/components/profile_add.rs:198
 profile-add-title = Wachtel hinzufügen
 
-# Source: ./src/components/profile_add.rs:208
+# Source: ./src/components/profile_add.rs:210
 profile-created-success = Profil erstellt!
 
 # Source: ./src/components/profile_detail.rs:181
 profile-detail-title = Profil
 
-# Source: ./src/components/profile_edit.rs:271
+# Source: ./src/components/profile_edit.rs:269
 profile-edit-title = Profil bearbeiten
 
-# Source: ./src/components/profile_add.rs:228
+# Source: ./src/components/profile_add.rs:230
 profile-gender-label = Geschlecht
 
-# Source: ./src/components/profile_list.rs:141
+# Source: ./src/components/profile_list.rs:226
 profile-list-empty = Keine Profile vorhanden
 
 # Source: ./src/components/home.rs:40
 profile-list-title = Wachtel-Profile
 
-# Source: ./src/components/profile_add.rs:214
+# Source: ./src/components/profile_add.rs:216
 profile-name-label = Name *
 
-# Source: ./src/components/profile_add.rs:219
+# Source: ./src/components/profile_add.rs:221
 profile-name-placeholder = z.B. Flecki
 
-# Source: ./src/components/profile_add.rs:345
+# Source: ./src/components/profile_add.rs:308
 profile-photo-label = Foto
 
-# Source: ./src/components/profile_add.rs:255
+# Source: ./src/components/profile_add.rs:257
 profile-ring-color-label = Ringfarbe
 
 # Source: ./src/components/home.rs:35
 quick-access = Schnellzugriff
 
-# Source: ./src/components/profile_add.rs:279
+# Source: ./src/components/ring_color_picker.rs:167
 ring-color-black = Schwarz
 
-# Source: ./src/components/profile_add.rs:273
+# Source: ./src/components/ring_color_picker.rs:162
 ring-color-dark-blue = Dunkelblau
 
-# Source: ./src/components/profile_add.rs:280
+# Source: ./src/components/ring_color_picker.rs:168
 ring-color-green = Grün
 
-# Source: ./src/components/profile_add.rs:270
+# Source: ./src/components/ring_color_picker.rs:161
 ring-color-light-blue = Hellblau
 
-# Source: ./src/components/profile_add.rs:266
-ring-color-none = Keine Ringfarbe
+# Source: ./src/components/ring_color_picker.rs:54
+ring-color-none = wählen
 
-# Source: ./src/components/profile_add.rs:276
+# Source: ./src/components/ring_color_picker.rs:164
 ring-color-orange = Orange
 
-# Source: ./src/components/profile_add.rs:268
+# Source: ./src/components/ring_color_picker.rs:160
 ring-color-pink = Rosa
 
-# Source: ./src/components/profile_add.rs:267
+# Source: ./src/components/ring_color_picker.rs:159
 ring-color-purple = Lila
 
-# Source: ./src/components/profile_add.rs:275
+# Source: ./src/components/ring_color_picker.rs:163
 ring-color-red = Rot
 
-# Source: ./src/components/profile_add.rs:258
+# Source: ./src/components/profile_add.rs:261
 ring-color-side-left = Links
 
-# Source: ./src/components/profile_add.rs:297
+# Source: ./src/components/profile_add.rs:280
 ring-color-side-right = Rechts
 
-# Source: ./src/components/profile_add.rs:277
+# Source: ./src/components/ring_color_picker.rs:165
 ring-color-white = Weiß
 
-# Source: ./src/components/profile_add.rs:278
+# Source: ./src/components/ring_color_picker.rs:166
 ring-color-yellow = Gelb
 
-# Source: ./src/components/profile_list.rs:131
+# Source: ./src/components/profile_list.rs:216
 search-placeholder-name = Suche...
 
 # Source: ./src/components/home.rs:59
@@ -789,7 +790,7 @@ status-sick = Krank
 # Source: ./src/components/profile_detail.rs:240
 status-slaughtered = Geschlachtet
 
-# Source: ./src/components/profile_edit.rs:280
+# Source: ./src/components/profile_edit.rs:278
 success-profile-updated = Profil erfolgreich aktualisiert!
 
 # Source: ./src/components/settings/nextcloud_card.rs:475
@@ -936,3 +937,4 @@ weekday-tue = Di
 # Source: ./src/components/egg_history.rs:84
 # UNUSED: This key is no longer used in the code
 weekday-wed = Mi
+

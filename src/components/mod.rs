@@ -9,6 +9,7 @@ pub mod profile_edit;
 pub mod profile_i18n;
 pub mod profile_list;
 pub mod profile_photo_card;
+pub mod ring_color_picker;
 pub mod settings;
 pub mod statistics;
 pub mod synced_photo;

@@ -141,6 +141,10 @@ pub fn ring_color_select_bg(value: &str) -> &'static str {
     }
 }
 
+pub fn ring_color_selection_value(value: Option<&RingColor>) -> Option<String> {
+    value.map(|color| color.as_str().to_string())
+}
+
 fn normalize_ring_color_option(value: Option<&str>) -> Option<String> {
     value.and_then(normalize_ring_color_code)
 }

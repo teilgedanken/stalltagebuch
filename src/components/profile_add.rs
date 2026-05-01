@@ -1,9 +1,7 @@
+use super::ring_color_picker::RingColorField;
 use crate::{
     Screen,
-    models::{
-        Gender, normalize_ring_color_code, ring_color_combination_conflicts, ring_color_preview_bg,
-        ring_color_select_bg,
-    },
+    models::{Gender, RingColor, ring_color_combination_conflicts, ring_color_selection_value},
     spacetime,
 };
 use dioxus::prelude::*;
@@ -15,8 +13,9 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
     let mut birthday = use_signal(|| String::new());
-    let mut ring_color_left = use_signal(|| String::new());
-    let mut ring_color_right = use_signal(|| String::new());
+    let mut ring_color_left = use_signal(|| None::<RingColor>);
+    let mut ring_color_right = use_signal(|| None::<RingColor>);
+    let mut active_ring_color_slot = use_signal(|| None::<usize>);
     let mut photo_path = use_signal(|| None::<PathBuf>);
     let mut uploading = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
@@ -47,8 +46,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
-        let ring_color_left_value = normalize_ring_color_selection(&ring_color_left());
-        let ring_color_right_value = normalize_ring_color_selection(&ring_color_right());
+        let ring_color_left_value = ring_color_selection_value(ring_color_left().as_ref());
+        let ring_color_right_value = ring_color_selection_value(ring_color_right().as_ref());
 
         if quails().iter().any(|quail| {
             ring_color_combination_conflicts(
@@ -257,82 +256,43 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                     div { class: "field",
                         label { class: "label", {tid!("profile-ring-color-label")} }
                         div { class: "columns is-mobile",
-                            div { class: "column",
-                                p { class: "help mb-2", {tid!("ring-color-side-left")} }
-                                div { class: "field has-addons",
-                                    p { class: "control is-expanded",
-                                        span { class: "select is-fullwidth",
-                                            select {
-                                                style: format!("background: {};", ring_color_select_bg(&ring_color_left())),
-                                                value: "{ring_color_left}",
-                                                onchange: move |e| ring_color_left.set(e.value()),
-                                                option { value: "", {tid!("ring-color-none")} }
-                                                option { value: "lila", {tid!("ring-color-purple")} }
-                                                option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau",
-                                                    {tid!("ring-color-light-blue")}
-                                                }
-                                                option { value: "dunkelblau",
-                                                    {tid!("ring-color-dark-blue")}
-                                                }
-                                                option { value: "rot", {tid!("ring-color-red")} }
-                                                option { value: "orange", {tid!("ring-color-orange")} }
-                                                option { value: "weiss", {tid!("ring-color-white")} }
-                                                option { value: "gelb", {tid!("ring-color-yellow")} }
-                                                option { value: "schwarz", {tid!("ring-color-black")} }
-                                                option { value: "gruen", {tid!("ring-color-green")} }
-                                            }
-                                        }
-                                    }
-                                    p { class: "control",
-                                        span {
-                                            class: "tag",
-                                            style: format!(
-                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
-                                                ring_color_preview_bg(&ring_color_left()),
-                                            ),
-                                        }
-                                    }
-                                }
+                            RingColorField {
+                                field_label: tid!("profile-ring-color-label"),
+                                side_label: tid!("ring-color-side-left"),
+                                selected: ring_color_left(),
+                                is_open: active_ring_color_slot() == Some(0),
+                                disabled: saving(),
+                                key_prefix: "add-left".to_string(),
+                                on_toggle: move |_| {
+                                    active_ring_color_slot.set(if active_ring_color_slot() == Some(0) {
+                                        None
+                                    } else {
+                                        Some(0)
+                                    });
+                                },
+                                on_select: move |value| {
+                                    ring_color_left.set(value);
+                                    active_ring_color_slot.set(None);
+                                },
                             }
-
-                            div { class: "column",
-                                p { class: "help mb-2", {tid!("ring-color-side-right")} }
-                                div { class: "field has-addons",
-                                    p { class: "control is-expanded",
-                                        span { class: "select is-fullwidth",
-                                            select {
-                                                style: format!("background: {};", ring_color_select_bg(&ring_color_right())),
-                                                value: "{ring_color_right}",
-                                                onchange: move |e| ring_color_right.set(e.value()),
-                                                option { value: "", {tid!("ring-color-none")} }
-                                                option { value: "lila", {tid!("ring-color-purple")} }
-                                                option { value: "rosa", {tid!("ring-color-pink")} }
-                                                option { value: "hellblau",
-                                                    {tid!("ring-color-light-blue")}
-                                                }
-                                                option { value: "dunkelblau",
-                                                    {tid!("ring-color-dark-blue")}
-                                                }
-                                                option { value: "rot", {tid!("ring-color-red")} }
-                                                option { value: "orange", {tid!("ring-color-orange")} }
-                                                option { value: "weiss", {tid!("ring-color-white")} }
-                                                option { value: "gelb", {tid!("ring-color-yellow")} }
-                                                option { value: "schwarz", {tid!("ring-color-black")} }
-                                                option { value: "gruen", {tid!("ring-color-green")} }
-                                            }
-                                        }
-                                    }
-                                    p { class: "control",
-                                        span {
-                                            class: "tag",
-                                            style: format!(
-                                                "width: 2rem; height: 2rem; border: 1px solid #bbb; background: {};",
-                                                ring_color_preview_bg(&ring_color_right()),
-                                            ),
-                                        }
-                                    }
-                                }
+                            RingColorField {
+                                field_label: tid!("profile-ring-color-label"),
+                                side_label: tid!("ring-color-side-right"),
+                                selected: ring_color_right(),
+                                is_open: active_ring_color_slot() == Some(1),
+                                disabled: saving(),
+                                key_prefix: "add-right".to_string(),
+                                on_toggle: move |_| {
+                                    active_ring_color_slot.set(if active_ring_color_slot() == Some(1) {
+                                        None
+                                    } else {
+                                        Some(1)
+                                    });
+                                },
+                                on_select: move |value| {
+                                    ring_color_right.set(value);
+                                    active_ring_color_slot.set(None);
+                                },
                             }
                         }
                     }
@@ -468,10 +428,6 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
         }
     }
-}
-
-fn normalize_ring_color_selection(value: &str) -> Option<String> {
-    normalize_ring_color_code(value)
 }
 
 fn normalize_optional_date_input(value: &str) -> Option<String> {

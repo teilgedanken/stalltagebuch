@@ -1,5 +1,5 @@
 # Generated translation template by dx-i18n
-# Contains 291 translation keys
+# Contains 292 translation keys
 
 # Source: ./src/components/profile_detail.rs:362
 action-add-event = Event
@@ -7,7 +7,7 @@ action-add-event = Event
 # Source: ./src/components/event_edit.rs:298
 action-back = Back
 
-# Source: ./src/components/profile_add.rs:417
+# Source: ./src/components/profile_add.rs:395
 action-camera = Camera
 
 # Source: ./src/components/event_add.rs:161
@@ -16,10 +16,10 @@ action-cancel = Cancel
 # Source: ./src/components/event_edit.rs:626
 action-delete = Delete
 
-# Source: ./src/components/profile_edit.rs:527
+# Source: ./src/components/profile_edit.rs:503
 action-delete-permanently = Delete permanently
 
-# Source: ./src/components/profile_edit.rs:544
+# Source: ./src/components/profile_edit.rs:520
 action-delete-quail = Delete quail
 
 # Source: ./src/components/profile_detail.rs:435
@@ -28,10 +28,11 @@ action-edit = Edit
 # Source: ./src/components/event_edit.rs:482
 action-gallery = Gallery
 
-# Source: ./src/components/profile_add.rs:382
+# Source: ./src/components/profile_add.rs:360
 action-loading = Loading...
 
 # Source: ./src/components/profile_list.rs:114
+# UNUSED: This key is no longer used in the code
 action-new = New
 
 # Source: ./src/components/event_edit.rs:585
@@ -80,7 +81,7 @@ backup-card-history-file = File: { $path }
 backup-card-history-include-images = With images: { $include_images }
 
 # Source: ./src/components/settings/backup_card.rs:623
-# Parameters: $quails, $egg_records, $events
+# Parameters: $quails, $events, $egg_records
 backup-card-history-items = Items: { $quails } quails, { $events } events, { $egg_records } egg records
 
 # Source: ./src/components/settings/backup_card.rs:640
@@ -92,7 +93,7 @@ backup-card-history-more = More ({ $count })
 backup-card-history-nextcloud = Nextcloud: { $name }
 
 # Source: ./src/components/settings/backup_card.rs:626
-# Parameters: $photos_files_included, $photos_files_missing, $photos_meta
+# Parameters: $photos_meta, $photos_files_missing, $photos_files_included
 backup-card-history-photos = Photos: { $photos_meta } entries, { $photos_files_included } files included, { $photos_files_missing } missing
 
 # Source: ./src/components/settings/backup_card.rs:620
@@ -228,7 +229,7 @@ backup-upload-running = 🔄 Creating and uploading backup...
 # Parameters: $filename
 backup-upload-success = ✅ Backup uploaded successfully: { $filename }
 
-# Source: ./src/components/profile_edit.rs:519
+# Source: ./src/components/profile_edit.rs:495
 confirm-delete-quail = Are you sure you want to delete this quail? This action cannot be undone.
 
 # Source: ./src/components/egg_history.rs:109
@@ -245,7 +246,7 @@ egg-history-empty = No entries available
 # UNUSED: This key is no longer used in the code
 egg-history-loaded = { $count } entries loaded
 
-# Source: ./src/components/statistics.rs:306
+# Source: ./src/components/statistics.rs:279
 egg-history-title = Egg History
 
 # Source: ./src/components/egg_tracking.rs:172
@@ -261,11 +262,11 @@ egg-tracking-success = Entry saved successfully!
 # Source: ./src/components/egg_tracking.rs:150
 egg-tracking-title = Enter eggs
 
-# Source: ./src/components/profile_add.rs:40
+# Source: ./src/components/profile_add.rs:45
 # Parameters: $error
 error = Error
 
-# Source: ./src/components/profile_add.rs:375
+# Source: ./src/components/profile_add.rs:353
 error-android-only = Only available on Android
 
 # Source: ./src/components/event_edit.rs:575
@@ -312,7 +313,7 @@ error-invalid-event-id = Invalid event ID
 error-multiselect-android-only = Multi-select only available on Android
 
 # Name cannot be empty
-# Source: ./src/components/profile_add.rs:35
+# Source: ./src/components/profile_add.rs:40
 error-name-required = Name must not be empty
 
 # Source: ./src/components/settings/network_check_card.rs:14
@@ -325,7 +326,7 @@ error-not-connected = Not connected to SpacetimeDB
 # Parameters: $error
 error-pick-images = Selection error: { $error }
 
-# Source: ./src/components/profile_add.rs:58
+# Source: ./src/components/profile_add.rs:60
 error-ring-color-combination-not-unique = This ring color combination is already assigned to another quail
 
 # Source: ./src/components/profile_photo_card.rs:138
@@ -399,13 +400,13 @@ field-eggs-count-required = Egg count *
 # Source: ./src/components/event_add.rs:92
 field-event-type = Event type
 
-# Source: ./src/components/profile_edit.rs:290
+# Source: ./src/components/profile_edit.rs:305
 field-gender = Gender
 
-# Source: ./src/components/profile_edit.rs:281
+# Source: ./src/components/profile_edit.rs:296
 field-name-placeholder = e.g. Flecki
 
-# Source: ./src/components/profile_edit.rs:276
+# Source: ./src/components/profile_edit.rs:291
 field-name-required = Name *
 
 # Source: ./src/components/egg_tracking.rs:205
@@ -417,22 +418,22 @@ field-notes-optional = Notes (optional)
 # Source: ./src/components/egg_tracking.rs:210
 field-notes-placeholder = Special notes, observations, etc.
 
-# Source: ./src/components/profile_edit.rs:408
+# Source: ./src/components/profile_edit.rs:384
 field-photos = Photos
 
-# Source: ./src/components/profile_edit.rs:317
+# Source: ./src/components/profile_edit.rs:332
 field-ring-color = Ring color
 
 # Source: ./src/components/event_edit.rs:324
 field-type = Type
 
-# Source: ./src/components/profile_add.rs:220
+# Source: ./src/components/profile_add.rs:237
 gender-female = Female
 
-# Source: ./src/components/profile_add.rs:221
+# Source: ./src/components/profile_add.rs:238
 gender-male = Male
 
-# Source: ./src/components/profile_add.rs:219
+# Source: ./src/components/profile_add.rs:236
 gender-unknown = Unknown
 
 # Source: ./src/components/settings/backup_card.rs:649
@@ -444,7 +445,7 @@ import-failed = Import failed
 # Source: ./src/components/settings/backup_card.rs:302
 import-in-progress = Import in progress...
 
-# Source: ./src/components/profile_edit.rs:402
+# Source: ./src/components/profile_edit.rs:378
 info-photos-detail-view = Photos are added in the detail view. Here you can only select the profile photo or delete photos.
 
 # Source: ./src/components/home.rs:87
@@ -459,7 +460,7 @@ info-spacetimedb-disconnected = SpacetimeDB: not connected
 # Source: ./src/components/home.rs:89
 info-spacetimedb-error = SpacetimeDB: connection error
 
-# Source: ./src/components/profile_edit.rs:482
+# Source: ./src/components/profile_edit.rs:458
 info-tap-photo-to-mark = Tap a photo to mark it as profile photo.
 
 # Source: ./src/components/event_edit.rs:632
@@ -488,28 +489,28 @@ network-checking = Checking network connection...
 # Source: ./src/components/settings/network_check_card.rs:120
 network-offline = No internet connection
 
-# Source: ./src/components/statistics.rs:191
+# Source: ./src/components/statistics.rs:193
 period-all = All
 
-# Source: ./src/components/statistics.rs:189
+# Source: ./src/components/statistics.rs:191
 period-month = Month
 
 # Source: ./src/components/profile_i18n.rs:15
 period-months = Months
 
-# Source: ./src/components/statistics.rs:188
+# Source: ./src/components/statistics.rs:190
 period-week = Week
 
-# Source: ./src/components/statistics.rs:190
+# Source: ./src/components/statistics.rs:192
 period-year = Year
 
 # Source: ./src/components/profile_i18n.rs:36
 period-years = Years
 
-# Source: ./src/components/profile_add.rs:353
+# Source: ./src/components/profile_add.rs:331
 photo-none-selected = No photo selected
 
-# Source: ./src/components/profile_add.rs:337
+# Source: ./src/components/profile_add.rs:315
 photo-selected = Photo selected
 
 # Source: ./src/components/event_edit.rs:370
@@ -522,85 +523,85 @@ photos-title = Photos
 # Source: ./src/components/event_add.rs:133
 placeholder-event-notes = Additional information about the event...
 
-# Source: ./src/components/profile_add.rs:325
+# Source: ./src/components/profile_add.rs:303
 profile-add-info = Notes can be added as events after creation.
 
-# Source: ./src/components/profile_add.rs:181
+# Source: ./src/components/profile_add.rs:198
 profile-add-title = Add quail
 
-# Source: ./src/components/profile_add.rs:193
+# Source: ./src/components/profile_add.rs:210
 profile-created-success = Profile created!
 
 # Source: ./src/components/profile_detail.rs:181
 profile-detail-title = Profile
 
-# Source: ./src/components/profile_edit.rs:254
+# Source: ./src/components/profile_edit.rs:269
 profile-edit-title = Edit profile
 
-# Source: ./src/components/profile_add.rs:213
+# Source: ./src/components/profile_add.rs:230
 profile-gender-label = Gender
 
-# Source: ./src/components/profile_list.rs:135
+# Source: ./src/components/profile_list.rs:226
 profile-list-empty = No profiles available
 
 # Source: ./src/components/home.rs:40
 profile-list-title = Quail profiles
 
-# Source: ./src/components/profile_add.rs:199
+# Source: ./src/components/profile_add.rs:216
 profile-name-label = Name *
 
-# Source: ./src/components/profile_add.rs:204
+# Source: ./src/components/profile_add.rs:221
 profile-name-placeholder = e.g. Flecki
 
-# Source: ./src/components/profile_add.rs:330
+# Source: ./src/components/profile_add.rs:308
 profile-photo-label = Photo
 
-# Source: ./src/components/profile_add.rs:240
+# Source: ./src/components/profile_add.rs:257
 profile-ring-color-label = Ring color
 
 # Source: ./src/components/home.rs:35
 quick-access = Quick Access
 
-# Source: ./src/components/profile_add.rs:264
+# Source: ./src/components/ring_color_picker.rs:167
 ring-color-black = Black
 
-# Source: ./src/components/profile_add.rs:258
+# Source: ./src/components/ring_color_picker.rs:162
 ring-color-dark-blue = Dark blue
 
-# Source: ./src/components/profile_add.rs:265
+# Source: ./src/components/ring_color_picker.rs:168
 ring-color-green = Green
 
-# Source: ./src/components/profile_add.rs:255
+# Source: ./src/components/ring_color_picker.rs:161
 ring-color-light-blue = Light blue
 
-# Source: ./src/components/profile_add.rs:251
-ring-color-none = None
+# Source: ./src/components/ring_color_picker.rs:54
+ring-color-none = Select
 
-# Source: ./src/components/profile_add.rs:261
+# Source: ./src/components/ring_color_picker.rs:164
 ring-color-orange = Orange
 
-# Source: ./src/components/profile_add.rs:253
+# Source: ./src/components/ring_color_picker.rs:160
 ring-color-pink = Pink
 
-# Source: ./src/components/profile_add.rs:252
+# Source: ./src/components/ring_color_picker.rs:159
 ring-color-purple = Purple
 
-# Source: ./src/components/profile_add.rs:260
+# Source: ./src/components/ring_color_picker.rs:163
 ring-color-red = Red
 
-# Source: ./src/components/profile_add.rs:243
+# Source: ./src/components/profile_add.rs:261
 ring-color-side-left = Left
 
-# Source: ./src/components/profile_add.rs:282
+# Source: ./src/components/profile_add.rs:280
 ring-color-side-right = Right
 
-# Source: ./src/components/profile_add.rs:262
+# Source: ./src/components/ring_color_picker.rs:165
 ring-color-white = White
 
-# Source: ./src/components/profile_add.rs:263
+# Source: ./src/components/ring_color_picker.rs:166
 ring-color-yellow = Yellow
 
-# Source: ./src/components/profile_list.rs:125
+# Source: ./src/components/profile_list.rs:216
 search-placeholder-name = Search by name...
 
 # Source: ./src/components/home.rs:59
@@ -697,68 +698,68 @@ spacetime-card-token-hint = Stored locally and reused for reconnect
 # Source: ./src/components/settings/spacetime_db_card.rs:234
 spacetime-card-token-label = Auth token
 
-# Source: ./src/components/statistics.rs:176
+# Source: ./src/components/statistics.rs:178
 stats-add-entry = Add entry
 
-# Source: ./src/components/statistics.rs:281
+# Source: ./src/components/statistics.rs:254
 stats-averages = Averages
 
-# Source: ./src/components/statistics.rs:285
+# Source: ./src/components/statistics.rs:258
 stats-daily-avg = Daily avg
 
-# Source: ./src/components/statistics.rs:59
+# Source: ./src/components/statistics.rs:61
 stats-date-format-short = %y-%m-%d
 
 # Source: ./src/components/statistics.rs:247
 # UNUSED: This key is no longer used in the code
 stats-last-10-days = Last 10 days
 
-# Source: ./src/components/statistics.rs:271
+# Source: ./src/components/statistics.rs:244
 stats-max = Max
 
-# Source: ./src/components/statistics.rs:266
+# Source: ./src/components/statistics.rs:239
 stats-min = Min
 
-# Source: ./src/components/statistics.rs:295
+# Source: ./src/components/statistics.rs:268
 stats-monthly-avg = Monthly avg
 
-# Source: ./src/components/statistics.rs:341
+# Source: ./src/components/statistics.rs:350
 stats-no-data = No data available
 
-# Source: ./src/components/statistics.rs:242
+# Source: ./src/components/statistics.rs:215
 stats-overview = Overview
 
-# Source: ./src/components/statistics.rs:312
+# Source: ./src/components/statistics.rs:285
 stats-period = Period
 
-# Source: ./src/components/statistics.rs:219
+# Source: ./src/components/statistics.rs:322
 stats-population-hens = Hens
 
-# Source: ./src/components/statistics.rs:229
+# Source: ./src/components/statistics.rs:342
 stats-population-ratio = Ratio
 
-# Source: ./src/components/statistics.rs:224
+# Source: ./src/components/statistics.rs:327
 stats-population-roosters = Roosters
 
-# Source: ./src/components/statistics.rs:210
+# Source: ./src/components/statistics.rs:314
 stats-population-title = Flock population
 
-# Source: ./src/components/statistics.rs:214
+# Source: ./src/components/statistics.rs:317
 stats-population-total-quails = Quails
 
 # Source: ./src/components/home.rs:50
 stats-title = Statistics
 
-# Source: ./src/components/statistics.rs:261
+# Source: ./src/components/statistics.rs:234
 stats-total-eggs = Total eggs
 
-# Source: ./src/components/statistics.rs:255
+# Source: ./src/components/statistics.rs:228
 stats-total-records = Total records
 
-# Source: ./src/components/statistics.rs:248
+# Source: ./src/components/statistics.rs:221
 stats-until = Until
 
-# Source: ./src/components/statistics.rs:290
+# Source: ./src/components/statistics.rs:263
 stats-weekly-avg = Weekly avg
 
 # Source: ./src/components/profile_detail.rs:216
@@ -789,7 +790,7 @@ status-sick = Sick
 # Source: ./src/components/profile_detail.rs:240
 status-slaughtered = Slaughtered
 
-# Source: ./src/components/profile_edit.rs:263
+# Source: ./src/components/profile_edit.rs:278
 success-profile-updated = Profile updated
 
 # Source: ./src/components/settings/nextcloud_card.rs:475
@@ -891,7 +892,7 @@ sync-status-running-full = 🔄 Running full synchronization...
 sync-status-success-photos = ✅ Sync complete: uploaded { $count } photos
 
 # Source: ./src/components/settings/nextcloud_card.rs:358
-# Parameters: $total, $percent, $current
+# Parameters: $percent, $total, $current
 sync-upload-progress-detail = Uploaded { $current } of { $total } photos ({ $percent }%)
 
 # Source: ./src/components/settings/nextcloud_card.rs:356
@@ -936,3 +937,4 @@ weekday-tue = Tue
 # Source: ./src/components/egg_history.rs:84
 # UNUSED: This key is no longer used in the code
 weekday-wed = Wed
+
