@@ -1,9 +1,10 @@
 use super::profile_i18n::{format_age_years_months, gender_label};
 use super::profile_photo_card::ProfilePhotoCard;
+use super::ring_color_picker::ring_color_option_label;
 use super::synced_photo::{SyncedCollectionFullscreen, SyncedThumbnailImage};
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
 use crate::Screen;
-use crate::models::{EventType, Gender};
+use crate::models::{EventType, Gender, RingColor, ring_color_preview_bg, ring_color_select_bg};
 use crate::spacetime;
 use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
@@ -194,6 +195,60 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
 
                         div { class: "box",
                             h2 { class: "title is-3 mb-3", "{p.name}" }
+
+                            {
+                                let left_ring = p
+                                    .ring_color_left
+                                    .as_ref()
+                                    .map(|value| RingColor::from_str(value));
+                                let right_ring = p
+                                    .ring_color_right
+                                    .as_ref()
+                                    .map(|value| RingColor::from_str(value));
+
+                                rsx! {
+                                    div {
+                                        class: "mb-2",
+                                        style: "display: flex; width: 100%;",
+                                        button {
+                                            class: "button",
+                                            style: detail_ring_button_style(left_ring.as_ref(), true),
+                                            title: format!(
+                                                "{}: {}",
+                                                tid!("ring-color-side-left"),
+                                                detail_ring_label(left_ring.as_ref())
+                                            ),
+                                            span {
+                                                style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                                span { style: detail_ring_swatch_style(left_ring.as_ref()) }
+                                                    span {
+                                                        class: "is-size-7 has-text-grey-dark",
+                                                        style: "overflow: hidden; text-overflow: ellipsis;",
+                                                        {detail_ring_label(left_ring.as_ref())}
+                                                    }
+                                            }
+                                        }
+                                        button {
+                                            class: "button",
+                                            style: detail_ring_button_style(right_ring.as_ref(), false),
+                                            title: format!(
+                                                "{}: {}",
+                                                tid!("ring-color-side-right"),
+                                                detail_ring_label(right_ring.as_ref())
+                                            ),
+                                            span {
+                                                style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                                span { style: detail_ring_swatch_style(right_ring.as_ref()) }
+                                                    span {
+                                                        class: "is-size-7 has-text-grey-dark",
+                                                        style: "overflow: hidden; text-overflow: ellipsis;",
+                                                        {detail_ring_label(right_ring.as_ref())}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             div { class: "tags mb-3",
                                 span { class: "tag is-info is-light",
@@ -459,4 +514,45 @@ fn age_display_from_events(events: &[spacetime::QuailEvent], today: NaiveDate) -
         .min()?;
 
     Some(format_age_years_months(birth_date, today))
+}
+
+fn detail_ring_label(color: Option<&RingColor>) -> String {
+    color
+        .map(ring_color_option_label)
+        .unwrap_or_else(|| tid!("ring-color-none"))
+}
+
+fn detail_ring_button_style(color: Option<&RingColor>, is_left: bool) -> String {
+    let background = color
+        .map(|value| ring_color_select_bg(value.as_str()))
+        .unwrap_or("#ffffff");
+    let border_radius = if is_left {
+        "0.75rem 0 0 0.75rem"
+    } else {
+        "0 0.75rem 0.75rem 0"
+    };
+    let border_right = if is_left { "border-right: none;" } else { "" };
+
+    format!(
+        "flex: 1 1 0; min-height: 2.55rem; display: flex; align-items: center; justify-content: center; padding: 0.45rem 0.65rem; background: {}; border: 1px solid #e5e5e5; {} border-radius: {}; box-shadow: none; font-size: 0.8rem;",
+        background, border_right, border_radius
+    )
+}
+
+fn detail_ring_swatch_style(color: Option<&RingColor>) -> String {
+    let background = color
+        .map(|value| ring_color_preview_bg(value.as_str()))
+        .unwrap_or(
+            "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ececec 45%, #ececec 55%, #ffffff 55%, #ffffff 100%)",
+        );
+    let border = if color.is_some() {
+        "1px solid rgba(0, 0, 0, 0.35)"
+    } else {
+        "1px dashed #bbb"
+    };
+
+    format!(
+        "display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 999px; border: {}; background: {}; flex-shrink: 0;",
+        border, background
+    )
 }

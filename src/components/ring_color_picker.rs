@@ -154,7 +154,7 @@ pub fn RingColorPalette(
     }
 }
 
-fn ring_color_option_label(color: &RingColor) -> String {
+pub(crate) fn ring_color_option_label(color: &RingColor) -> String {
     match color {
         RingColor::Lila => tid!("ring-color-purple"),
         RingColor::Rosa => tid!("ring-color-pink"),
