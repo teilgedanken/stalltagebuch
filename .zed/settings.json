@@ -1,0 +1,16 @@
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "cargo": {
+          "features": [],
+          "target": "aarch64-linux-android",
+          "cfgs": ["target_os=\"android\""],
+        },
+        "check": {
+          "targets": ["aarch64-linux-android"],
+        },
+      },
+    },
+  },
+}

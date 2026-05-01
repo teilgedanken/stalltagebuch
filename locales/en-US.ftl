@@ -325,6 +325,9 @@ error-not-connected = Not connected to SpacetimeDB
 # Parameters: $error
 error-pick-images = Selection error: { $error }
 
+# Source: ./src/components/profile_add.rs:58
+error-ring-color-combination-not-unique = This ring color combination is already assigned to another quail
+
 # Source: ./src/components/profile_photo_card.rs:138
 error-selection-failed = Selection error
 
@@ -933,4 +936,3 @@ weekday-tue = Tue
 # Source: ./src/components/egg_history.rs:84
 # UNUSED: This key is no longer used in the code
 weekday-wed = Wed
-

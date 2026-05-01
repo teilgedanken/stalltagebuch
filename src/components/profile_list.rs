@@ -80,9 +80,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 let age_display = born_dates_by_quail
                     .get(&remote_quail.uuid)
                     .map(|birth_date| format_age_years_months(*birth_date, today));
-                let days_since_last_event =
-                    latest_event_date_for(&remote_quail.uuid, &all_events)
-                        .map(|d| today.signed_duration_since(d).num_days());
+                let days_since_last_event = latest_event_date_for(&remote_quail.uuid, &all_events)
+                    .map(|d| today.signed_duration_since(d).num_days());
 
                 rows.push((
                     local_quail,
@@ -347,21 +346,16 @@ fn to_local_quail(remote: &spacetime::Quail) -> Option<Quail> {
 }
 
 fn border_color(gender: &Gender, days: Option<i64>) -> String {
-    match gender {
-        Gender::Unknown => "#ec4899".to_string(),
-        _ => {
-            let t = (days.unwrap_or(100).clamp(0, 100) as f32) / 100.0;
-            let (r0, g0, b0, r1, g1, b1) = match gender {
-                Gender::Male => (37u8, 99u8, 235u8, 153u8, 27u8, 27u8),
-                Gender::Female => (22u8, 163u8, 74u8, 234u8, 88u8, 12u8),
-                Gender::Unknown => unreachable!(),
-            };
-            let r = (r0 as f32 + (r1 as f32 - r0 as f32) * t).round() as u8;
-            let g = (g0 as f32 + (g1 as f32 - g0 as f32) * t).round() as u8;
-            let b = (b0 as f32 + (b1 as f32 - b0 as f32) * t).round() as u8;
-            format!("#{:02x}{:02x}{:02x}", r, g, b)
-        }
-    }
+    let t = (days.unwrap_or(100).clamp(0, 100) as f32) / 100.0;
+    let (r0, g0, b0, r1, g1, b1) = match gender {
+        Gender::Male => (37u8, 99u8, 235u8, 153u8, 27u8, 27u8),
+        Gender::Female => (22u8, 163u8, 74u8, 234u8, 88u8, 12u8),
+        Gender::Unknown => (236u8, 72u8, 153u8, 255u8, 255u8, 255u8),
+    };
+    let r = (r0 as f32 + (r1 as f32 - r0 as f32) * t).round() as u8;
+    let g = (g0 as f32 + (g1 as f32 - g0 as f32) * t).round() as u8;
+    let b = (b0 as f32 + (b1 as f32 - b0 as f32) * t).round() as u8;
+    format!("#{:02x}{:02x}{:02x}", r, g, b)
 }
 
 fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> String {
@@ -378,7 +372,7 @@ fn split_overlay_bg(left: Option<&RingColor>, right: Option<&RingColor>) -> Stri
 }
 
 fn get_light_color_for(color: &RingColor) -> &'static str {
-    const TRANSPARENCY: &str = "0.6"; // Adjust this value to make colors more or less transparent
+    const TRANSPARENCY: &str = "0.8"; // Adjust this value to make colors more or less transparent
     match color {
         RingColor::Rot => concatcp!("rgba(255, 200, 200, ", TRANSPARENCY, ")"),
         RingColor::Dunkelblau => concatcp!("rgba(200, 210, 245, ", TRANSPARENCY, ")"),

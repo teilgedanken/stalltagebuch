@@ -1,6 +1,6 @@
 use crate::{
     Screen,
-    models::{Gender, RingColor},
+    models::{Gender, normalize_ring_color_code, ring_color_combination_conflicts},
     spacetime,
 };
 use dioxus::prelude::*;
@@ -19,12 +19,15 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut error = use_signal(|| None::<String>);
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
+    let quails = spacetime::use_table_quails();
     let create_quail = spacetime::use_reducer_create_quail();
     let create_event = spacetime::use_reducer_create_event();
     let create_photo_collection = spacetime::use_reducer_create_photo_collection();
     let create_photo = spacetime::use_reducer_create_photo();
     let set_quail_photo = spacetime::use_reducer_set_quail_photo();
     let connection = spacetime::use_connection();
+
+    spacetime::use_subscription(&["SELECT * FROM quails"]);
 
     let mut handle_submit = move || {
         error.set(None);
@@ -41,6 +44,21 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
+        let ring_color_left_value = normalize_ring_color_selection(&ring_color_left());
+        let ring_color_right_value = normalize_ring_color_selection(&ring_color_right());
+
+        if quails().iter().any(|quail| {
+            ring_color_combination_conflicts(
+                ring_color_left_value.as_deref(),
+                ring_color_right_value.as_deref(),
+                quail.ring_color_left.as_deref(),
+                quail.ring_color_right.as_deref(),
+            )
+        }) {
+            error.set(Some(tid!("error-ring-color-combination-not-unique")));
+            return;
+        }
+
         saving.set(true);
         let quail_uuid = uuid::Uuid::new_v4().to_string();
         let gender_value = match gender().as_str() {
@@ -48,9 +66,6 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
             "female" => Gender::Female,
             _ => Gender::Unknown,
         };
-
-        let ring_color_left_value = normalize_ring_color_selection(&ring_color_left());
-        let ring_color_right_value = normalize_ring_color_selection(&ring_color_right());
         let birthday_value = normalize_optional_date_input(&birthday());
 
         let device_id = crate::services::device_id_service::get_device_id()
@@ -453,12 +468,7 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
 }
 
 fn normalize_ring_color_selection(value: &str) -> Option<String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        None
-    } else {
-        Some(RingColor::from_str(trimmed).as_str().to_string())
-    }
+    normalize_ring_color_code(value)
 }
 
 fn normalize_optional_date_input(value: &str) -> Option<String> {

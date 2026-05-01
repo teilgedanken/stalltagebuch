@@ -6,11 +6,10 @@ Ziel: Native Android-Dioxus-0.7 App (Nur Android) zur Verwaltung von Wachteln, E
 - Navigation: Enum `Screen` in `src/main.rs`, Wechsel über `Signal<Screen>` und Props `on_navigate: Fn(Screen)` in Komponenten.
 - UI Komponenten: In `src/components/*`; jede Screen-Komponente akzeptiert eigene Props + einen `on_navigate` Callback. Keine veralteten APIs (`cx`, `Scope`, `use_state`); benutze `use_signal`, `use_memo`, `use_effect`.
 - SpacetimeDB-first: CRUD fuer Quails/Events/EggRecords ueber generated bindings in `src/spacetime_module_bindings/*` und Re-Exports in `src/spacetime/*` (`use_table_*`, `use_reducer_*`, `use_subscription`).
-- Services: `src/services/*` fuer lokale Hilfslogik (Fotoverwaltung, Sync/CRDT, Export/Import). Keine neuen SQLite-CRUD Pfade fuer Quails/Events/EggRecords einfuehren.
+- Services: `src/services/*` fuer lokale Hilfslogik (Fotoverwaltung,  Export/Import). Keine neuen SQLite-CRUD Pfade fuer Quails/Events/EggRecords einfuehren.
 - Modelle: `src/models/*` als reine Datenstrukturen (Owned Types, `PartialEq`, `Clone` wenn als Props genutzt).
-- Datenbank: Schema + Migration in `database/schema.rs` – CRDT Felder (`rev`, `logical_clock`, `deleted`) und `op_log`/`sync_queue` für Sync. Änderungen: neue Migration statt direktes Anpassen bestehender CREATE.
+- Datenbank: Schema + Migration in `database/schema.rs`
 - Sync: Settings via `sync_settings` Tabelle; Autostart in `App` über `use_effect` nach `init_database`.
-- Sync-Architektur (aktuell): Kein CRDT-Op-Datei-Sync mehr (`sync/ops/*` entfernt). Strukturdaten laufen über SpacetimeDB-Subscriptions; Nextcloud wird für Foto-Upload/Download und manuelle ZIP-Backups genutzt. Keine neuen periodischen Thread-Loop-Syncs einführen.
 - JNI/Android: Kamera & Galerie über `camera.rs` + `android/MainActivity.kt`; nutze ClassLoader-Helper (siehe `camera.rs`). Führe keinen direkten Zugriff auf Android APIs außerhalb dieser Brücke ein.
 
 ## Build & Workflow

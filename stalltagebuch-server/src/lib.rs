@@ -277,6 +277,64 @@ pub struct FinishBackupArgs {
     pub error_message: Option<String>,
 }
 
+fn normalize_ring_color(value: Option<&str>) -> Option<String> {
+    match value.map(str::trim).unwrap_or_default().to_lowercase().as_str() {
+        "" => None,
+        "lila" => Some("lila".to_string()),
+        "rosa" => Some("rosa".to_string()),
+        "hellblau" => Some("hellblau".to_string()),
+        "dunkelblau" => Some("dunkelblau".to_string()),
+        "rot" => Some("rot".to_string()),
+        "orange" => Some("orange".to_string()),
+        "weiß" | "weiss" => Some("weiss".to_string()),
+        "gelb" => Some("gelb".to_string()),
+        "schwarz" => Some("schwarz".to_string()),
+        "grün" | "gruen" => Some("gruen".to_string()),
+        other => Some(other.to_string()),
+    }
+}
+
+fn ring_color_combination_conflicts(
+    candidate_left: Option<&str>,
+    candidate_right: Option<&str>,
+    existing_left: Option<&str>,
+    existing_right: Option<&str>,
+) -> bool {
+    let candidate_left = normalize_ring_color(candidate_left);
+    let candidate_right = normalize_ring_color(candidate_right);
+
+    if candidate_left.is_none() && candidate_right.is_none() {
+        return false;
+    }
+
+    candidate_left == normalize_ring_color(existing_left)
+        && candidate_right == normalize_ring_color(existing_right)
+}
+
+fn ensure_unique_ring_color_combination(
+    ctx: &ReducerContext,
+    owner: &str,
+    current_uuid: Option<&str>,
+    ring_color_left: Option<&str>,
+    ring_color_right: Option<&str>,
+) {
+    let has_duplicate = ctx.db.quails().iter().any(|quail| {
+        quail.owner == owner
+            && current_uuid != Some(quail.uuid.as_str())
+            && ring_color_combination_conflicts(
+                ring_color_left,
+                ring_color_right,
+                quail.ring_color_left.as_deref(),
+                quail.ring_color_right.as_deref(),
+            )
+    });
+
+    assert!(
+        !has_duplicate,
+        "Ring color combination is already assigned to another quail."
+    );
+}
+
 // ─── Reducers ─────────────────────────────────────────────────────────────────
 
 /// Create a new quail profile.
@@ -287,17 +345,25 @@ pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
         .duration_since(Timestamp::UNIX_EPOCH)
         .expect("timestamp should be after UNIX_EPOCH")
         .as_secs() as i64;
+    let owner = ctx.sender().to_string();
+
+    ensure_unique_ring_color_combination(
+        ctx,
+        &owner,
+        None,
+        args.ring_color_left.as_deref(),
+        args.ring_color_right.as_deref(),
+    );
 
     ctx.db.quails().insert(Quail {
         uuid: args.uuid,
-        
         name: args.name,
         gender: args.gender,
         ring_color_left: args.ring_color_left,
         ring_color_right: args.ring_color_right,
         profile_photo: args.profile_photo,
         device_id: args.device_id,
-        owner: ctx.sender().to_string(),
+        owner,
         created_at: now,
     });
 }
@@ -306,16 +372,69 @@ pub fn create_quail(ctx: &ReducerContext, args: CreateQuailArgs) {
 #[reducer]
 pub fn update_quail(ctx: &ReducerContext, args: UpdateQuailArgs) {
     if let Some(mut existing) = ctx.db.quails().iter().find(|q| q.uuid == args.uuid) {
-        if existing.owner != ctx.sender().to_string() {
+        let owner = ctx.sender().to_string();
+
+        if existing.owner != owner {
             log::warn!("update_quail: caller is not the owner");
             return;
         }
+
+        ensure_unique_ring_color_combination(
+            ctx,
+            &owner,
+            Some(args.uuid.as_str()),
+            args.ring_color_left.as_deref(),
+            args.ring_color_right.as_deref(),
+        );
+
         existing.name = args.name;
         existing.gender = args.gender;
         existing.ring_color_left = args.ring_color_left;
         existing.ring_color_right = args.ring_color_right;
         existing.profile_photo = args.profile_photo;
         ctx.db.quails().uuid().update(existing);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ring_color_combination_conflicts;
+
+    #[test]
+    fn ring_helper_allows_duplicate_unringed_quails() {
+        assert!(!ring_color_combination_conflicts(None, None, None, None));
+    }
+
+    #[test]
+    fn ring_helper_is_side_specific() {
+        assert!(ring_color_combination_conflicts(
+            Some("hellblau"),
+            Some("rot"),
+            Some("hellblau"),
+            Some("rot")
+        ));
+        assert!(!ring_color_combination_conflicts(
+            Some("hellblau"),
+            Some("rot"),
+            Some("rot"),
+            Some("hellblau")
+        ));
+    }
+
+    #[test]
+    fn ring_helper_distinguishes_partial_pairs() {
+        assert!(ring_color_combination_conflicts(
+            Some("hellblau"),
+            None,
+            Some("hellblau"),
+            None
+        ));
+        assert!(!ring_color_combination_conflicts(
+            Some("hellblau"),
+            None,
+            Some("hellblau"),
+            Some("rot")
+        ));
     }
 }
 

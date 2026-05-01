@@ -1,6 +1,8 @@
 use crate::{
     Screen,
-    models::{Gender, Quail, RingColor},
+    models::{
+        Gender, Quail, RingColor, normalize_ring_color_code, ring_color_combination_conflicts,
+    },
     spacetime,
 };
 use dioxus::prelude::*;
@@ -124,6 +126,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 
     let quail_id_for_submit = quail_id.clone();
     let mut handle_submit = move || {
+        error.set(String::new());
+        success.set(false);
+
         // Check if connected to Spacetime
         if connection().is_none() {
             error.set(tid!("error-not-connected"));
@@ -135,25 +140,37 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
             return;
         }
 
-        saving.set(true);
-
-        let device_id = crate::services::device_id_service::get_device_id()
-            .unwrap_or_else(|_| "unknown-device".to_string());
+        let updated_ring_color_left = normalize_ring_color_selection(&ring_color_left());
+        let updated_ring_color_right = normalize_ring_color_selection(&ring_color_right());
 
         if let Some(updated_profile) = profile() {
+            let quail_uuid = updated_profile.uuid.to_string();
+
+            if quails().iter().any(|quail| {
+                quail.uuid != quail_uuid
+                    && ring_color_combination_conflicts(
+                        updated_ring_color_left.as_deref(),
+                        updated_ring_color_right.as_deref(),
+                        quail.ring_color_left.as_deref(),
+                        quail.ring_color_right.as_deref(),
+                    )
+            }) {
+                error.set(tid!("error-ring-color-combination-not-unique"));
+                return;
+            }
+
+            saving.set(true);
+
+            let device_id = crate::services::device_id_service::get_device_id()
+                .unwrap_or_else(|_| "unknown-device".to_string());
             let updated_name = name().trim().to_string();
             let updated_gender = match gender().as_str() {
                 "male" => "male".to_string(),
                 "female" => "female".to_string(),
                 _ => "unknown".to_string(),
             };
-
-            let updated_ring_color_left = normalize_ring_color_selection(&ring_color_left());
-            let updated_ring_color_right = normalize_ring_color_selection(&ring_color_right());
             let updated_birthday = normalize_optional_date_input(&birthday());
             let existing_event_id = existing_birthday_event_id();
-
-            let quail_uuid = updated_profile.uuid.to_string();
             let selected_photo = selected_profile_photo_id();
             let update_reducer = update_quail_reducer.clone();
             let create_event_reducer = create_event_reducer.clone();
@@ -552,12 +569,7 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
 }
 
 fn normalize_ring_color_selection(value: &str) -> Option<String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        None
-    } else {
-        Some(RingColor::from_str(trimmed).as_str().to_string())
-    }
+    normalize_ring_color_code(value)
 }
 
 fn ring_color_preview_bg(value: &str) -> &'static str {

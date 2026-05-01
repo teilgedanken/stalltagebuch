@@ -92,6 +92,44 @@ impl RingColor {
     }
 }
 
+pub fn normalize_ring_color_code(value: &str) -> Option<String> {
+    match value.trim().to_lowercase().as_str() {
+        "" => None,
+        "lila" => Some("lila".to_string()),
+        "rosa" => Some("rosa".to_string()),
+        "hellblau" => Some("hellblau".to_string()),
+        "dunkelblau" => Some("dunkelblau".to_string()),
+        "rot" => Some("rot".to_string()),
+        "orange" => Some("orange".to_string()),
+        "weiß" | "weiss" => Some("weiss".to_string()),
+        "gelb" => Some("gelb".to_string()),
+        "schwarz" => Some("schwarz".to_string()),
+        "grün" | "gruen" => Some("gruen".to_string()),
+        other => Some(other.to_string()),
+    }
+}
+
+fn normalize_ring_color_option(value: Option<&str>) -> Option<String> {
+    value.and_then(normalize_ring_color_code)
+}
+
+pub fn ring_color_combination_conflicts(
+    candidate_left: Option<&str>,
+    candidate_right: Option<&str>,
+    existing_left: Option<&str>,
+    existing_right: Option<&str>,
+) -> bool {
+    let candidate_left = normalize_ring_color_option(candidate_left);
+    let candidate_right = normalize_ring_color_option(candidate_right);
+
+    if candidate_left.is_none() && candidate_right.is_none() {
+        return false;
+    }
+
+    candidate_left == normalize_ring_color_option(existing_left)
+        && candidate_right == normalize_ring_color_option(existing_right)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Gender {
@@ -135,5 +173,57 @@ mod tests {
         assert_eq!(Gender::from_str("male"), Gender::Male);
         assert_eq!(Gender::from_str("female"), Gender::Female);
         assert_eq!(Gender::from_str("invalid"), Gender::Unknown);
+    }
+
+    #[test]
+    fn test_ring_color_combination_allows_unringed_duplicates() {
+        assert!(!ring_color_combination_conflicts(None, None, None, None));
+        assert!(!ring_color_combination_conflicts(
+            None,
+            None,
+            Some("rot"),
+            None
+        ));
+    }
+
+    #[test]
+    fn test_ring_color_combination_is_side_specific() {
+        assert!(ring_color_combination_conflicts(
+            Some("hellblau"),
+            Some("rot"),
+            Some("hellblau"),
+            Some("rot")
+        ));
+        assert!(!ring_color_combination_conflicts(
+            Some("hellblau"),
+            Some("rot"),
+            Some("rot"),
+            Some("hellblau")
+        ));
+    }
+
+    #[test]
+    fn test_ring_color_combination_distinguishes_partial_pairs() {
+        assert!(ring_color_combination_conflicts(
+            Some("hellblau"),
+            None,
+            Some("hellblau"),
+            None
+        ));
+        assert!(!ring_color_combination_conflicts(
+            Some("hellblau"),
+            None,
+            Some("hellblau"),
+            Some("rot")
+        ));
+    }
+
+    #[test]
+    fn test_ring_color_normalization_uses_canonical_ascii_codes() {
+        assert_eq!(
+            normalize_ring_color_code(" Weiß "),
+            Some("weiss".to_string())
+        );
+        assert_eq!(normalize_ring_color_code("grün"), Some("gruen".to_string()));
     }
 }

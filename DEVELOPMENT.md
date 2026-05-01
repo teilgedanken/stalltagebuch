@@ -220,7 +220,6 @@ Until then, the hand-written types in `src/spacetime/types.rs` and the context i
 - Services
   - `src/services/sync_service.rs`: Pull (PROPFIND/GET), Manifestpflege (ETag), Replay‑Pipeline, Snapshot‑Nutzung
   - `src/services/upload_service.rs`: Batch‑Upload neuer NDJSON‑Dateien, atomar via `If-None-Match: *`
-  - Neu: `src/services/crdt_service.rs` (geplant): HLC, Feld‑CRDTs (LWW/OR‑Set/PN‑Counter), Merge API
 - Datenbank/Schema
   - `src/database/schema.rs`: additive Spalten `rev INTEGER`, `logical_clock INTEGER`, `deleted INTEGER` je Entität; Tabellen `op_log`, `device_state`, `sync_checkpoint`
   - Migrations sind additive und rückwärtskompatibel; keine Legacy‑Änderungen entfernen
