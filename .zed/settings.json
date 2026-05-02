@@ -13,4 +13,17 @@
       },
     },
   },
+  "languages": {
+    "Rust": {
+      "formatter": [
+        { "language_server": { "name": "rust-analyzer" } },
+        {
+          "external": {
+            "command": "dx",
+            "arguments": ["fmt", "--file", "-"],
+          },
+        },
+      ],
+    },
+  },
 }

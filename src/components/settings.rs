@@ -50,18 +50,14 @@ pub fn SettingsScreen(
                 }
 
                 if !status_message().is_empty() {
-                    div { class: "notification is-info is-light",
-                        "{status_message}"
-                    }
+                    div { class: "notification is-info is-light", "{status_message}" }
                 }
 
                 NetworkCheckCard {}
                 SpacetimeDbCard { on_spacetime_settings_saved }
                 NextcloudCard {
                     on_status_message: move |message| status_message.set(message),
-                    on_nextcloud_config_changed: move |configured| {
-                        is_nextcloud_configured.set(configured)
-                    },
+                    on_nextcloud_config_changed: move |configured| { is_nextcloud_configured.set(configured) },
                 }
                 DevicesCard {}
                 BackupCard {

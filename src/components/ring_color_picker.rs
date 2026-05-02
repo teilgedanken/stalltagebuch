@@ -55,16 +55,8 @@ pub fn RingColorTrigger(
 
     rsx! {
         button {
-            class: if compact {
-                "button is-link is-light px-2"
-            } else {
-                "button is-light is-fullwidth"
-            },
-            style: if compact {
-                ring_color_compact_trigger_style(selected.as_ref(), is_open)
-            } else {
-                ring_color_field_trigger_style(selected.as_ref(), is_open)
-            },
+            class: if compact { "button is-link is-light px-2" } else { "button is-light is-fullwidth" },
+            style: if compact { ring_color_compact_trigger_style(selected.as_ref(), is_open) } else { ring_color_field_trigger_style(selected.as_ref(), is_open) },
             disabled,
             title: trigger_label.clone(),
             aria_label: trigger_label,
@@ -80,8 +72,7 @@ pub fn RingColorTrigger(
                     }
                 }
             } else {
-                span {
-                    style: "display: flex; align-items: center; gap: 0.25rem; min-width: 0;",
+                span { style: "display: flex; align-items: center; gap: 0.25rem; min-width: 0;",
                     if let Some(color) = selected.as_ref() {
                         span { style: ring_color_swatch_style(Some(color), is_open, "1.25rem") }
                     } else {
@@ -91,11 +82,7 @@ pub fn RingColorTrigger(
                             "🎨"
                         }
                     }
-                    span {
-                        class: if selected.is_some() {"has-text-black"
-                        } else {
-                            "has-text-grey"
-                        },
+                    span { class: if selected.is_some() { "has-text-black" } else { "has-text-grey" },
                         "{selection_label}"
                     }
                 }
@@ -122,10 +109,7 @@ pub fn RingColorPalette(
                     title: tid!("ring-color-none"),
                     aria_label: tid!("ring-color-none"),
                     onclick: move |_| on_select.call(None),
-                    span {
-                        style: ring_color_none_swatch_style(selected.is_none()),
-                        "×"
-                    }
+                    span { style: ring_color_none_swatch_style(selected.is_none()), "×" }
                 }
                 for color in RingColor::all().iter().cloned() {
                     {
@@ -137,10 +121,7 @@ pub fn RingColorPalette(
                             button {
                                 key: "{button_key}",
                                 class: "button is-light p-1",
-                                style: ring_color_palette_button_style(
-                                    Some(&color),
-                                    selected.as_ref() == Some(&color),
-                                ),
+                                style: ring_color_palette_button_style(Some(&color), selected.as_ref() == Some(&color)),
                                 title: button_label.clone(),
                                 aria_label: button_label,
                                 onclick: move |_| on_select.call(Some(button_color.clone())),

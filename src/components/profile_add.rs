@@ -264,11 +264,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: saving(),
                                 key_prefix: "add-left".to_string(),
                                 on_toggle: move |_| {
-                                    active_ring_color_slot.set(if active_ring_color_slot() == Some(0) {
-                                        None
-                                    } else {
-                                        Some(0)
-                                    });
+                                    active_ring_color_slot
+                                        .set(if active_ring_color_slot() == Some(0) { None } else { Some(0) });
                                 },
                                 on_select: move |value| {
                                     ring_color_left.set(value);
@@ -283,11 +280,8 @@ pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: saving(),
                                 key_prefix: "add-right".to_string(),
                                 on_toggle: move |_| {
-                                    active_ring_color_slot.set(if active_ring_color_slot() == Some(1) {
-                                        None
-                                    } else {
-                                        Some(1)
-                                    });
+                                    active_ring_color_slot
+                                        .set(if active_ring_color_slot() == Some(1) { None } else { Some(1) });
                                 },
                                 on_select: move |value| {
                                     ring_color_right.set(value);

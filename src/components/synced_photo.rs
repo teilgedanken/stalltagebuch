@@ -66,8 +66,7 @@ pub fn SyncedThumbnailImage(
                     "!"
                 }
             } else if is_downloading() {
-                div {
-                    style: "position:absolute; right:6px; bottom:6px; width:22px; height:22px; border-radius:50%; background:rgba(0, 0, 0, 0.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px;",
+                div { style: "position:absolute; right:6px; bottom:6px; width:22px; height:22px; border-radius:50%; background:rgba(0, 0, 0, 0.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px;",
                     "⏳"
                 }
             }
@@ -119,11 +118,7 @@ pub fn SyncedPreviewImage(
 
     rsx! {
         div { style: "position: relative; display: inline-block;",
-            PreviewImage {
-                relative_path,
-                alt,
-                refresh_token: rerender_tick(),
-            }
+            PreviewImage { relative_path, alt, refresh_token: rerender_tick() }
 
             if download_error().is_some() {
                 div {
@@ -132,8 +127,7 @@ pub fn SyncedPreviewImage(
                     "!"
                 }
             } else if is_downloading() {
-                div {
-                    style: "position:absolute; right:10px; bottom:10px; width:26px; height:26px; border-radius:50%; background:rgba(0, 0, 0, 0.6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px;",
+                div { style: "position:absolute; right:10px; bottom:10px; width:26px; height:26px; border-radius:50%; background:rgba(0, 0, 0, 0.6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px;",
                     "⏳"
                 }
             }
@@ -218,13 +212,11 @@ pub fn SyncedCollectionFullscreen(
             }
 
             if let Some(_err) = download_error() {
-                div {
-                    style: "position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 1100; background: rgba(198, 40, 40, 0.95); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;",
+                div { style: "position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 1100; background: rgba(198, 40, 40, 0.95); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;",
                     "⚠ Sync-Fehler"
                 }
             } else if is_downloading() {
-                div {
-                    style: "position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 1100; background: rgba(0, 0, 0, 0.65); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px;",
+                div { style: "position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 1100; background: rgba(0, 0, 0, 0.65); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px;",
                     "⏳ Lädt aus Nextcloud..."
                 }
             }

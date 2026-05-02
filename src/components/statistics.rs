@@ -186,7 +186,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                     }
 
                     div { class: "buttons has-addons is-centered",
-                        for (label , value) in [
+                        for (label, value) in [
                             (tid!("period-week"), "week"),
                             (tid!("period-month"), "month"),
                             (tid!("period-year"), "year"),
@@ -289,7 +289,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                             }
                                         }
                                         tbody {
-                                            for (display_date , iso_date , eggs) in period_records().iter() {
+                                            for (display_date, iso_date, eggs) in period_records().iter() {
                                                 tr {
                                                     class: "is-clickable",
                                                     style: "cursor: pointer;",

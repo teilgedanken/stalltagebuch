@@ -207,25 +207,22 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     .map(|value| RingColor::from_str(value));
 
                                 rsx! {
-                                    div {
-                                        class: "mb-2",
-                                        style: "display: flex; width: 100%;",
+                                    div { class: "mb-2", style: "display: flex; width: 100%;",
                                         button {
                                             class: "button",
                                             style: detail_ring_button_style(left_ring.as_ref(), true),
                                             title: format!(
                                                 "{}: {}",
                                                 tid!("ring-color-side-left"),
-                                                detail_ring_label(left_ring.as_ref())
+                                                detail_ring_label(left_ring.as_ref()),
                                             ),
-                                            span {
-                                                style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                            span { style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
                                                 span { style: detail_ring_swatch_style(left_ring.as_ref()) }
-                                                    span {
-                                                        class: "is-size-7 has-text-grey-dark",
-                                                        style: "overflow: hidden; text-overflow: ellipsis;",
-                                                        {detail_ring_label(left_ring.as_ref())}
-                                                    }
+                                                span {
+                                                    class: "is-size-7 has-text-grey-dark",
+                                                    style: "overflow: hidden; text-overflow: ellipsis;",
+                                                    {detail_ring_label(left_ring.as_ref())}
+                                                }
                                             }
                                         }
                                         button {
@@ -234,15 +231,14 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                             title: format!(
                                                 "{}: {}",
                                                 tid!("ring-color-side-right"),
-                                                detail_ring_label(right_ring.as_ref())
+                                                detail_ring_label(right_ring.as_ref()),
                                             ),
-                                            span {
-                                                style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                            span { style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
                                                 span { style: detail_ring_swatch_style(right_ring.as_ref()) }
-                                                    span {
-                                                        class: "is-size-7 has-text-grey-dark",
-                                                        style: "overflow: hidden; text-overflow: ellipsis;",
-                                                        {detail_ring_label(right_ring.as_ref())}
+                                                span {
+                                                    class: "is-size-7 has-text-grey-dark",
+                                                    style: "overflow: hidden; text-overflow: ellipsis;",
+                                                    {detail_ring_label(right_ring.as_ref())}
                                                 }
                                             }
                                         }
@@ -356,7 +352,7 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                                     }
 
                                     div { class: "grid is-col-min-5 is-gap-0",
-                                        for (idx , (photo_uuid , photo_path , _created_at)) in photo_items.iter().enumerate() {
+                                        for (idx, (photo_uuid, photo_path, _created_at)) in photo_items.iter().enumerate() {
                                             div {
                                                 key: "{photo_uuid}",
                                                 class: "cell is-clickable",

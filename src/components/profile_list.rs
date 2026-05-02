@@ -159,11 +159,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: dead_only,
                                 compact: true,
                                 on_toggle: move |_| {
-                                    active_ring_filter_slot.set(if active_ring_filter_slot() == Some(0) {
-                                        None
-                                    } else {
-                                        Some(0)
-                                    });
+                                    active_ring_filter_slot
+                                        .set(if active_ring_filter_slot() == Some(0) { None } else { Some(0) });
                                 },
                             }
                             RingColorTrigger {
@@ -174,11 +171,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: dead_only,
                                 compact: true,
                                 on_toggle: move |_| {
-                                    active_ring_filter_slot.set(if active_ring_filter_slot() == Some(1) {
-                                        None
-                                    } else {
-                                        Some(1)
-                                    });
+                                    active_ring_filter_slot
+                                        .set(if active_ring_filter_slot() == Some(1) { None } else { Some(1) });
                                 },
                             }
                             button {
@@ -227,7 +221,14 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     }
                 } else {
                     div { class: "profile-grid",
-                        for (profile , status , profile_photo_uuid , profile_photo_path , age_display , days_since_last_event) in filtered_profiles() {
+                        for (
+        profile,
+        status,
+        profile_photo_uuid,
+        profile_photo_path,
+        age_display,
+        days_since_last_event,
+    ) in filtered_profiles() {
                             ProfileCard {
                                 key: "{profile.uuid}",
                                 profile: profile.clone(),

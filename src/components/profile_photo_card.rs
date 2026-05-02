@@ -75,10 +75,14 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                             alt: "Profile Photo".to_string(),
                         }
                     } else {
-                        div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;", "🐦" }
+                        div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;",
+                            "🐦"
+                        }
                     }
                 } else {
-                    div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;", "🐦" }
+                    div { style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; color: #ccc;",
+                        "🐦"
+                    }
                 }
             }
 
@@ -98,11 +102,11 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                         upload_error.set(String::new());
 
                         let quail_id_for_gallery = _quail_id_for_gallery.clone();
-                        let create_photo_collection_gallery = _create_photo_collection_gallery.clone();
+                        let create_photo_collection_gallery = _create_photo_collection_gallery
+                            .clone();
                         let create_photo_gallery = _create_photo_gallery.clone();
                         let set_quail_photo_gallery = _set_quail_photo_gallery.clone();
                         let has_profile_photo = _has_profile_photo;
-
                         spawn(async move {
                             #[cfg(not(target_os = "android"))]
                             let _ = (
@@ -112,16 +116,16 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                 &set_quail_photo_gallery,
                                 has_profile_photo,
                             );
-
                             #[cfg(target_os = "android")]
                             {
                                 let device_id = crate::services::device_id_service::get_device_id()
                                     .unwrap_or_else(|_| "unknown-device".to_string());
                                 let needs_profile_photo = !has_profile_photo;
-
                                 match crate::camera::pick_images() {
                                     Ok(paths) => {
-                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_for_gallery) {
+                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(
+                                            &quail_id_for_gallery,
+                                        ) {
                                             let collection_uuid = quail_uuid;
                                             if let Err(err) = create_photo_collection_gallery(spacetime::CreatePhotoCollectionArgs {
                                                 uuid: collection_uuid.to_string(),
@@ -129,25 +133,27 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                 event_uuid: None,
                                                 name: format!(
                                                     "Quail-{}",
-                                                    quail_uuid.to_string().chars().take(8).collect::<String>()
+                                                    quail_uuid.to_string().chars().take(8).collect::<String>(),
                                                 ),
                                                 device_id: device_id.clone(),
                                             }) {
-                                                upload_error.set(format!(
-                                                    "{}: {}",
-                                                    tid!("error-selection-failed"),
-                                                    err
-                                                ));
+                                                upload_error
+                                                    .set(
+                                                        format!("{}: {}", tid!("error-selection-failed"), err),
+                                                    );
                                                 uploading.set(false);
                                                 return;
                                             }
-
                                             let mut profile_photo_set = false;
                                             for picked_path in paths {
                                                 let source = picked_path.to_string_lossy().to_string();
-                                                match crate::services::photo_service::process_photo(source).await {
+                                                match crate::services::photo_service::process_photo(source)
+                                                    .await
+                                                {
                                                     Ok((relative_original, _, _)) => {
-                                                        if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                                        if let Some(photo_uuid) = std::path::Path::new(
+                                                                &relative_original,
+                                                            )
                                                             .file_stem()
                                                             .and_then(|s| s.to_str())
                                                         {
@@ -157,24 +163,21 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                                 relative_path: relative_original.clone(),
                                                                 device_id: device_id.clone(),
                                                             }) {
-                                                                upload_error.set(format!(
-                                                                    "{}: {}",
-                                                                    tid!("error-selection-failed"),
-                                                                    err
-                                                                ));
+                                                                upload_error
+                                                                    .set(
+                                                                        format!("{}: {}", tid!("error-selection-failed"), err),
+                                                                    );
                                                                 continue;
                                                             }
-
                                                             if needs_profile_photo && !profile_photo_set {
                                                                 if let Err(err) = set_quail_photo_gallery(
                                                                     quail_uuid.to_string(),
                                                                     Some(photo_uuid.to_string()),
                                                                 ) {
-                                                                    upload_error.set(format!(
-                                                                        "{}: {}",
-                                                                        tid!("error-selection-failed"),
-                                                                        err
-                                                                    ));
+                                                                    upload_error
+                                                                        .set(
+                                                                            format!("{}: {}", tid!("error-selection-failed"), err),
+                                                                        );
                                                                 } else {
                                                                     profile_photo_set = true;
                                                                 }
@@ -182,18 +185,18 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                         }
                                                     }
                                                     Err(err) => {
-                                                        upload_error.set(format!(
-                                                            "{}: {}",
-                                                            tid!("error-selection-failed"),
-                                                            err
-                                                        ));
+                                                        upload_error
+                                                            .set(
+                                                                format!("{}: {}", tid!("error-selection-failed"), err),
+                                                            );
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        upload_error.set(format!("{}: {}", tid!("error-selection-failed"), e));
+                                        upload_error
+                                            .set(format!("{}: {}", tid!("error-selection-failed"), e));
                                     }
                                 }
                             }
@@ -201,7 +204,6 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                             {
                                 upload_error.set(tid!("error-multiselect-android-only"));
                             }
-
                             uploading.set(false);
                         });
                     }
@@ -254,7 +256,9 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                 match crate::camera::capture_photo() {
                                     Ok(path) => {
                                         let source = path.to_string_lossy().to_string();
-                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(&quail_id_for_camera) {
+                                        if let Ok(quail_uuid) = uuid::Uuid::parse_str(
+                                            &quail_id_for_camera,
+                                        ) {
                                             let collection_uuid = quail_uuid;
                                             if let Err(err) = create_photo_collection_camera(spacetime::CreatePhotoCollectionArgs {
                                                 uuid: collection_uuid.to_string(),
@@ -262,22 +266,22 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                 event_uuid: None,
                                                 name: format!(
                                                     "Quail-{}",
-                                                    quail_uuid.to_string().chars().take(8).collect::<String>()
+                                                    quail_uuid.to_string().chars().take(8).collect::<String>(),
                                                 ),
                                                 device_id: device_id.clone(),
                                             }) {
-                                                upload_error.set(format!(
-                                                    "{}: {}",
-                                                    tid!("error-capture-failed"),
-                                                    err
-                                                ));
+                                                upload_error
+                                                    .set(format!("{}: {}", tid!("error-capture-failed"), err));
                                                 uploading.set(false);
                                                 return;
                                             }
-
-                                            match crate::services::photo_service::process_photo(source).await {
+                                            match crate::services::photo_service::process_photo(source)
+                                                .await
+                                            {
                                                 Ok((relative_original, _, _)) => {
-                                                    if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                                    if let Some(photo_uuid) = std::path::Path::new(
+                                                            &relative_original,
+                                                        )
                                                         .file_stem()
                                                         .and_then(|s| s.to_str())
                                                     {
@@ -287,41 +291,32 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                                                             relative_path: relative_original.clone(),
                                                             device_id,
                                                         }) {
-                                                            upload_error.set(format!(
-                                                                "{}: {}",
-                                                                tid!("error-capture-failed"),
-                                                                err
-                                                            ));
+                                                            upload_error
+                                                                .set(format!("{}: {}", tid!("error-capture-failed"), err));
                                                             uploading.set(false);
                                                             return;
                                                         }
-
                                                         if needs_profile_photo {
                                                             if let Err(err) = set_quail_photo_camera(
                                                                 quail_uuid.to_string(),
                                                                 Some(photo_uuid.to_string()),
                                                             ) {
-                                                                upload_error.set(format!(
-                                                                    "{}: {}",
-                                                                    tid!("error-capture-failed"),
-                                                                    err
-                                                                ));
+                                                                upload_error
+                                                                    .set(format!("{}: {}", tid!("error-capture-failed"), err));
                                                             }
                                                         }
                                                     }
                                                 }
                                                 Err(err) => {
-                                                    upload_error.set(format!(
-                                                        "{}: {}",
-                                                        tid!("error-capture-failed"),
-                                                        err
-                                                    ));
+                                                    upload_error
+                                                        .set(format!("{}: {}", tid!("error-capture-failed"), err));
                                                 }
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        upload_error.set(format!("{}: {}", tid!("error-capture-failed"), e));
+                                        upload_error
+                                            .set(format!("{}: {}", tid!("error-capture-failed"), e));
                                     }
                                 }
                             }
@@ -329,7 +324,6 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                             {
                                 upload_error.set(tid!("error-camera-android-only"));
                             }
-
                             uploading.set(false);
                         });
                     }
