@@ -81,7 +81,7 @@ pub fn CropEditor(
 
     rsx! {
         div {
-            style: "width: 100%; height: 100%; display: flex; flex-direction: column; background: #1a1a1a; color: white; touch-action: none;",
+            style: "width: 100%; height: 100%; display: flex; flex-direction: column; background: #1a1a1a; color: white; touch-action: none; min-height: 100vh;",
             ontouchstart: move |evt| {
                 if let Some(touch) = evt.touches().get(0) {
                     start_x.set(touch.client_coordinates().x as f32);
@@ -223,10 +223,14 @@ pub fn CropEditor(
             },
 
             // Header using Bulma level
-            div { class: "level" ,
+            div {
+                class: "level",
+                style: "background: #1a1a1a; padding: 16px; margin: 0; border-bottom: 1px solid #333;",
                 div { class: "level-left",
                     div { class: "level-item",
-                        h2 { class: "title is-4", "{tid!(\"crop_editor_title\")}" }
+                        h2 { class: "title is-4", style: "margin: 0;",
+                            "{tid!(\"crop_editor_title\")}"
+                        }
                     }
                 }
                 div { class: "level-right",
@@ -234,16 +238,17 @@ pub fn CropEditor(
                         button {
                             class: "delete is-large",
                             onclick: handle_crop_cancel,
-                            aria_label: "close"
+                            aria_label: "close",
                         }
                     }
                 }
             }
 
-            // Image container with crop overlay using Bulma section
-            section { class: "section" , style: "flex: 1; display: flex; overflow: hidden;",
+            // Centered content wrapper (image + buttons)
+            div { style: "flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: auto; padding: 16px;",
 
-                div { style: "position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;",
+                // Image container with crop overlay
+                div { style: "position: relative; width: 100%; max-width: 600px; aspect-ratio: auto; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;",
 
                     img {
                         src: "{image_data}",
@@ -427,24 +432,14 @@ pub fn CropEditor(
                         }
                     }
                 }
-            }
 
-            // Controls using Bulma buttons
-            div { class: "level",
-                div { class: "level-right",
-                    div { class: "level-item",
-                        div { class: "buttons",
-                            button {
-                                class: "button is-light",
-                                onclick: handle_crop_cancel,
-                                "{tid!(\"crop_editor_cancel\")}"
-                            }
-                            button {
-                                class: "button is-info",
-                                onclick: handle_crop_apply,
-                                "{tid!(\"crop_editor_apply\")}"
-                            }
-                        }
+                // Buttons directly below image
+                div { class: "buttons", style: "margin-top: 12px; gap: 8px;",
+                    button { class: "button is-light", onclick: handle_crop_cancel,
+                        "{tid!(\"crop_editor_cancel\")}"
+                    }
+                    button { class: "button is-info", onclick: handle_crop_apply,
+                        "{tid!(\"crop_editor_apply\")}"
                     }
                 }
             }
