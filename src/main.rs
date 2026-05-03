@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
+use image_processing::CropRect;
 use models::SpacetimeSettings;
 use photo_gallery::PhotoGalleryContext;
 
@@ -310,36 +311,19 @@ fn SpacetimeSession(
                     }
                 },
                 Screen::Crop { photo_path, on_complete } => {
-                    let photo_path_for_editor = photo_path.clone();
-                    let photo_path_for_crop = photo_path.clone();
-                    let return_screen = (*on_complete).clone();
-                    let return_screen_cancel = (*on_complete).clone();
+                    // TODO: Implement crop editor
                     rsx! {
-                        CropEditor {
-                            image_path: photo_path_for_editor,
-                            on_crop: move |crop_rect| {
-                                let photo_path = photo_path_for_crop.clone();
-                                let screen_to_return = return_screen.clone();
-                                spawn(async move {
-                                    match crate::services::photo_service::crop_and_process_photo(
-                                        photo_path,
-                                        crop_rect,
-                                    )
-                                    .await
-                                    {
-                                        Ok(_) => {
-                                            log::info!("Photo cropped successfully");
-                                            current_screen.set(screen_to_return);
-                                        }
-                                        Err(e) => {
-                                            log::error!("Failed to crop photo: {}", e);
-                                        }
-                                    }
-                                });
-                            },
-                            on_cancel: move |_| {
-                                current_screen.set(return_screen_cancel.clone());
-                            },
+                        div {
+                            class: "section",
+                            h1 { "Crop Editor" }
+                            p { "Crop screen not yet fully implemented" }
+                            button {
+                                class: "button",
+                                onclick: move |_| {
+                                    current_screen.set((*on_complete).clone());
+                                },
+                                "Back"
+                            }
                         }
                     }
                 }

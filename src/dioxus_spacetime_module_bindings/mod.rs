@@ -51,6 +51,8 @@ pub mod update_photo_collection_args_type;
 pub mod update_photo_collection_reducer;
 pub mod update_photo_sync_status_args_type;
 pub mod update_photo_sync_status_reducer;
+pub mod update_photo_version_args_type;
+pub mod update_photo_version_reducer;
 pub mod update_quail_args_type;
 pub mod update_quail_reducer;
 pub mod upsert_egg_record_args_type;
@@ -99,6 +101,8 @@ pub use update_photo_collection_args_type::UpdatePhotoCollectionArgs;
 pub use update_photo_collection_reducer::update_photo_collection;
 pub use update_photo_sync_status_args_type::UpdatePhotoSyncStatusArgs;
 pub use update_photo_sync_status_reducer::update_photo_sync_status;
+pub use update_photo_version_args_type::UpdatePhotoVersionArgs;
+pub use update_photo_version_reducer::update_photo_version;
 pub use update_quail_args_type::UpdateQuailArgs;
 pub use update_quail_reducer::update_quail;
 pub use upsert_egg_record_args_type::UpsertEggRecordArgs;
@@ -167,6 +171,9 @@ pub enum Reducer {
     UpdatePhotoSyncStatus {
         args: UpdatePhotoSyncStatusArgs,
     },
+    UpdatePhotoVersion {
+        args: UpdatePhotoVersionArgs,
+    },
     UpdateQuail {
         args: UpdateQuailArgs,
     },
@@ -200,6 +207,7 @@ impl __sdk::Reducer for Reducer {
             Reducer::UpdateEvent { .. } => "update_event",
             Reducer::UpdatePhotoCollection { .. } => "update_photo_collection",
             Reducer::UpdatePhotoSyncStatus { .. } => "update_photo_sync_status",
+            Reducer::UpdatePhotoVersion { .. } => "update_photo_version",
             Reducer::UpdateQuail { .. } => "update_quail",
             Reducer::UpsertEggRecord { .. } => "upsert_egg_record",
             _ => unreachable!(),
@@ -278,6 +286,11 @@ impl __sdk::Reducer for Reducer {
             Reducer::UpdatePhotoSyncStatus { args } => __sats::bsatn::to_vec(
                 &update_photo_sync_status_reducer::UpdatePhotoSyncStatusArgs { args: args.clone() },
             ),
+            Reducer::UpdatePhotoVersion { args } => {
+                __sats::bsatn::to_vec(&update_photo_version_reducer::UpdatePhotoVersionArgs {
+                    args: args.clone(),
+                })
+            }
             Reducer::UpdateQuail { args } => {
                 __sats::bsatn::to_vec(&update_quail_reducer::UpdateQuailArgs { args: args.clone() })
             }

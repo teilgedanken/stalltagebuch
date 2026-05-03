@@ -7,7 +7,7 @@
 
 #![allow(legacy_derive_helpers)]
 
-use spacetimedb::{reducer, ReducerContext, SpacetimeType, Table, Timestamp};
+use spacetimedb::{ReducerContext, SpacetimeType, Table, Timestamp, reducer};
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +140,14 @@ pub struct Photo {
     pub created_at: i64,
     /// Unix timestamp (seconds) when photo was last modified.
     pub updated_at: i64,
+    /// Version number for cropped photos. 0 = original (unversioned), 1+ = cropped versions.
+    /// Automatically populated with 0 for existing photos during migration.
+    #[default(0)]
+    pub version: i32,
+    /// Whether this is the original uncropped photo. True = original (uuid.jpg), False = cropped (uuid-v{version}.jpg).
+    /// Automatically populated with true for existing photos during migration.
+    #[default(true)]
+    pub is_original: bool,
 }
 
 /// A tracked backup run and its final result.
@@ -254,6 +262,14 @@ pub struct UpdatePhotoSyncStatusArgs {
 }
 
 #[derive(SpacetimeType)]
+pub struct UpdatePhotoVersionArgs {
+    pub uuid: String,
+    pub version: i32,
+    pub is_original: bool,
+    pub relative_path: String,
+}
+
+#[derive(SpacetimeType)]
 pub struct CreateBackupStartedArgs {
     pub backup_id: String,
     pub kind: String,
@@ -278,7 +294,12 @@ pub struct FinishBackupArgs {
 }
 
 fn normalize_ring_color(value: Option<&str>) -> Option<String> {
-    match value.map(str::trim).unwrap_or_default().to_lowercase().as_str() {
+    match value
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
         "" => None,
         "lila" => Some("lila".to_string()),
         "rosa" => Some("rosa".to_string()),
@@ -478,7 +499,7 @@ pub fn set_quail_photo(ctx: &ReducerContext, quail_uuid: String, photo_uuid: Opt
 pub fn create_event(ctx: &ReducerContext, args: CreateEventArgs) {
     ctx.db.quail_events().insert(QuailEvent {
         uuid: args.uuid,
-        
+
         quail_uuid: args.quail_uuid,
         event_type: args.event_type,
         event_date: args.event_date,
@@ -533,7 +554,7 @@ pub fn upsert_egg_record(ctx: &ReducerContext, args: UpsertEggRecordArgs) {
     } else {
         ctx.db.egg_records().insert(EggRecord {
             uuid: args.uuid,
-            
+
             record_date: args.record_date,
             total_eggs: args.total_eggs,
             notes: args.notes,
@@ -565,7 +586,7 @@ pub fn create_photo_collection(ctx: &ReducerContext, args: CreatePhotoCollection
 
     ctx.db.photo_collections().insert(PhotoCollection {
         uuid: args.uuid,
-        
+
         quail_uuid: args.quail_uuid,
         event_uuid: args.event_uuid,
         preview_photo_uuid: None,
@@ -638,6 +659,8 @@ pub fn create_photo(ctx: &ReducerContext, args: CreatePhotoArgs) {
         owner: ctx.sender().to_string(),
         created_at: now,
         updated_at: now,
+        version: 0,
+        is_original: true,
     });
 }
 
@@ -674,7 +697,12 @@ pub fn create_backup_started(ctx: &ReducerContext, args: CreateBackupStartedArgs
 /// Finish a backup entry with status "success" or "failed" (owner-only).
 #[reducer]
 pub fn finish_backup(ctx: &ReducerContext, args: FinishBackupArgs) {
-    if let Some(mut existing) = ctx.db.backups().iter().find(|b| b.backup_id == args.backup_id) {
+    if let Some(mut existing) = ctx
+        .db
+        .backups()
+        .iter()
+        .find(|b| b.backup_id == args.backup_id)
+    {
         if existing.owner != ctx.sender().to_string() {
             return;
         }
@@ -710,7 +738,28 @@ pub fn update_photo_sync_status(ctx: &ReducerContext, args: UpdatePhotoSyncStatu
         existing.sync_error = args.sync_error;
         existing.last_sync_attempt = args.last_sync_attempt;
         existing.retry_count = args.retry_count;
-        let now = ctx.timestamp
+        let now = ctx
+            .timestamp
+            .duration_since(Timestamp::UNIX_EPOCH)
+            .expect("timestamp should be after UNIX_EPOCH")
+            .as_secs() as i64;
+        existing.updated_at = now;
+        ctx.db.photos().uuid().update(existing);
+    }
+}
+
+/// Update photo version and is_original flag after cropping (owner-only).
+#[reducer]
+pub fn update_photo_version(ctx: &ReducerContext, args: UpdatePhotoVersionArgs) {
+    if let Some(mut existing) = ctx.db.photos().iter().find(|p| p.uuid == args.uuid) {
+        if existing.owner != ctx.sender().to_string() {
+            return;
+        }
+        existing.version = args.version;
+        existing.is_original = args.is_original;
+        existing.relative_path = args.relative_path;
+        let now = ctx
+            .timestamp
             .duration_since(Timestamp::UNIX_EPOCH)
             .expect("timestamp should be after UNIX_EPOCH")
             .as_secs() as i64;
@@ -752,18 +801,24 @@ pub struct UpdateDeviceArgs {
 pub fn register_device(ctx: &ReducerContext, args: RegisterDeviceArgs) {
     let sender_str = ctx.sender().to_string();
     // Use ctx.timestamp to get the current time in a WASM-compatible way
-    let now = ctx.timestamp
+    let now = ctx
+        .timestamp
         .duration_since(Timestamp::UNIX_EPOCH)
         .expect("timestamp should be after UNIX_EPOCH")
         .as_secs() as i64;
 
     log::info!(
-        "register_device called: device_id={}, sender={}", 
-        args.device_id, 
+        "register_device called: device_id={}, sender={}",
+        args.device_id,
         sender_str
     );
 
-    if let Some(mut existing) = ctx.db.devices().iter().find(|d| d.device_id == args.device_id) {
+    if let Some(mut existing) = ctx
+        .db
+        .devices()
+        .iter()
+        .find(|d| d.device_id == args.device_id)
+    {
         // Update existing device
         log::info!(
             "register_device: found existing device, owner={}, current_sender={}",
@@ -782,13 +837,16 @@ pub fn register_device(ctx: &ReducerContext, args: RegisterDeviceArgs) {
             existing.comment = Some(comment);
         }
         ctx.db.devices().device_id().update(existing);
-        log::info!("register_device: updated existing device {}", args.device_id);
+        log::info!(
+            "register_device: updated existing device {}",
+            args.device_id
+        );
     } else {
         // Create new device
         log::info!("register_device: creating new device {}", args.device_id);
         ctx.db.devices().insert(Device {
             device_id: args.device_id.clone(),
-            
+
             name: args.name,
             comment: args.comment,
             first_seen: now,
@@ -802,7 +860,12 @@ pub fn register_device(ctx: &ReducerContext, args: RegisterDeviceArgs) {
 /// Update device information (owner-only).
 #[reducer]
 pub fn update_device(ctx: &ReducerContext, args: UpdateDeviceArgs) {
-    if let Some(mut existing) = ctx.db.devices().iter().find(|d| d.device_id == args.device_id) {
+    if let Some(mut existing) = ctx
+        .db
+        .devices()
+        .iter()
+        .find(|d| d.device_id == args.device_id)
+    {
         if existing.owner != ctx.sender().to_string() {
             log::warn!("update_device: caller is not the owner");
             return;

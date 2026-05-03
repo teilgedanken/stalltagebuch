@@ -18,6 +18,8 @@ pub struct Photo {
     pub owner: String,
     pub created_at: i64,
     pub updated_at: i64,
+    pub version: i32,
+    pub is_original: bool,
 }
 
 impl __sdk::InModule for Photo {
@@ -39,6 +41,8 @@ pub struct PhotoCols {
     pub owner: __sdk::__query_builder::Col<Photo, String>,
     pub created_at: __sdk::__query_builder::Col<Photo, i64>,
     pub updated_at: __sdk::__query_builder::Col<Photo, i64>,
+    pub version: __sdk::__query_builder::Col<Photo, i32>,
+    pub is_original: __sdk::__query_builder::Col<Photo, bool>,
 }
 
 impl __sdk::__query_builder::HasCols for Photo {
@@ -56,6 +60,8 @@ impl __sdk::__query_builder::HasCols for Photo {
             owner: __sdk::__query_builder::Col::new(table_name, "owner"),
             created_at: __sdk::__query_builder::Col::new(table_name, "created_at"),
             updated_at: __sdk::__query_builder::Col::new(table_name, "updated_at"),
+            version: __sdk::__query_builder::Col::new(table_name, "version"),
+            is_original: __sdk::__query_builder::Col::new(table_name, "is_original"),
         }
     }
 }

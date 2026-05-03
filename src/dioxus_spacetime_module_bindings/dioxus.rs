@@ -852,6 +852,23 @@ pub fn use_reducer_update_photo_sync_status()
     }
 }
 
+/// Get a callback to invoke the `update_photo_version` reducer.
+#[must_use]
+pub fn use_reducer_update_photo_version()
+-> impl Fn(update_photo_version_args_type::UpdatePhotoVersionArgs) -> spacetimedb_sdk::Result<()>
++ Clone
++ 'static {
+    let conn_signal = use_connection();
+
+    move |args: update_photo_version_args_type::UpdatePhotoVersionArgs| {
+        if let Some(conn) = conn_signal().as_ref() {
+            conn.reducers.update_photo_version(args)
+        } else {
+            Err(spacetimedb_sdk::Error::Disconnected)
+        }
+    }
+}
+
 /// Get a callback to invoke the `update_quail` reducer.
 #[must_use]
 pub fn use_reducer_update_quail()

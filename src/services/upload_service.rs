@@ -43,9 +43,42 @@ where
             .update_photo_sync_status(&photo.uuid, "uploading", None, photo.retry_count)
             .await?;
 
-        let upload_result = webdav
+        // Upload original photo
+        let mut upload_result = webdav
             .upload_original(&absolute_path, &photo.relative_path)
             .await;
+
+        // Upload all cropped versions if they exist (uuid-v1.jpg, uuid-v2.jpg, etc.)
+        if upload_result.is_ok() {
+            let storage_root = photo_paths::photo_storage_root();
+            let mut version = 1;
+            loop {
+                let versioned_filename = format!("{}-v{}.jpg", photo.uuid, version);
+                let versioned_path = storage_root.join(&versioned_filename);
+
+                if !versioned_path.exists() {
+                    break; // No more versions
+                }
+
+                match webdav
+                    .upload_original(&versioned_path, &versioned_filename)
+                    .await
+                {
+                    Ok(()) => {
+                        log::info!("Uploaded crop version {}: {}", version, versioned_filename);
+                        version += 1;
+                    }
+                    Err(err) => {
+                        log::warn!(
+                            "Failed to upload crop version {}: {} (continuing with synced status)",
+                            version,
+                            err
+                        );
+                        break; // Continue with next photo even if a crop version fails
+                    }
+                }
+            }
+        }
 
         match upload_result {
             Ok(()) => {
