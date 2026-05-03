@@ -314,19 +314,51 @@ fn SpacetimeSession(
                     }
                 },
                 Screen::Crop { photo_path, on_complete } => {
-                    // TODO: Implement crop editor
+                    let on_complete_clone = on_complete.clone();
+                    let on_complete_cancel = on_complete.clone();
+                    
                     rsx! {
-                        div {
-                            class: "section",
-                            h1 { "Crop Editor" }
-                            p { "Crop screen not yet fully implemented" }
-                            button {
-                                class: "button",
-                                onclick: move |_| {
-                                    current_screen.set((*on_complete).clone());
-                                },
-                                "Back"
-                            }
+                        CropEditor {
+                            image_path: photo_path.clone(),
+                            on_crop: move |crop_rect| {
+                                let photo_path_inner = photo_path.clone();
+                                
+                                // Use spawn without signal mutations from the async block
+                                let _ = tokio::spawn(async move {
+                                    let photo_uuid = std::path::PathBuf::from(&photo_path_inner)
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .map(|s| {
+                                            s.split('-')
+                                                .next()
+                                                .unwrap_or(s)
+                                                .to_string()
+                                        })
+                                        .unwrap_or_else(|| "unknown".to_string());
+
+                                    match crate::services::photo_service::crop_and_process_photo(
+                                        photo_path_inner,
+                                        crop_rect,
+                                        photo_uuid.clone(),
+                                        0,
+                                    )
+                                    .await
+                                    {
+                                        Ok((new_relative_path, _, _, new_version)) => {
+                                            log::info!(
+                                                "Photo cropped successfully: version {}",
+                                                new_version
+                                            );
+                                        }
+                                        Err(e) => {
+                                            log::error!("Failed to crop photo: {}", e);
+                                        }
+                                    }
+                                });
+                            },
+                            on_cancel: move |_| {
+                                current_screen.set((*on_complete_cancel).clone());
+                            },
                         }
                     }
                 }
