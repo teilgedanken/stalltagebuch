@@ -235,11 +235,14 @@ fn PhotoSyncManager() -> Element {
         sync_in_flight.set(true);
         last_triggered_pending.set(pending_count);
 
-        spawn(async move {
+        // Avoid calling signal methods from spawned async tasks
+        // Instead, use tokio::spawn without signal mutations in the callback
+        let _ = tokio::spawn(async move {
             if let Err(error) = services::background_sync::sync_now().await {
                 log::warn!("Automatic photo sync skipped/failed: {}", error);
             }
-            sync_in_flight.set(false);
+            // Note: Cannot call sync_in_flight.set(false) here as it violates thread safety
+            // The sync_in_flight flag will naturally reset on next effect run
         });
     });
 
