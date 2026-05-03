@@ -51,6 +51,7 @@ fn EventPhotoGallery(
     let gallery_config = GalleryConfig {
         allow_delete: true,
         allow_select: false,
+        allow_edit: false,
         selected_id: None,
     };
     let gallery_key = format!(

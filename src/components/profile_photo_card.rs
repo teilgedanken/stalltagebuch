@@ -1,5 +1,5 @@
 use super::synced_photo::{SyncedCollectionFullscreen, SyncedPreviewImage};
-use crate::spacetime;
+use crate::{Screen, spacetime};
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
@@ -217,7 +217,7 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
             }
 
             button {
-                style: "position:absolute; bottom:12px; right:12px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
+                style: "position:absolute; bottom:12px; right:120px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
                 disabled: uploading(),
                 onclick: {
                     let _quail_id_for_camera = quail_id.clone();

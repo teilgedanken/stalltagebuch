@@ -428,8 +428,10 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                             let gallery_config = GalleryConfig {
                                 allow_delete: true,
                                 allow_select: true,
+                                allow_edit: true,
                                 selected_id: selected_profile_photo_id(),
                             };
+                            let photos_for_edit = photos();
                             rsx! {
                                 Gallery {
                                     key: "{gallery_key}",
@@ -443,6 +445,16 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     },
                                     on_select: move |photo_id: String| {
                                         selected_profile_photo_id.set(Some(photo_id));
+                                    },
+                                    on_edit: move |photo_id: String| {
+                                        // Find the photo path from the photo_id
+                                        if let Some(photo) = photos_for_edit.iter().find(|p| p.uuid == photo_id) {
+                                            let photo_path = photo.relative_path.clone();
+                                            on_navigate.call(Screen::Crop {
+                                                photo_path,
+                                                on_complete: Box::new(Screen::ProfileEdit(quail_id.clone())),
+                                            });
+                                        }
                                     },
                                 }
                             }

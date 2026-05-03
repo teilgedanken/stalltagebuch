@@ -1,3 +1,4 @@
+pub mod crop_editor;
 pub mod egg_tracking;
 pub mod event_add;
 pub mod event_edit;
@@ -14,6 +15,7 @@ pub mod settings;
 pub mod statistics;
 pub mod synced_photo;
 
+pub use crop_editor::CropEditor;
 pub use egg_tracking::EggTrackingScreen;
 pub use event_add::EventAdd;
 pub use event_edit::EventEditScreen;

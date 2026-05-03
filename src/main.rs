@@ -14,8 +14,9 @@ mod services;
 mod spacetime;
 
 use components::{
-    AddProfileScreen, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen, NavigationBar,
-    ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, SettingsScreen, StatisticsScreen,
+    AddProfileScreen, CropEditor, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
+    NavigationBar, ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, SettingsScreen,
+    StatisticsScreen,
 };
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -154,6 +155,10 @@ pub enum Screen {
     EggTracking(Option<String>), // Date in YYYY-MM-DD format
     Statistics,
     Settings,
+    Crop {
+        photo_path: String,
+        on_complete: Box<Screen>, // Screen to return to after crop
+    },
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -304,6 +309,40 @@ fn SpacetimeSession(
                         on_spacetime_settings_saved,
                     }
                 },
+                Screen::Crop { photo_path, on_complete } => {
+                    let photo_path_for_editor = photo_path.clone();
+                    let photo_path_for_crop = photo_path.clone();
+                    let return_screen = (*on_complete).clone();
+                    let return_screen_cancel = (*on_complete).clone();
+                    rsx! {
+                        CropEditor {
+                            image_path: photo_path_for_editor,
+                            on_crop: move |crop_rect| {
+                                let photo_path = photo_path_for_crop.clone();
+                                let screen_to_return = return_screen.clone();
+                                spawn(async move {
+                                    match crate::services::photo_service::crop_and_process_photo(
+                                        photo_path,
+                                        crop_rect,
+                                    )
+                                    .await
+                                    {
+                                        Ok(_) => {
+                                            log::info!("Photo cropped successfully");
+                                            current_screen.set(screen_to_return);
+                                        }
+                                        Err(e) => {
+                                            log::error!("Failed to crop photo: {}", e);
+                                        }
+                                    }
+                                });
+                            },
+                            on_cancel: move |_| {
+                                current_screen.set(return_screen_cancel.clone());
+                            },
+                        }
+                    }
+                }
             }
         }
 

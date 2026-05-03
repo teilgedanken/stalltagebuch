@@ -1,41 +1,45 @@
 # Generated translation template by dx-i18n
-# Contains 292 translation keys
+# Contains 296 translation keys
 
-# Source: ./src/components/profile_detail.rs:362
+# Source: ./src/components/profile_detail.rs:413
 action-add-event = Event
 
-# Source: ./src/components/event_edit.rs:298
+# Source: ./src/components/profile_add.rs:194
 action-back = Back
 
-# Source: ./src/components/profile_add.rs:395
+# Source: ./src/components/profile_add.rs:389
 action-camera = Camera
 
 # Source: ./src/components/event_add.rs:161
 action-cancel = Cancel
 
-# Source: ./src/components/event_edit.rs:626
+# Source: ./src/components/profile_photo_card.rs:241
+# UNUSED: This key is no longer used in the code
+action-crop = crop
+
+# Source: ./src/components/event_edit.rs:627
 action-delete = Delete
 
-# Source: ./src/components/profile_edit.rs:503
+# Source: ./src/components/profile_edit.rs:509
 action-delete-permanently = Delete permanently
 
-# Source: ./src/components/profile_edit.rs:520
+# Source: ./src/components/profile_edit.rs:526
 action-delete-quail = Delete quail
 
-# Source: ./src/components/profile_detail.rs:435
+# Source: ./src/components/profile_detail.rs:486
 action-edit = Edit
 
-# Source: ./src/components/event_edit.rs:482
+# Source: ./src/components/profile_add.rs:357
 action-gallery = Gallery
 
-# Source: ./src/components/profile_add.rs:360
+# Source: ./src/components/profile_add.rs:354
 action-loading = Loading...
 
 # Source: ./src/components/profile_list.rs:114
 # UNUSED: This key is no longer used in the code
 action-new = New
 
-# Source: ./src/components/event_edit.rs:585
+# Source: ./src/components/profile_photo_card.rs:335
 action-photo = Photo
 
 # Source: ./src/components/settings/network_check_card.rs:126
@@ -81,7 +85,7 @@ backup-card-history-file = File: { $path }
 backup-card-history-include-images = With images: { $include_images }
 
 # Source: ./src/components/settings/backup_card.rs:623
-# Parameters: $quails, $events, $egg_records
+# Parameters: $events, $egg_records, $quails
 backup-card-history-items = Items: { $quails } quails, { $events } events, { $egg_records } egg records
 
 # Source: ./src/components/settings/backup_card.rs:640
@@ -93,7 +97,7 @@ backup-card-history-more = More ({ $count })
 backup-card-history-nextcloud = Nextcloud: { $name }
 
 # Source: ./src/components/settings/backup_card.rs:626
-# Parameters: $photos_meta, $photos_files_missing, $photos_files_included
+# Parameters: $photos_meta, $photos_files_included, $photos_files_missing
 backup-card-history-photos = Photos: { $photos_meta } entries, { $photos_files_included } files included, { $photos_files_missing } missing
 
 # Source: ./src/components/settings/backup_card.rs:620
@@ -212,7 +216,7 @@ backup-import-android-only = ⚠️ File picker is only available on Android
 backup-import-no-file-selected = ❌ No file selected
 
 # Source: ./src/components/settings/backup_card.rs:316
-# Parameters: $photos, $count
+# Parameters: $count, $photos
 backup-import-success-with-counts = ✅ Imported { $count } items and { $photos } photos
 
 # Source: ./src/components/settings/backup_card.rs:518
@@ -229,8 +233,17 @@ backup-upload-running = 🔄 Creating and uploading backup...
 # Parameters: $filename
 backup-upload-success = ✅ Backup uploaded successfully: { $filename }
 
-# Source: ./src/components/profile_edit.rs:495
+# Source: ./src/components/profile_edit.rs:501
 confirm-delete-quail = Are you sure you want to delete this quail? This action cannot be undone.
+
+# Source: ./src/components/crop_editor.rs:436
+crop_editor_apply = crop
+
+# Source: ./src/components/crop_editor.rs:430
+crop_editor_cancel = cancel
+
+# Source: ./src/components/crop_editor.rs:227
+crop_editor_title = crop
 
 # Source: ./src/components/egg_history.rs:109
 # Parameters: $count
@@ -266,22 +279,22 @@ egg-tracking-title = Enter eggs
 # Parameters: $error
 error = Error
 
-# Source: ./src/components/profile_add.rs:353
+# Source: ./src/components/profile_add.rs:347
 error-android-only = Only available on Android
 
-# Source: ./src/components/event_edit.rs:575
+# Source: ./src/components/event_edit.rs:576
 error-android-only-camera = Camera only available on Android
 
-# Source: ./src/components/event_edit.rs:472
+# Source: ./src/components/event_edit.rs:473
 error-android-only-gallery = Gallery only available on Android
 
-# Source: ./src/components/profile_photo_card.rs:330
+# Source: ./src/components/profile_photo_card.rs:325
 error-camera-android-only = Camera only available on Android
 
-# Source: ./src/components/profile_photo_card.rs:271
+# Source: ./src/components/profile_photo_card.rs:274
 error-capture-failed = Capture failed
 
-# Source: ./src/components/event_edit.rs:528
+# Source: ./src/components/event_edit.rs:529
 # Parameters: $error
 error-capture-photo = Capture error: { $error }
 
@@ -300,16 +313,16 @@ error-eggs-count-invalid = Invalid egg count
 # Source: ./src/components/egg_tracking.rs:67
 error-eggs-count-negative = Egg count must not be negative
 
-# Source: ./src/components/event_edit.rs:216
+# Source: ./src/components/event_edit.rs:217
 error-empty-date = Date must not be empty
 
 # Source: ./src/components/event_add.rs:40
 error-invalid-date = Invalid date format
 
-# Source: ./src/components/event_edit.rs:462
+# Source: ./src/components/event_edit.rs:463
 error-invalid-event-id = Invalid event ID
 
-# Source: ./src/components/profile_photo_card.rs:202
+# Source: ./src/components/profile_photo_card.rs:205
 error-multiselect-android-only = Multi-select only available on Android
 
 # Name cannot be empty
@@ -322,14 +335,14 @@ error-network = Error
 # Source: ./src/components/egg_tracking.rs:52
 error-not-connected = Not connected to SpacetimeDB
 
-# Source: ./src/components/event_edit.rs:423
+# Source: ./src/components/event_edit.rs:424
 # Parameters: $error
 error-pick-images = Selection error: { $error }
 
 # Source: ./src/components/profile_add.rs:60
 error-ring-color-combination-not-unique = This ring color combination is already assigned to another quail
 
-# Source: ./src/components/profile_photo_card.rs:138
+# Source: ./src/components/profile_photo_card.rs:142
 error-selection-failed = Selection error
 
 # Source: ./src/components/event_add.rs:85
@@ -339,7 +352,7 @@ event-add-for = for { $name }
 # Source: ./src/components/event_add.rs:84
 event-add-title = Add event
 
-# Source: ./src/components/event_edit.rs:302
+# Source: ./src/components/event_edit.rs:303
 event-edit-title = Edit event
 
 # Source: ./src/components/event_add.rs:103
@@ -363,10 +376,10 @@ event-type-sick = 🤒 Sick
 # Source: ./src/components/event_add.rs:107
 event-type-slaughtered = 🥩 Slaughtered
 
-# Source: ./src/components/profile_detail.rs:369
+# Source: ./src/components/profile_detail.rs:420
 events-empty = No events available
 
-# Source: ./src/components/profile_detail.rs:346
+# Source: ./src/components/profile_detail.rs:397
 events-timeline-title = Events
 
 # Source: ./src/components/settings/backup_card.rs:195
@@ -378,7 +391,7 @@ export-in-progress = Export in progress...
 # Source: ./src/components/settings/backup_card.rs:238
 export-success = Data backup created successfully
 
-# Source: ./src/components/profile_detail.rs:259
+# Source: ./src/components/profile_detail.rs:310
 field-age = Age
 
 # Source: ./src/components/event_add.rs:115
@@ -418,13 +431,13 @@ field-notes-optional = Notes (optional)
 # Source: ./src/components/egg_tracking.rs:210
 field-notes-placeholder = Special notes, observations, etc.
 
-# Source: ./src/components/profile_edit.rs:384
+# Source: ./src/components/profile_edit.rs:378
 field-photos = Photos
 
 # Source: ./src/components/profile_edit.rs:332
 field-ring-color = Ring color
 
-# Source: ./src/components/event_edit.rs:324
+# Source: ./src/components/event_edit.rs:325
 field-type = Type
 
 # Source: ./src/components/profile_add.rs:237
@@ -445,7 +458,7 @@ import-failed = Import failed
 # Source: ./src/components/settings/backup_card.rs:302
 import-in-progress = Import in progress...
 
-# Source: ./src/components/profile_edit.rs:378
+# Source: ./src/components/profile_edit.rs:372
 info-photos-detail-view = Photos are added in the detail view. Here you can only select the profile photo or delete photos.
 
 # Source: ./src/components/home.rs:87
@@ -460,13 +473,13 @@ info-spacetimedb-disconnected = SpacetimeDB: not connected
 # Source: ./src/components/home.rs:89
 info-spacetimedb-error = SpacetimeDB: connection error
 
-# Source: ./src/components/profile_edit.rs:458
+# Source: ./src/components/profile_edit.rs:464
 info-tap-photo-to-mark = Tap a photo to mark it as profile photo.
 
-# Source: ./src/components/event_edit.rs:632
+# Source: ./src/components/event_edit.rs:633
 loading-event = Loading event...
 
-# Source: ./src/components/profile_detail.rs:441
+# Source: ./src/components/profile_detail.rs:492
 loading-profile = Loading profile...
 
 # Source: ./src/components/navigation.rs:33
@@ -507,23 +520,23 @@ period-year = Year
 # Source: ./src/components/profile_i18n.rs:36
 period-years = Years
 
-# Source: ./src/components/profile_add.rs:331
+# Source: ./src/components/profile_add.rs:325
 photo-none-selected = No photo selected
 
-# Source: ./src/components/profile_add.rs:315
+# Source: ./src/components/profile_add.rs:309
 photo-selected = Photo selected
 
-# Source: ./src/components/event_edit.rs:370
+# Source: ./src/components/event_edit.rs:371
 # Parameters: $count
 photos-count = Photos ({ $count })
 
-# Source: ./src/components/profile_detail.rs:300
+# Source: ./src/components/profile_detail.rs:351
 photos-title = Photos
 
 # Source: ./src/components/event_add.rs:133
 placeholder-event-notes = Additional information about the event...
 
-# Source: ./src/components/profile_add.rs:303
+# Source: ./src/components/profile_add.rs:297
 profile-add-info = Notes can be added as events after creation.
 
 # Source: ./src/components/profile_add.rs:198
@@ -532,7 +545,7 @@ profile-add-title = Add quail
 # Source: ./src/components/profile_add.rs:210
 profile-created-success = Profile created!
 
-# Source: ./src/components/profile_detail.rs:181
+# Source: ./src/components/profile_detail.rs:182
 profile-detail-title = Profile
 
 # Source: ./src/components/profile_edit.rs:269
@@ -541,7 +554,7 @@ profile-edit-title = Edit profile
 # Source: ./src/components/profile_add.rs:230
 profile-gender-label = Gender
 
-# Source: ./src/components/profile_list.rs:226
+# Source: ./src/components/profile_list.rs:220
 profile-list-empty = No profiles available
 
 # Source: ./src/components/home.rs:40
@@ -553,7 +566,7 @@ profile-name-label = Name *
 # Source: ./src/components/profile_add.rs:221
 profile-name-placeholder = e.g. Flecki
 
-# Source: ./src/components/profile_add.rs:308
+# Source: ./src/components/profile_add.rs:302
 profile-photo-label = Photo
 
 # Source: ./src/components/profile_add.rs:257
@@ -562,46 +575,46 @@ profile-ring-color-label = Ring color
 # Source: ./src/components/home.rs:35
 quick-access = Quick Access
 
-# Source: ./src/components/ring_color_picker.rs:167
+# Source: ./src/components/ring_color_picker.rs:148
 ring-color-black = Black
 
-# Source: ./src/components/ring_color_picker.rs:162
+# Source: ./src/components/ring_color_picker.rs:143
 ring-color-dark-blue = Dark blue
 
-# Source: ./src/components/ring_color_picker.rs:168
+# Source: ./src/components/ring_color_picker.rs:149
 ring-color-green = Green
 
-# Source: ./src/components/ring_color_picker.rs:161
+# Source: ./src/components/ring_color_picker.rs:142
 ring-color-light-blue = Light blue
 
-# Source: ./src/components/ring_color_picker.rs:54
+# Source: ./src/components/profile_detail.rs:518
 ring-color-none = Select
 
-# Source: ./src/components/ring_color_picker.rs:164
+# Source: ./src/components/ring_color_picker.rs:145
 ring-color-orange = Orange
 
-# Source: ./src/components/ring_color_picker.rs:160
+# Source: ./src/components/ring_color_picker.rs:141
 ring-color-pink = Pink
 
-# Source: ./src/components/ring_color_picker.rs:159
+# Source: ./src/components/ring_color_picker.rs:140
 ring-color-purple = Purple
 
-# Source: ./src/components/ring_color_picker.rs:163
+# Source: ./src/components/ring_color_picker.rs:144
 ring-color-red = Red
 
 # Source: ./src/components/profile_add.rs:261
 ring-color-side-left = Left
 
-# Source: ./src/components/profile_add.rs:280
+# Source: ./src/components/profile_add.rs:277
 ring-color-side-right = Right
 
-# Source: ./src/components/ring_color_picker.rs:165
+# Source: ./src/components/ring_color_picker.rs:146
 ring-color-white = White
 
-# Source: ./src/components/ring_color_picker.rs:166
+# Source: ./src/components/ring_color_picker.rs:147
 ring-color-yellow = Yellow
 
-# Source: ./src/components/profile_list.rs:216
+# Source: ./src/components/profile_list.rs:210
 search-placeholder-name = Search by name...
 
 # Source: ./src/components/home.rs:59
@@ -762,32 +775,32 @@ stats-until = Until
 # Source: ./src/components/statistics.rs:263
 stats-weekly-avg = Weekly avg
 
-# Source: ./src/components/profile_detail.rs:216
+# Source: ./src/components/profile_detail.rs:267
 status-alive = Alive
 
-# Source: ./src/components/profile_detail.rs:210
+# Source: ./src/components/profile_detail.rs:261
 status-born = Born
 
 # Source: ./src/components/home.rs:19
 # Parameters: $count
 status-db-ready = DB ready ({ $count } profiles)
 
-# Source: ./src/components/profile_detail.rs:246
+# Source: ./src/components/profile_detail.rs:297
 status-died = Died
 
-# Source: ./src/components/profile_detail.rs:228
+# Source: ./src/components/profile_detail.rs:279
 status-healthy = Healthy
 
 # Source: ./src/components/home.rs:11
 status-initializing = Initializing...
 
-# Source: ./src/components/profile_detail.rs:234
+# Source: ./src/components/profile_detail.rs:285
 status-marked = Marked for slaughter
 
-# Source: ./src/components/profile_detail.rs:222
+# Source: ./src/components/profile_detail.rs:273
 status-sick = Sick
 
-# Source: ./src/components/profile_detail.rs:240
+# Source: ./src/components/profile_detail.rs:291
 status-slaughtered = Slaughtered
 
 # Source: ./src/components/profile_edit.rs:278
@@ -892,7 +905,7 @@ sync-status-running-full = 🔄 Running full synchronization...
 sync-status-success-photos = ✅ Sync complete: uploaded { $count } photos
 
 # Source: ./src/components/settings/nextcloud_card.rs:358
-# Parameters: $percent, $total, $current
+# Parameters: $total, $percent, $current
 sync-upload-progress-detail = Uploaded { $current } of { $total } photos ({ $percent }%)
 
 # Source: ./src/components/settings/nextcloud_card.rs:356
@@ -907,7 +920,7 @@ sync-waiting = Waiting for login...
 # Source: ./src/components/home.rs:64
 system-info = System Information
 
-# Source: ./src/components/event_edit.rs:317
+# Source: ./src/components/event_edit.rs:318
 updated = Updated
 
 # Source: ./src/components/egg_history.rs:86
