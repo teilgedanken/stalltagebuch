@@ -45,27 +45,28 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
                     let mut show_fullscreen_sig = show_fullscreen.clone();
                     let quail_id_open = quail_id_open.clone();
 
-                    spawn(async move {
-                        // Get all PhotoCollections for this quail
-                        let collection_ids: Vec<String> = photo_collections_table()
-                            .iter()
-                            .filter(|coll| coll.quail_uuid.as_ref() == Some(&quail_id_open))
-                            .map(|coll| coll.uuid.clone())
-                            .collect();
+                    // Capture table snapshots BEFORE entering async block
+                    let collections_snapshot = photo_collections_table();
+                    let photos_snapshot = photos_table();
 
-                        // Get all photos from those collections
-                        let photo_items: Vec<(String, String)> = photos_table()
-                            .iter()
-                            .filter(|p| collection_ids.contains(&p.collection_uuid))
-                            .map(|p| (p.uuid.clone(), p.relative_path.clone()))
-                            .collect();
+                    // Perform work without awaiting to avoid Send requirement
+                    let collection_ids: Vec<String> = collections_snapshot
+                        .iter()
+                        .filter(|coll| coll.quail_uuid.as_ref() == Some(&quail_id_open))
+                        .map(|coll| coll.uuid.clone())
+                        .collect();
 
-                        if !photo_items.is_empty() {
-                            fullscreen_photo_items_sig.set(photo_items);
-                            current_idx_sig.set(0);
-                            show_fullscreen_sig.set(true);
-                        }
-                    });
+                    let photo_items: Vec<(String, String)> = photos_snapshot
+                        .iter()
+                        .filter(|p| collection_ids.contains(&p.collection_uuid))
+                        .map(|p| (p.uuid.clone(), p.relative_path.clone()))
+                        .collect();
+
+                    if !photo_items.is_empty() {
+                        fullscreen_photo_items_sig.set(photo_items);
+                        current_idx_sig.set(0);
+                        show_fullscreen_sig.set(true);
+                    }
                 },
                 if let Some(_photo_uuid_str) = profile_photo.as_ref() {
                     if let Some(photo_path) = effective_photo_path() {
