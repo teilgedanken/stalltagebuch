@@ -21,11 +21,11 @@ pub fn CropEditor(
 
     let image_path_for_effect = image_path.clone();
 
-    // Load image data URL on mount
+    // Load image data URL on mount — offload file I/O + base64 to blocking thread pool
+    // so large photos don't stall the UI.
     use_effect(move || {
         let path = image_path_for_effect.clone();
         spawn(async move {
-            // If path is relative (doesn't start with /), prepend the storage path
             let absolute_path = if path.starts_with('/') {
                 path.clone()
             } else {
@@ -36,17 +36,26 @@ pub fn CropEditor(
                     .to_string()
             };
 
-            match crate::image_processing::image_path_to_data_url(&absolute_path) {
-                Ok(data_url) => {
+            let path_for_blocking = absolute_path.clone();
+            let result = tokio::task::spawn_blocking(move || {
+                crate::image_processing::image_path_to_data_url(&path_for_blocking)
+            })
+            .await;
+
+            match result {
+                Ok(Ok(data_url)) => {
                     image_data.set(data_url);
                     log::debug!("Loaded crop editor image from: {}", absolute_path);
                 }
-                Err(e) => {
+                Ok(Err(e)) => {
                     log::error!(
                         "Failed to load image for crop editor from {}: {}",
                         absolute_path,
                         e
                     );
+                }
+                Err(e) => {
+                    log::error!("Blocking task panicked loading crop image: {}", e);
                 }
             }
         });

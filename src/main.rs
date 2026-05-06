@@ -235,14 +235,13 @@ fn PhotoSyncManager() -> Element {
         sync_in_flight.set(true);
         last_triggered_pending.set(pending_count);
 
-        // Avoid calling signal methods from spawned async tasks
-        // Instead, use tokio::spawn without signal mutations in the callback
-        let _ = tokio::spawn(async move {
+        // dioxus::spawn runs on the Dioxus runtime thread, so signal updates are safe.
+        // sync_now() is pure async I/O — no UI blocking.
+        spawn(async move {
             if let Err(error) = services::background_sync::sync_now().await {
                 log::warn!("Automatic photo sync skipped/failed: {}", error);
             }
-            // Note: Cannot call sync_in_flight.set(false) here as it violates thread safety
-            // The sync_in_flight flag will naturally reset on next effect run
+            sync_in_flight.set(false);
         });
     });
 
@@ -314,27 +313,30 @@ fn SpacetimeSession(
                     }
                 },
                 Screen::Crop { photo_path, on_complete } => {
-                    let on_complete_clone = on_complete.clone();
                     let on_complete_cancel = on_complete.clone();
-                    
+
                     rsx! {
                         CropEditor {
                             image_path: photo_path.clone(),
                             on_crop: move |crop_rect| {
                                 let photo_path_inner = photo_path.clone();
-                                
-                                // Use spawn without signal mutations from the async block
-                                let _ = tokio::spawn(async move {
-                                    let photo_uuid = std::path::PathBuf::from(&photo_path_inner)
-                                        .file_stem()
-                                        .and_then(|s| s.to_str())
-                                        .map(|s| {
-                                            s.split('-')
-                                                .next()
-                                                .unwrap_or(s)
-                                                .to_string()
-                                        })
-                                        .unwrap_or_else(|| "unknown".to_string());
+                                let on_complete_after = on_complete.clone();
+
+                                // dioxus::spawn stays on the Dioxus thread so signal updates
+                                // are safe. crop_and_process_photo internally uses
+                                // tokio::task::spawn_blocking for CPU-heavy work.
+                                spawn(async move {
+                                    let photo_uuid =
+                                        std::path::PathBuf::from(&photo_path_inner)
+                                            .file_stem()
+                                            .and_then(|s| s.to_str())
+                                            .map(|s| {
+                                                s.split('-')
+                                                    .next()
+                                                    .unwrap_or(s)
+                                                    .to_string()
+                                            })
+                                            .unwrap_or_else(|| "unknown".to_string());
 
                                     match crate::services::photo_service::crop_and_process_photo(
                                         photo_path_inner,
@@ -344,7 +346,7 @@ fn SpacetimeSession(
                                     )
                                     .await
                                     {
-                                        Ok((new_relative_path, _, _, new_version)) => {
+                                        Ok((_, _, _, new_version)) => {
                                             log::info!(
                                                 "Photo cropped successfully: version {}",
                                                 new_version
@@ -354,10 +356,11 @@ fn SpacetimeSession(
                                             log::error!("Failed to crop photo: {}", e);
                                         }
                                     }
+                                    current_screen.set(*on_complete_after);
                                 });
                             },
                             on_cancel: move |_| {
-                                current_screen.set((*on_complete_cancel).clone());
+                                current_screen.set(*on_complete_cancel.clone());
                             },
                         }
                     }
