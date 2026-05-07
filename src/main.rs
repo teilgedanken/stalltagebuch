@@ -55,8 +55,8 @@ fn main() {
 
 #[cfg(target_os = "android")]
 fn init_android_tls_verifier() {
-    use jni::JavaVM;
-    use jni::objects::JObject;
+    use dioxus::prelude::jni::JavaVM;
+    use dioxus::prelude::jni::objects::JObject;
     use ndk_context::android_context;
 
     let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
@@ -329,29 +329,26 @@ fn SpacetimeSession(
                                 spawn(async move {
                                     let photo_uuid =
                                         std::path::PathBuf::from(&photo_path_inner)
-                                            .file_stem()
-                                            .and_then(|s| s.to_str())
-                                            .map(|s| {
-                                                s.split('-')
-                                                    .next()
-                                                    .unwrap_or(s)
-                                                    .to_string()
-                                            })
-                                            .unwrap_or_else(|| "unknown".to_string());
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .map(|s| {
+                                            s.split('-')
+                                                .next()
+                                                .unwrap_or(s)
+                                                .to_string()
+                                        })
+                                        .unwrap_or_else(|| "unknown".to_string());
 
                                     match crate::services::photo_service::crop_and_process_photo(
-                                        photo_path_inner,
-                                        crop_rect,
-                                        photo_uuid.clone(),
-                                        0,
-                                    )
-                                    .await
+                                            photo_path_inner,
+                                            crop_rect,
+                                            photo_uuid.clone(),
+                                            0,
+                                        )
+                                        .await
                                     {
                                         Ok((_, _, _, new_version)) => {
-                                            log::info!(
-                                                "Photo cropped successfully: version {}",
-                                                new_version
-                                            );
+                                            log::info!("Photo cropped successfully: version {}", new_version);
                                         }
                                         Err(e) => {
                                             log::error!("Failed to crop photo: {}", e);

@@ -3,9 +3,9 @@
 Geplante Features ohne Implementierungsbeschreibung. Checkboxen zeigen Umsetzungsstatus.
 
 ## Bildverarbeitung
-- [ ] Tatsächliche Image-Resize-Implementation (statt Placeholder)
-- [ ] WebP-Konvertierung für kleinere Dateigröße
-- [ ] Automatische Thumbnail-Generierung
+- [x] Tatsächliche Image-Resize-Implementation (statt Placeholder)
+- [x] WebP-Konvertierung für kleinere Dateigröße
+- [x] Automatische Thumbnail-Generierung
 
 ## Ereignisse & Historie
 - [ ] Kalenderansicht für Ereignisse
