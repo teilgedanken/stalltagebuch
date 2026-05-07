@@ -149,11 +149,19 @@ pub async fn crop_and_process_photo(
     let service = init_photo_service();
     let (small_size, medium_size) = service.thumbnail_sizes();
 
+    // Use the versioned file stem (e.g. "uuid-v1") as the thumbnail key so that
+    // get_photo_file_path("uuid-v1.jpg", Small) finds "uuid-v1_128.webp" correctly.
+    let versioned_stem = cropped_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&versioned_filename)
+        .to_string();
+
     let cropped_path_clone = cropped_path.to_string_lossy().to_string();
     let thumbnail_result = tokio::task::spawn_blocking(move || {
         photo_gallery::thumbnail::create_thumbnails(
             &cropped_path_clone,
-            &photo_uuid,
+            &versioned_stem,
             small_size,
             medium_size,
         )

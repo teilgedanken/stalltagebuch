@@ -1,6 +1,5 @@
 use dioxus::prelude::*;
 use dioxus_i18n::prelude::*;
-use image_processing::CropRect;
 use models::SpacetimeSettings;
 use photo_gallery::PhotoGalleryContext;
 
@@ -159,6 +158,8 @@ pub enum Screen {
     Settings,
     Crop {
         photo_path: String,
+        photo_uuid: String,   // SpacetimeDB photo UUID for update_photo_version
+        current_version: i32, // Current version (0 = original) to compute next version
         on_complete: Box<Screen>, // Screen to return to after crop
     },
 }
@@ -268,6 +269,8 @@ fn SpacetimeSession(
     // Automatically register this device when connected to SpacetimeDB
     let _device_registration = spacetime::use_register_device();
 
+    let update_photo_version_fn = spacetime::use_reducer_update_photo_version();
+
     rsx! {
         PhotoSyncManager {}
 
@@ -313,7 +316,7 @@ fn SpacetimeSession(
                         on_spacetime_settings_saved,
                     }
                 },
-                Screen::Crop { photo_path, on_complete } => {
+                Screen::Crop { photo_path, photo_uuid, current_version, on_complete } => {
                     let on_complete_cancel = on_complete.clone();
 
                     rsx! {
@@ -321,34 +324,54 @@ fn SpacetimeSession(
                             image_path: photo_path.clone(),
                             on_crop: move |crop_rect| {
                                 let photo_path_inner = photo_path.clone();
+                                let photo_uuid_inner = photo_uuid.clone();
+                                let current_version_inner = current_version;
                                 let on_complete_after = on_complete.clone();
+                                let update_photo_version_fn = update_photo_version_fn.clone();
 
                                 // dioxus::spawn stays on the Dioxus thread so signal updates
                                 // are safe. crop_and_process_photo internally uses
                                 // tokio::task::spawn_blocking for CPU-heavy work.
                                 spawn(async move {
-                                    let photo_uuid =
-                                        std::path::PathBuf::from(&photo_path_inner)
-                                        .file_stem()
-                                        .and_then(|s| s.to_str())
-                                        .map(|s| {
-                                            s.split('-')
-                                                .next()
-                                                .unwrap_or(s)
-                                                .to_string()
-                                        })
-                                        .unwrap_or_else(|| "unknown".to_string());
+                                    // Derive the base UUID by stripping a trailing -vN suffix,
+                                    // preserving the full UUID (which itself contains hyphens).
+                                    let file_uuid = {
+                                        let stem = std::path::PathBuf::from(&photo_path_inner)
+                                            .file_stem()
+                                            .and_then(|s| s.to_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        // Strip trailing -v<digits> suffix if present
+                                        if let Some(idx) = stem.rfind("-v") {
+                                            let suffix = &stem[idx + 2..];
+                                            if !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_digit()) {
+                                                stem[..idx].to_string()
+                                            } else {
+                                                stem
+                                            }
+                                        } else {
+                                            stem
+                                        }
+                                    };
 
                                     match crate::services::photo_service::crop_and_process_photo(
                                             photo_path_inner,
                                             crop_rect,
-                                            photo_uuid.clone(),
-                                            0,
+                                            file_uuid,
+                                            current_version_inner,
                                         )
                                         .await
                                     {
-                                        Ok((_, _, _, new_version)) => {
-                                            log::info!("Photo cropped successfully: version {}", new_version);
+                                        Ok((new_relative_path, _, _, new_version)) => {
+                                            log::info!("Photo cropped successfully: new path={} version={}", new_relative_path, new_version);
+                                            if let Err(e) = update_photo_version_fn(spacetime::UpdatePhotoVersionArgs {
+                                                uuid: photo_uuid_inner,
+                                                version: new_version,
+                                                is_original: false,
+                                                relative_path: new_relative_path,
+                                            }) {
+                                                log::error!("Failed to update photo version in SpacetimeDB: {}", e);
+                                            }
                                         }
                                         Err(e) => {
                                             log::error!("Failed to crop photo: {}", e);
