@@ -9,8 +9,7 @@ Geplante Features ohne Implementierungsbeschreibung. Checkboxen zeigen Umsetzung
 
 ## Ereignisse & Historie
 - [ ] Kalenderansicht für Ereignisse
-- [ ] Ereignis-Zeitstrahl pro Wachtel
-- [ ] Ereignis-Benachrichtigungen
+- [x] Ereignis-Zeitstrahl pro Wachtel
 
 ## Statistiken & Visualisierung
 - [ ] Plotters-Integration für Diagramme
@@ -22,32 +21,21 @@ Geplante Features ohne Implementierungsbeschreibung. Checkboxen zeigen Umsetzung
 - [ ] Dark/Light Theme
 - [ ] Landscape-Modus
 - [ ] Tablet-Optimierung
-- [ ] Touch-Feedback/Ripple-Effekte
 - [ ] Onboarding-Screen
 - [ ] Tutorial-Overlays
 
 ## Daten & Backup
 - [ ] JSON Export/Import
-- [ ] Cloud-Sync
 - [ ] Automatische Backups
-- [ ] Datenbank-Verschlüsselung
 
 ## Erweiterte Features
 - [ ] Benachrichtigungen (tägliche Erinnerungen)
-- [ ] Settings-Screen
+- [x] Settings-Screen
 - [ ] Über-Dialog
-- [ ] Multi-Language Support
+- [x] Multi-Language Support
 - [ ] Futter-Tracking
-- [ ] Gewichts-Tracking
 - [ ] Tierarzt-Notizen
 - [ ] Kostenrechnung
-
-## Testing & Quality
-- [ ] Unit-Tests für alle Services
-- [ ] Integration-Tests
-- [ ] UI-Tests (Espresso)
-- [ ] Performance-Profiling
-- [ ] Memory-Leak-Tests
 
 ## Deployment
 - [ ] Release-Build & Signing
