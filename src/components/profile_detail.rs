@@ -153,6 +153,11 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
         rows
     });
 
+    // Hooks for the photo gallery section — must live at component root (not inside conditionals)
+    let mut show_fullscreen = use_signal(|| false);
+    let mut selected_photo_items = use_signal(Vec::<(String, String)>::new);
+    let mut selected_index = use_signal(|| 0usize);
+
     // Auto-refresh when quails table changes to pick up edits from profile_edit screen
     let quail_id_for_auto_refresh = quail_id.clone();
     use_effect(move || {
@@ -337,9 +342,6 @@ pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) 
                         {
                             let photo_items = filtered_photo_items();
                             if !photo_items.is_empty() {
-                                let mut show_fullscreen = use_signal(|| false);
-                                let mut selected_photo_items = use_signal(Vec::<(String, String)>::new);
-                                let mut selected_index = use_signal(|| 0usize);
                                 let all_photo_items: Vec<(String, String)> = photo_items
                                     .iter()
                                     .map(|(uuid, path, _)| (uuid.clone(), path.clone()))
