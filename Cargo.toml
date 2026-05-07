@@ -57,6 +57,7 @@ image = { version = "0.25", default-features = false, features = [
 ndk-context = "0.1"
 android_logger = "0.15"
 rustls-platform-verifier = "0.7"
+jni = "0.22"
 
 
 [features]

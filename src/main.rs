@@ -55,18 +55,19 @@ fn main() {
 
 #[cfg(target_os = "android")]
 fn init_android_tls_verifier() {
-    use dioxus::prelude::jni::objects::JObject;
+    use jni::JavaVM;
+    use jni::objects::JObject;
     use ndk_context::android_context;
 
-    let vm_ptr = android_context().vm() as *mut dioxus::prelude::jni::sys::JavaVM;
-    let context_ptr = android_context().context() as dioxus::prelude::jni::sys::jobject;
+    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
+    let context_ptr = android_context().context() as jni::sys::jobject;
 
     if vm_ptr.is_null() || context_ptr.is_null() {
         log::error!("Android TLS verifier init failed: missing VM or context pointer");
         return;
     }
 
-    let vm = match unsafe { dioxus::prelude::jni::JavaVM::from_raw(vm_ptr) } {
+    let vm = match unsafe { JavaVM::from_raw(vm_ptr) } {
         Ok(vm) => vm,
         Err(error) => {
             log::error!(
