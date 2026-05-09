@@ -10,15 +10,19 @@ use dioxus::prelude::*;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
 
+const INACTIVE_EVENT_DAYS_THRESHOLD: i64 = 100;
+
 #[component]
 pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut search_filter = use_signal(String::new);
     let mut show_dead = use_signal(|| false);
+    let mut show_inactive = use_signal(|| false);
     let mut first_ring_filter = use_signal(|| None::<RingColor>);
     let mut second_ring_filter = use_signal(|| None::<RingColor>);
     let mut active_ring_filter_slot = use_signal(|| None::<usize>);
     let mut gender_filter = use_signal(|| None::<Gender>);
     let mut show_gender_palette = use_signal(|| false);
+    let mut show_search_menu = use_signal(|| false);
     let quails = spacetime::use_table_quails();
     let events = spacetime::use_table_quail_events();
     let photos = spacetime::use_table_photos();
@@ -32,6 +36,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
 
     use_effect(move || {
         if show_dead() {
+            show_inactive.set(false);
             active_ring_filter_slot.set(None);
             show_gender_palette.set(false);
         }
@@ -46,6 +51,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         let all_events = events().clone();
         let search = search_filter().to_lowercase();
         let dead_only = show_dead();
+        let inactive_only = show_inactive();
         let first_ring = first_ring_filter();
         let second_ring = second_ring_filter();
         let selected_gender = gender_filter();
@@ -79,11 +85,22 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             let status = latest_status_for(&remote_quail.uuid, &all_events);
+            let days_since_last_event = latest_event_date_for(&remote_quail.uuid, &all_events)
+                .map(|d| today.signed_duration_since(d).num_days());
+
             if dead_only {
                 if !matches!(status, Some(EventType::Died | EventType::Slaughtered)) {
                     continue;
                 }
             } else if matches!(status, Some(EventType::Died | EventType::Slaughtered)) {
+                continue;
+            }
+
+            if inactive_only
+                && !days_since_last_event
+                    .as_ref()
+                    .is_some_and(|days| *days > INACTIVE_EVENT_DAYS_THRESHOLD)
+            {
                 continue;
             }
 
@@ -115,8 +132,6 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 let age_display = born_dates_by_quail
                     .get(&remote_quail.uuid)
                     .map(|birth_date| format_age_years_months(*birth_date, today));
-                let days_since_last_event = latest_event_date_for(&remote_quail.uuid, &all_events)
-                    .map(|d| today.signed_duration_since(d).num_days());
 
                 rows.push((
                     local_quail,
@@ -134,11 +149,14 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     });
 
     let dead_only = show_dead();
+    let inactive_only = show_inactive();
     let active_palette_slot = active_ring_filter_slot();
     let first_ring = first_ring_filter();
     let second_ring = second_ring_filter();
     let selected_gender = gender_filter();
     let gender_palette_open = show_gender_palette();
+    let search_menu_open = show_search_menu();
+    let has_search_text = !search_filter().trim().is_empty();
     let current_palette_selection = match active_palette_slot {
         Some(0) => first_ring.clone(),
         Some(1) => second_ring.clone(),
@@ -148,66 +166,108 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     rsx! {
         section { class: "section pt-4 pb-3",
             div { class: "container is-max-tablet",
-                div { class: "level is-mobile mb-4",
-                    div { class: "level-left",
-                        h1 { class: "title is-5 mb-0", {tid!("profile-list-title")} }
-                    }
-                    div { class: "level-right",
-                        div { class: "buttons has-addons mb-0",
-                            button {
-                                class: if dead_only { "button is-link" } else { "button is-link is-light" },
-                                onclick: move |_| {
-                                    let next_dead_only = !show_dead();
-                                    show_dead.set(next_dead_only);
-                                    if next_dead_only {
-                                        active_ring_filter_slot.set(None);
-                                    }
-                                },
-                                span { class: "icon is-small", "🪦" }
-                            }
-                            RingColorTrigger {
-                                field_label: tid!("field-ring-color"),
-                                side_label: tid!("ring-color-side-left"),
-                                selected: first_ring.clone(),
-                                is_open: active_palette_slot == Some(0),
-                                disabled: dead_only,
-                                compact: true,
-                                on_toggle: move |_| {
-                                    show_gender_palette.set(false);
-                                    active_ring_filter_slot
-                                        .set(if active_ring_filter_slot() == Some(0) { None } else { Some(0) });
-                                },
-                            }
-                            RingColorTrigger {
-                                field_label: tid!("field-ring-color"),
-                                side_label: tid!("ring-color-side-right"),
-                                selected: second_ring.clone(),
-                                is_open: active_palette_slot == Some(1),
-                                disabled: dead_only,
-                                compact: true,
-                                on_toggle: move |_| {
-                                    show_gender_palette.set(false);
-                                    active_ring_filter_slot
-                                        .set(if active_ring_filter_slot() == Some(1) { None } else { Some(1) });
-                                },
-                            }
-                            button {
-                                class: if gender_palette_open { "button is-link" } else { "button is-link is-light" },
-                                style: "min-width: 2.5rem;",
-                                disabled: dead_only,
-                                title: gender_filter_button_title(selected_gender.as_ref()),
-                                aria_label: gender_filter_button_title(selected_gender.as_ref()),
-                                onclick: move |_| {
+                div { class: "mb-4",
+                    div { class: "buttons has-addons is-centered mb-0",
+                        button {
+                            class: "button is-light px-2",
+                            style: compact_filter_button_style(dead_only),
+                            onclick: move |_| {
+                                let next_dead_only = !show_dead();
+                                show_dead.set(next_dead_only);
+                                if next_dead_only {
                                     active_ring_filter_slot.set(None);
-                                    show_gender_palette.set(!show_gender_palette());
-                                },
-                                "{gender_filter_button_icon(selected_gender.as_ref())}"
+                                }
+                            },
+                            span { class: "icon is-small", "🪦" }
+                        }
+                        button {
+                            class: "button is-light px-2",
+                            style: compact_filter_button_style(inactive_only),
+                            disabled: dead_only,
+                            onclick: move |_| {
+                                let next_inactive_only = !show_inactive();
+                                show_inactive.set(next_inactive_only);
+                                if next_inactive_only {
+                                    active_ring_filter_slot.set(None);
+                                    show_gender_palette.set(false);
+                                }
+                            },
+                            "🌀"
+                        }
+                        RingColorTrigger {
+                            field_label: tid!("field-ring-color"),
+                            side_label: tid!("ring-color-side-left"),
+                            selected: first_ring.clone(),
+                            is_open: active_palette_slot == Some(0),
+                            disabled: dead_only,
+                            compact: true,
+                            on_toggle: move |_| {
+                                show_gender_palette.set(false);
+                                show_search_menu.set(false);
+                                active_ring_filter_slot
+                                    .set(if active_ring_filter_slot() == Some(0) { None } else { Some(0) });
+                            },
+                        }
+                        RingColorTrigger {
+                            field_label: tid!("field-ring-color"),
+                            side_label: tid!("ring-color-side-right"),
+                            selected: second_ring.clone(),
+                            is_open: active_palette_slot == Some(1),
+                            disabled: dead_only,
+                            compact: true,
+                            on_toggle: move |_| {
+                                show_gender_palette.set(false);
+                                show_search_menu.set(false);
+                                active_ring_filter_slot
+                                    .set(if active_ring_filter_slot() == Some(1) { None } else { Some(1) });
+                            },
+                        }
+                        button {
+                            class: "button is-light px-2",
+                            style: compact_filter_button_style(gender_palette_open),
+                            disabled: dead_only,
+                            title: gender_filter_button_title(selected_gender.as_ref()),
+                            aria_label: gender_filter_button_title(selected_gender.as_ref()),
+                            onclick: move |_| {
+                                active_ring_filter_slot.set(None);
+                                show_search_menu.set(false);
+                                show_gender_palette.set(!show_gender_palette());
+                            },
+                            "{gender_filter_button_icon(selected_gender.as_ref())}"
+                        }
+                        button {
+                            class: "button is-light px-2",
+                            style: compact_filter_button_style(search_menu_open || has_search_text),
+                            title: tid!("search-placeholder-name"),
+                            aria_label: tid!("search-placeholder-name"),
+                            onclick: move |_| {
+                                active_ring_filter_slot.set(None);
+                                show_gender_palette.set(false);
+                                show_search_menu.set(!show_search_menu());
+                            },
+                            "🔍"
+                        }
+                        button {
+                            class: "button is-success",
+                            onclick: move |_| on_navigate.call(Screen::AddProfile),
+                            span { class: "icon is-small", "+" }
+                        }
+                    }
+                }
+
+                if search_menu_open {
+                    div {
+                        class: "box p-2 mb-3",
+                        style: "max-width: 16rem; margin-left: auto; margin-right: auto;",
+                        p { class: "control has-icons-left mb-0",
+                            input {
+                                class: "input",
+                                r#type: "text",
+                                placeholder: tid!("search-placeholder-name"),
+                                value: "{search_filter}",
+                                oninput: move |e| search_filter.set(e.value()),
                             }
-                            button {
-                                class: "button is-success",
-                                onclick: move |_| on_navigate.call(Screen::AddProfile),
-                                span { class: "icon is-small", "+" }
-                            }
+                            span { class: "icon is-small is-left", "🔍" }
                         }
                     }
                 }
@@ -216,7 +276,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                     if gender_palette_open {
                         div {
                             class: "box p-2 mb-3",
-                            style: "max-width: 16rem; margin-left: auto;",
+                            style: "max-width: 16rem; margin-left: auto; margin-right: auto;",
                             div {
                                 class: "buttons are-small mb-0",
                                 style: "display: flex; flex-wrap: wrap; gap: 0.35rem;",
@@ -248,7 +308,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                         RingColorPalette {
                             selected: current_palette_selection.clone(),
                             key_prefix: format!("profile-filter-{slot}"),
-                            container_style: "max-width: 16rem; margin-left: auto; margin-bottom: 1rem;".to_string(),
+                            container_style: "max-width: 16rem; margin-left: auto; margin-right: auto; margin-bottom: 1rem;"
+                                .to_string(),
                             on_select: move |value| {
                                 match slot {
                                     0 => first_ring_filter.set(value),
@@ -258,19 +319,6 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 active_ring_filter_slot.set(None);
                             },
                         }
-                    }
-                }
-
-                div { class: "field mb-4",
-                    p { class: "control has-icons-left",
-                        input {
-                            class: "input",
-                            r#type: "text",
-                            placeholder: tid!("search-placeholder-name"),
-                            value: "{search_filter}",
-                            oninput: move |e| search_filter.set(e.value()),
-                        }
-                        span { class: "icon is-small is-left", "🔍" }
                     }
                 }
 
@@ -531,6 +579,19 @@ fn get_light_color_for(color: &RingColor) -> &'static str {
         RingColor::Schwarz => concatcp!("rgba(220, 220, 220, ", TRANSPARENCY, ")"),
         RingColor::Weiss => concatcp!("rgba(255, 255, 255, ", TRANSPARENCY, ")"),
     }
+}
+
+fn compact_filter_button_style(is_active: bool) -> String {
+    let border = if is_active {
+        "2px solid #3273dc"
+    } else {
+        "1px solid #dbdbdb"
+    };
+
+    format!(
+        "height: 2.5em; min-height: 2.5em; min-width: 2.5em; border: {}; background: #ffffff;",
+        border
+    )
 }
 
 fn gender_filter_button_icon(selected: Option<&Gender>) -> &'static str {
