@@ -17,6 +17,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut first_ring_filter = use_signal(|| None::<RingColor>);
     let mut second_ring_filter = use_signal(|| None::<RingColor>);
     let mut active_ring_filter_slot = use_signal(|| None::<usize>);
+    let mut gender_filter = use_signal(|| None::<Gender>);
+    let mut show_gender_palette = use_signal(|| false);
     let quails = spacetime::use_table_quails();
     let events = spacetime::use_table_quail_events();
     let photos = spacetime::use_table_photos();
@@ -31,6 +33,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     use_effect(move || {
         if show_dead() {
             active_ring_filter_slot.set(None);
+            show_gender_palette.set(false);
         }
     });
 
@@ -45,6 +48,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
         let dead_only = show_dead();
         let first_ring = first_ring_filter();
         let second_ring = second_ring_filter();
+        let selected_gender = gender_filter();
         let today = Local::now().date_naive();
 
         let born_dates_by_quail = earliest_born_dates_by_quail(&all_events);
@@ -84,6 +88,14 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
             }
 
             if let Some(local_quail) = to_local_quail(remote_quail) {
+                if !dead_only
+                    && selected_gender
+                        .as_ref()
+                        .is_some_and(|selected| local_quail.gender != *selected)
+                {
+                    continue;
+                }
+
                 if !dead_only
                     && !ring_color_filter_matches(
                         first_ring.as_ref(),
@@ -125,6 +137,8 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
     let active_palette_slot = active_ring_filter_slot();
     let first_ring = first_ring_filter();
     let second_ring = second_ring_filter();
+    let selected_gender = gender_filter();
+    let gender_palette_open = show_gender_palette();
     let current_palette_selection = match active_palette_slot {
         Some(0) => first_ring.clone(),
         Some(1) => second_ring.clone(),
@@ -159,6 +173,7 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: dead_only,
                                 compact: true,
                                 on_toggle: move |_| {
+                                    show_gender_palette.set(false);
                                     active_ring_filter_slot
                                         .set(if active_ring_filter_slot() == Some(0) { None } else { Some(0) });
                                 },
@@ -171,9 +186,22 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 disabled: dead_only,
                                 compact: true,
                                 on_toggle: move |_| {
+                                    show_gender_palette.set(false);
                                     active_ring_filter_slot
                                         .set(if active_ring_filter_slot() == Some(1) { None } else { Some(1) });
                                 },
+                            }
+                            button {
+                                class: if gender_palette_open { "button is-link" } else { "button is-link is-light" },
+                                style: "min-width: 2.5rem;",
+                                disabled: dead_only,
+                                title: gender_filter_button_title(selected_gender.as_ref()),
+                                aria_label: gender_filter_button_title(selected_gender.as_ref()),
+                                onclick: move |_| {
+                                    active_ring_filter_slot.set(None);
+                                    show_gender_palette.set(!show_gender_palette());
+                                },
+                                "{gender_filter_button_icon(selected_gender.as_ref())}"
                             }
                             button {
                                 class: "button is-success",
@@ -185,6 +213,37 @@ pub fn ProfileListScreen(on_navigate: EventHandler<Screen>) -> Element {
                 }
 
                 if !dead_only {
+                    if gender_palette_open {
+                        div {
+                            class: "box p-2 mb-3",
+                            style: "max-width: 16rem; margin-left: auto;",
+                            div {
+                                class: "buttons are-small mb-0",
+                                style: "display: flex; flex-wrap: wrap; gap: 0.35rem;",
+                                for option in [None, Some(Gender::Female), Some(Gender::Male), Some(Gender::Unknown)] {
+                                    {
+                                        let option_value = option.clone();
+                                        let option_title = gender_filter_button_title(option_value.as_ref());
+                                        let option_icon = gender_filter_button_icon(option_value.as_ref());
+
+                                        rsx! {
+                                            button {
+                                                class: if selected_gender == option { "button is-link" } else { "button is-light" },
+                                                title: option_title.clone(),
+                                                aria_label: option_title,
+                                                onclick: move |_| {
+                                                    gender_filter.set(option_value.clone());
+                                                    show_gender_palette.set(false);
+                                                },
+                                                "{option_icon}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if let Some(slot) = active_palette_slot {
                         RingColorPalette {
                             selected: current_palette_selection.clone(),
@@ -472,4 +531,19 @@ fn get_light_color_for(color: &RingColor) -> &'static str {
         RingColor::Schwarz => concatcp!("rgba(220, 220, 220, ", TRANSPARENCY, ")"),
         RingColor::Weiss => concatcp!("rgba(255, 255, 255, ", TRANSPARENCY, ")"),
     }
+}
+
+fn gender_filter_button_icon(selected: Option<&Gender>) -> &'static str {
+    match selected {
+        Some(Gender::Female) => "♀️",
+        Some(Gender::Male) => "♂️",
+        Some(Gender::Unknown) => "🐣",
+        None => "⚧️",
+    }
+}
+
+fn gender_filter_button_title(selected: Option<&Gender>) -> String {
+    selected
+        .map(gender_label)
+        .unwrap_or_else(|| tid!("period-all"))
 }
