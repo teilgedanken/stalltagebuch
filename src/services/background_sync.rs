@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::services::upload_service;
+use crate::services::upload_service::{self, UploadBatchStats};
 use chrono::Utc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -61,15 +61,14 @@ fn set_upload_progress(current: usize, total: usize) {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SyncStats {
-    pub photos_uploaded: usize,
-}
+pub type SyncStats = UploadBatchStats;
 
 /// Performs one complete photo sync cycle to Nextcloud.
 async fn perform_sync_cycle() -> Result<SyncStats, AppError> {
+    log::info!("Starting manual photo sync cycle");
+
     // Upload local photos that are missing remotely.
-    let photos_uploaded = upload_service::upload_photos_batch_with_progress(|current, total| {
+    let stats = upload_service::upload_photos_batch_with_progress(|current, total| {
         set_upload_progress(current, total);
     })
     .await
@@ -79,16 +78,25 @@ async fn perform_sync_cycle() -> Result<SyncStats, AppError> {
         } else {
             log::error!("Photo upload failed: {}", e);
         }
-        0
+        UploadBatchStats {
+            photos_uploaded: 0,
+            failed_photos: Vec::new(),
+            local_original_files: 0,
+            remote_original_files: 0,
+            all_updated: false,
+        }
     });
     set_upload_progress(0, 0);
 
-    let stats = SyncStats { photos_uploaded };
+    log::info!(
+        "Manual photo sync cycle finished: {} photo(s) uploaded",
+        stats.photos_uploaded
+    );
 
     // Log entry for session log
     append_log(SyncLogEntry {
         ts_ms: Utc::now().timestamp_millis(),
-        photos_uploaded,
+        photos_uploaded: stats.photos_uploaded,
     });
 
     Ok(stats)

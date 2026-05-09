@@ -181,6 +181,16 @@ impl SpacetimePhotoMetadataClient {
             .collect())
     }
 
+    pub async fn query_all_photos(&self) -> Result<Vec<PhotoSyncRow>, AppError> {
+        Ok(self
+            .connection
+            .db
+            .photos()
+            .iter()
+            .map(photo_to_sync_row)
+            .collect())
+    }
+
     pub async fn query_photo_by_uuid(&self, uuid: &str) -> Result<Option<PhotoSyncRow>, AppError> {
         Ok(self
             .connection

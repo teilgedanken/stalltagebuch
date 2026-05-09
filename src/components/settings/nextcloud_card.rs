@@ -15,9 +15,11 @@ pub fn NextcloudCard(
     let mut details_expanded = use_signal_sync(|| false);
     let mut is_syncing = use_signal_sync(|| false);
     let mut upload_progress = use_signal_sync(|| (0usize, 0usize));
+    let mut latest_sync_status = use_signal_sync(|| None::<(usize, usize, bool)>);
     let mut cleanup_candidates = use_signal_sync(|| Vec::<String>::new());
     let mut is_cleanup_scanning = use_signal_sync(|| false);
     let mut is_cleanup_deleting = use_signal_sync(|| false);
+    let delete_photo = crate::spacetime::use_reducer_delete_photo();
 
     use_coroutine(move |_: UnboundedReceiver<()>| async move {
         let mut rx = crate::services::background_sync::subscribe_upload_progress();
@@ -62,6 +64,13 @@ pub fn NextcloudCard(
             .iter()
             .filter(|photo| matches!(photo.sync_status.as_str(), "error" | "download_failed"))
             .count()
+    });
+    let failed_photos = use_memo(move || {
+        photos()
+            .iter()
+            .filter(|photo| matches!(photo.sync_status.as_str(), "error" | "download_failed"))
+            .cloned()
+            .collect::<Vec<_>>()
     });
 
     use_effect(move || {
@@ -156,10 +165,37 @@ pub fn NextcloudCard(
             on_status_message.call(tid!("sync-status-running-full").to_string());
             match crate::services::background_sync::sync_now().await {
                 Ok(stats) => {
-                    on_status_message.call(
-                        tid!("sync-status-success-photos", count : stats.photos_uploaded)
-                            .to_string(),
-                    );
+                    latest_sync_status.set(Some((
+                        stats.local_original_files,
+                        stats.remote_original_files,
+                        stats.all_updated,
+                    )));
+
+                    if !stats.failed_photos.is_empty() {
+                        on_status_message.call(format!(
+                            "⚠ Sync completed: {} uploaded, {} failed · local files {} · remote files {} · all updated {}",
+                            stats.photos_uploaded,
+                            stats.failed_photos.len(),
+                            stats.local_original_files,
+                            stats.remote_original_files,
+                            if stats.all_updated { "yes" } else { "no" }
+                        ));
+                    } else if stats.photos_uploaded > 0 {
+                        on_status_message.call(format!(
+                            "{} · local files {} · remote files {} · all updated {}",
+                            tid!("sync-status-success-photos", count : stats.photos_uploaded),
+                            stats.local_original_files,
+                            stats.remote_original_files,
+                            if stats.all_updated { "yes" } else { "no" }
+                        ));
+                    } else {
+                        on_status_message.call(format!(
+                            "⚠ Sync finished without uploading photos · local files {} · remote files {} · all updated {}",
+                            stats.local_original_files,
+                            stats.remote_original_files,
+                            if stats.all_updated { "yes" } else { "no" }
+                        ));
+                    }
                 }
                 Err(e) => {
                     on_status_message.call(format!("❌ {}: {}", tid!("sync-failed"), e));
@@ -340,6 +376,16 @@ pub fn NextcloudCard(
                                 if error_count() > 0 {
                                     p { class: "has-text-danger", {tid!("sync-photo-status-error", count : error_count())} }
                                 }
+                                if let Some((local_files, remote_files, all_updated)) = latest_sync_status() {
+                                    p { class: "mb-1",
+                                        {format!(
+                                            "local files {} · remote files {} · all updated {}",
+                                            local_files,
+                                            remote_files,
+                                            if all_updated { "yes" } else { "no" }
+                                        )}
+                                    }
+                                }
                             }
                         }
 
@@ -367,6 +413,80 @@ pub fn NextcloudCard(
                                 }
                             } else {
                                 rsx! {}
+                            }
+                        }
+
+                        {
+                            let failed_photos = failed_photos();
+                            if failed_photos.is_empty() {
+                                rsx! {}
+                            } else {
+                                rsx! {
+                                    div { class: "message is-danger mt-4",
+                                        div { class: "message-header",
+                                            "Failed photos ({failed_photos.len()})"
+                                        }
+                                        div { class: "message-body",
+                                            p { class: "mb-3",
+                                                "These photos failed during sync. You can remove them from the database if they should no longer be kept."
+                                            }
+                                            div { class: "content", style: "max-height: 240px; overflow-y: auto;",
+                                                for photo in failed_photos {
+                                                    {
+                                                        let photo_uuid = photo.uuid.clone();
+                                                        let photo_relative_path = photo.relative_path.clone();
+                                                        let photo_retry_count = photo.retry_count;
+                                                        let photo_sync_error = photo
+                                                            .sync_error
+                                                            .clone()
+                                                            .unwrap_or_else(|| "No error message available".to_string());
+
+                                                        rsx! {
+                                                            div { class: "box is-shadowless p-3 mb-3",
+                                                        div { class: "is-flex is-justify-content-space-between is-align-items-start gap-3",
+                                                            div {
+                                                                p { class: "mb-1",
+                                                                    strong { "{photo_relative_path}" }
+                                                                }
+                                                                p { class: "is-size-7 has-text-grey mb-1",
+                                                                    "UUID: {photo_uuid} · Retries: {photo_retry_count}"
+                                                                }
+                                                                p { class: "is-size-7 has-text-danger",
+                                                                    "{photo_sync_error}"
+                                                                }
+                                                            }
+                                                            div {
+                                                                button {
+                                                                    class: "button is-danger is-small",
+                                                                    onclick: {
+                                                                        let delete_photo = delete_photo.clone();
+                                                                        let on_status_message = on_status_message.clone();
+                                                                        let photo_uuid = photo_uuid.clone();
+                                                                        move |_| {
+                                                                            match delete_photo(photo_uuid.clone()) {
+                                                                                Ok(()) => on_status_message.call(format!(
+                                                                                    "🗑️ Removed failed photo from DB: {}",
+                                                                                    photo_uuid
+                                                                                )),
+                                                                                Err(error) => on_status_message.call(format!(
+                                                                                    "❌ Failed to remove photo from DB: {}",
+                                                                                    error
+                                                                                )),
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    "Remove from DB"
+                                                                }
+                                                            }
+                                                        }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 

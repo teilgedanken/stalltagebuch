@@ -270,6 +270,7 @@ fn SpacetimeSession(
     let _device_registration = spacetime::use_register_device();
 
     let update_photo_version_fn = spacetime::use_reducer_update_photo_version();
+    let update_photo_sync_status_fn = spacetime::use_reducer_update_photo_sync_status();
 
     rsx! {
         PhotoSyncManager {}
@@ -328,6 +329,7 @@ fn SpacetimeSession(
                                 let current_version_inner = current_version;
                                 let on_complete_after = on_complete.clone();
                                 let update_photo_version_fn = update_photo_version_fn.clone();
+                                let update_photo_sync_status_fn = update_photo_sync_status_fn.clone();
 
                                 // dioxus::spawn stays on the Dioxus thread so signal updates
                                 // are safe. crop_and_process_photo internally uses
@@ -365,12 +367,20 @@ fn SpacetimeSession(
                                         Ok((new_relative_path, _, _, new_version)) => {
                                             log::info!("Photo cropped successfully: new path={} version={}", new_relative_path, new_version);
                                             if let Err(e) = update_photo_version_fn(spacetime::UpdatePhotoVersionArgs {
-                                                uuid: photo_uuid_inner,
+                                                uuid: photo_uuid_inner.clone(),
                                                 version: new_version,
                                                 is_original: false,
                                                 relative_path: new_relative_path,
                                             }) {
                                                 log::error!("Failed to update photo version in SpacetimeDB: {}", e);
+                                            } else if let Err(e) = update_photo_sync_status_fn(spacetime::UpdatePhotoSyncStatusArgs {
+                                                uuid: photo_uuid_inner,
+                                                sync_status: "pending".to_string(),
+                                                sync_error: None,
+                                                last_sync_attempt: None,
+                                                retry_count: 0,
+                                            }) {
+                                                log::error!("Failed to reset photo sync status after crop: {}", e);
                                             }
                                         }
                                         Err(e) => {
