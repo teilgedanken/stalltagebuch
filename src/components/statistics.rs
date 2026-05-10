@@ -1,5 +1,6 @@
 use crate::{Screen, spacetime};
 use dioxus::prelude::*;
+use dioxus_charts::LineChart;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
 
@@ -43,6 +44,8 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut population_stats = use_signal(PopulationStatistics::default);
     let mut error = use_signal(|| String::new());
     let mut selected_period = use_signal(|| "month".to_string());
+    let mut chart_data =
+        use_signal(|| (Vec::<f32>::new(), Vec::<f32>::new(), Vec::<String>::new()));
     let on_navigate_add = on_navigate.clone();
 
     let mut load_statistics = move || {
@@ -58,7 +61,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         ));
 
         let today = chrono::Local::now().date_naive();
-        let date_format = tid!("stats-date-format-short");
+        let date_format = tid!("stats-date-format-extra-short");
         let period_start = match selected_period().as_str() {
             "week" => Some(today - chrono::Duration::days(7)),
             "month" => Some(today - chrono::Duration::days(30)),
@@ -84,6 +87,7 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         if valid_records.is_empty() {
             stats.set(None);
             period_records.set(Vec::new());
+            chart_data.set((Vec::new(), Vec::new(), Vec::new()));
             error.set(String::new());
             return;
         }
@@ -159,6 +163,53 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 })
                 .collect(),
         );
+
+        // Chart: expand to a continuous daily series, missing calendar days → 0
+        let chart_start = period_start
+            .unwrap_or_else(|| valid_records.iter().map(|(d, _)| *d).min().unwrap_or(today));
+        let record_map: std::collections::HashMap<chrono::NaiveDate, i32> =
+            valid_records.iter().cloned().collect();
+
+        let mut daily_dates: Vec<chrono::NaiveDate> = Vec::new();
+        let mut raw_series: Vec<f32> = Vec::new();
+        let mut current = chart_start;
+        while current <= today {
+            daily_dates.push(current);
+            raw_series.push(*record_map.get(&current).unwrap_or(&0) as f32);
+            current = current + chrono::Duration::days(1);
+        }
+
+        // Centered 3-day moving average over calendar days (gaps count as 0)
+        let n = raw_series.len();
+        let ma_series: Vec<f32> = (0..n)
+            .map(|i| {
+                if n == 1 {
+                    raw_series[0]
+                } else if i == 0 {
+                    (raw_series[0] + raw_series[1]) / 2.0
+                } else if i == n - 1 {
+                    (raw_series[n - 2] + raw_series[n - 1]) / 2.0
+                } else {
+                    (raw_series[i - 1] + raw_series[i] + raw_series[i + 1]) / 3.0
+                }
+            })
+            .collect();
+
+        // At most ~8 visible x-axis labels so the axis stays readable on mobile
+        let label_step = (n / 8).max(1);
+        let chart_labels: Vec<String> = daily_dates
+            .iter()
+            .enumerate()
+            .map(|(i, date)| {
+                if i % label_step == 0 {
+                    format_display_date(*date, &date_format)
+                } else {
+                    String::new()
+                }
+            })
+            .collect();
+
+        chart_data.set((raw_series, ma_series, chart_labels));
         error.set(String::new());
     };
 
@@ -268,6 +319,20 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     label: tid!("stats-monthly-avg"),
                                     value: format!("{:.1}", s.monthly_average),
                                     icon: "🗓️",
+                                }
+                            }
+                        }
+
+                        if !chart_data().0.is_empty() {
+                            div { class: "box",
+                                h2 { class: "title is-6 mb-2",
+                                    "📈 "
+                                    {tid!("stats-egg-chart-title")}
+                                }
+                                EggHistoryChart {
+                                    raw: chart_data().0,
+                                    moving_avg: chart_data().1,
+                                    labels: chart_data().2,
                                 }
                             }
                         }
@@ -451,6 +516,30 @@ fn StatCard(label: String, value: String, icon: String) -> Element {
                 div { class: "title is-6 has-text-link mb-0 mt-1", "{value}" }
                 div { class: "is-size-7 has-text-grey mt-1 mb-0", "{label}" }
             }
+        }
+    }
+}
+
+#[component]
+fn EggHistoryChart(raw: Vec<f32>, moving_avg: Vec<f32>, labels: Vec<String>) -> Element {
+    //let raw_label = tid!("stats-chart-raw").to_string();
+    let ma_label = tid!("stats-chart-ma").to_string();
+    rsx! {
+        LineChart {
+            series: vec![moving_avg],
+            labels,
+            series_labels: vec![ma_label],
+            viewbox_width: 600,
+            viewbox_height: 450,
+            padding_top: 10,
+            padding_bottom: 30,
+            padding_left: 20,
+            padding_right: 10,
+            line_width: "1.5%",
+            show_grid_ticks: true,
+            show_dotted_grid: false,
+            lowest: 0.0,
+            max_ticks: 5,
         }
     }
 }
