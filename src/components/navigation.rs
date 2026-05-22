@@ -34,6 +34,15 @@ pub fn NavigationBar(current_screen: Screen, on_navigate: EventHandler<Screen>) 
                             }
                         }
                     }
+
+                    li { class: if matches!(current_screen, Screen::QuestMode) { "is-active" } else { "" },
+                        a { onclick: move |_| on_navigate.call(Screen::QuestMode),
+                            span { "📸" }
+                            if matches!(current_screen, Screen::QuestMode) {
+                                span { {tid!("nav-quest")} }
+                            }
+                        }
+                    }
                 }
             }
         }

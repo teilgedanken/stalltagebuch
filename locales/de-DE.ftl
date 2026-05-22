@@ -495,6 +495,30 @@ loading-profile = Lade Profil...
 # Source: ./src/components/navigation.rs:33
 nav-eggs = Eier
 
+# Source: ./src/components/navigation.rs
+nav-quest = Quest
+
+# Source: ./src/components/quest_mode.rs
+quest-last-photo-days = vor { $days } Tagen
+
+# Source: ./src/components/quest_mode.rs
+quest-no-candidates = Alle Wachteln haben aktuelle Fotos! 🎉
+
+# Source: ./src/components/quest_mode.rs
+quest-no-photo = Noch kein Foto
+
+# Source: ./src/components/quest_mode.rs
+quest-or = oder
+
+# Source: ./src/components/quest_mode.rs
+quest-recent-photos = Letzte Fotos
+
+# Source: ./src/components/quest_mode.rs
+quest-skip = Nächste Wachtel
+
+# Source: ./src/components/quest_mode.rs
+quest-title = Foto-Quest
+
 # Source: ./src/components/navigation.rs:15
 nav-home = Startseite
 
@@ -974,4 +998,3 @@ weekday-tue = Di
 # Source: ./src/components/egg_history.rs:84
 # UNUSED: This key is no longer used in the code
 weekday-wed = Mi
-

@@ -485,6 +485,30 @@ loading-profile = Loading profile...
 # Source: ./src/components/navigation.rs:33
 nav-eggs = Eggs
 
+# Source: ./src/components/navigation.rs
+nav-quest = Quest
+
+# Source: ./src/components/quest_mode.rs
+quest-last-photo-days = { $days } days ago
+
+# Source: ./src/components/quest_mode.rs
+quest-no-candidates = All quails have recent photos! 🎉
+
+# Source: ./src/components/quest_mode.rs
+quest-no-photo = No photo yet
+
+# Source: ./src/components/quest_mode.rs
+quest-or = or
+
+# Source: ./src/components/quest_mode.rs
+quest-recent-photos = Recent photos
+
+# Source: ./src/components/quest_mode.rs
+quest-skip = Next quail
+
+# Source: ./src/components/quest_mode.rs
+quest-title = Photo Quest
+
 # Source: ./src/components/navigation.rs:15
 nav-home = Home
 
@@ -965,4 +989,3 @@ weekday-tue = Tue
 # Source: ./src/components/egg_history.rs:84
 # UNUSED: This key is no longer used in the code
 weekday-wed = Wed
-

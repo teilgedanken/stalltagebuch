@@ -15,8 +15,8 @@ mod spacetime;
 
 use components::{
     AddProfileScreen, CropEditor, EggTrackingScreen, EventAdd, EventEditScreen, HomeScreen,
-    NavigationBar, ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, SettingsScreen,
-    StatisticsScreen,
+    NavigationBar, ProfileDetailScreen, ProfileEditScreen, ProfileListScreen, QuestModeScreen,
+    SettingsScreen, StatisticsScreen,
 };
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -155,6 +155,7 @@ pub enum Screen {
     },
     EggTracking(Option<String>), // Date in YYYY-MM-DD format
     Statistics,
+    QuestMode,
     Settings,
     Crop {
         photo_path: String,
@@ -311,6 +312,9 @@ fn SpacetimeSession(
                 Screen::Statistics => rsx! {
                     StatisticsScreen { on_navigate: move |s| current_screen.set(s) }
                 },
+                Screen::QuestMode => rsx! {
+                    QuestModeScreen { on_navigate: move |s| current_screen.set(s) }
+                },
                 Screen::Settings => rsx! {
                     SettingsScreen {
                         on_navigate: move |s| current_screen.set(s),
@@ -365,14 +369,19 @@ fn SpacetimeSession(
                                         .await
                                     {
                                         Ok((new_relative_path, _, _, new_version)) => {
-                                            log::info!("Photo cropped successfully: new path={} version={}", new_relative_path, new_version);
+                                            log::info!(
+                                                "Photo cropped successfully: new path={} version={}",
+                                                new_relative_path, new_version
+                                            );
                                             if let Err(e) = update_photo_version_fn(spacetime::UpdatePhotoVersionArgs {
                                                 uuid: photo_uuid_inner.clone(),
                                                 version: new_version,
                                                 is_original: false,
                                                 relative_path: new_relative_path,
                                             }) {
-                                                log::error!("Failed to update photo version in SpacetimeDB: {}", e);
+                                                log::error!(
+                                                    "Failed to update photo version in SpacetimeDB: {}", e
+                                                );
                                             } else if let Err(e) = update_photo_sync_status_fn(spacetime::UpdatePhotoSyncStatusArgs {
                                                 uuid: photo_uuid_inner,
                                                 sync_status: "pending".to_string(),
@@ -380,7 +389,9 @@ fn SpacetimeSession(
                                                 last_sync_attempt: None,
                                                 retry_count: 0,
                                             }) {
-                                                log::error!("Failed to reset photo sync status after crop: {}", e);
+                                                log::error!(
+                                                    "Failed to reset photo sync status after crop: {}", e
+                                                );
                                             }
                                         }
                                         Err(e) => {
