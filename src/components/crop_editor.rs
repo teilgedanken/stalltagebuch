@@ -102,6 +102,7 @@ pub fn CropEditor(
                 is_dragging.set(false);
             },
             ontouchmove: move |evt| {
+                evt.prevent_default();
                 if !is_dragging() {
                     return;
                 }
@@ -318,6 +319,7 @@ pub fn CropEditor(
                                 drag_handle.set("nw".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     start_y.set(touch.client_coordinates().y as f32);
@@ -335,6 +337,7 @@ pub fn CropEditor(
                                 drag_handle.set("ne".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     start_y.set(touch.client_coordinates().y as f32);
@@ -352,6 +355,7 @@ pub fn CropEditor(
                                 drag_handle.set("sw".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     start_y.set(touch.client_coordinates().y as f32);
@@ -369,6 +373,7 @@ pub fn CropEditor(
                                 drag_handle.set("se".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     start_y.set(touch.client_coordinates().y as f32);
@@ -387,6 +392,7 @@ pub fn CropEditor(
                                 drag_handle.set("n".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_y.set(touch.client_coordinates().y as f32);
                                     is_dragging.set(true);
@@ -402,6 +408,7 @@ pub fn CropEditor(
                                 drag_handle.set("s".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_y.set(touch.client_coordinates().y as f32);
                                     is_dragging.set(true);
@@ -417,6 +424,7 @@ pub fn CropEditor(
                                 drag_handle.set("w".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     is_dragging.set(true);
@@ -432,6 +440,7 @@ pub fn CropEditor(
                                 drag_handle.set("e".to_string());
                             },
                             ontouchstart: move |evt| {
+                                evt.prevent_default();
                                 if let Some(touch) = evt.touches().get(0) {
                                     start_x.set(touch.client_coordinates().x as f32);
                                     is_dragging.set(true);
