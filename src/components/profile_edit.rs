@@ -87,6 +87,9 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                 ring_color_right.set(local_quail.ring_color_right.clone());
                 if let Some(profile_uuid) = local_quail.profile_photo {
                     selected_profile_photo_id.set(Some(profile_uuid.to_string()));
+                } else {
+                    // Profile photo was removed on another device – clear local selection.
+                    selected_profile_photo_id.set(None);
                 }
 
                 let quail_uuid_str = quail.uuid.clone();
@@ -449,12 +452,13 @@ pub fn ProfileEditScreen(quail_id: String, on_navigate: EventHandler<Screen>) ->
                                     on_edit: move |photo_id: String| {
                                         // Find the photo path from the photo_id
                                         if let Some(photo) = photos_for_edit.iter().find(|p| p.uuid == photo_id) {
-                                            on_navigate.call(Screen::Crop {
-                                                photo_path: photo.relative_path.clone(),
-                                                photo_uuid: photo.uuid.clone(),
-                                                current_version: photo.version,
-                                                on_complete: Box::new(Screen::ProfileEdit(quail_id.clone())),
-                                            });
+                                            on_navigate
+                                                .call(Screen::Crop {
+                                                    photo_path: photo.relative_path.clone(),
+                                                    photo_uuid: photo.uuid.clone(),
+                                                    current_version: photo.version,
+                                                    on_complete: Box::new(Screen::ProfileEdit(quail_id.clone())),
+                                                });
                                         }
                                     },
                                 }

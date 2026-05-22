@@ -94,7 +94,15 @@ impl PhotoGalleryContext {
         let Some(stem) = original_path.file_stem().and_then(|s| s.to_str()) else {
             return;
         };
-        if Uuid::parse_str(stem).is_err() {
+
+        // Accept both plain UUIDs ("<uuid>.jpg") and versioned crops
+        // ("<uuid>-v1.jpg", "<uuid>-v2.jpg", ...).
+        // Versioned stems end with "-v<digits>"; strip that suffix before UUID validation.
+        let base_uuid = match stem.rfind("-v") {
+            Some(pos) if stem[pos + 2..].chars().all(|c| c.is_ascii_digit()) => &stem[..pos],
+            _ => stem,
+        };
+        if Uuid::parse_str(base_uuid).is_err() {
             return;
         }
 

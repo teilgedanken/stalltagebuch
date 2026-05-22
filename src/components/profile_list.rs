@@ -367,19 +367,29 @@ pub fn ProfileCard(
     // Subscribe to photos table to dynamically find photo path
     let photos_table = spacetime::use_table_photos();
 
-    // Clone UUID for use in memo
-    let photo_uuid_for_lookup = profile_photo_uuid.clone();
+    // Bridge both photo props into Signals so `effective_photo_path` re-evaluates
+    // whenever another device updates the quail's profile_photo UUID.  Plain values
+    // captured inside `use_memo` are frozen at first render and miss later prop changes.
+    let mut photo_uuid_signal = use_signal(|| profile_photo_uuid.clone());
+    if *photo_uuid_signal.peek() != profile_photo_uuid {
+        photo_uuid_signal.set(profile_photo_uuid.clone());
+    }
+    let mut photo_path_signal = use_signal(|| profile_photo_path.clone());
+    if *photo_path_signal.peek() != profile_photo_path {
+        photo_path_signal.set(profile_photo_path.clone());
+    }
 
     let overlay_bg = split_overlay_bg(
         profile.ring_color_left.as_ref(),
         profile.ring_color_right.as_ref(),
     );
 
-    // Try to get photo path from the provided path, or dynamically fetch from photos table
+    // Try to use the precomputed path from the parent, or fall back to a live lookup.
+    // Both photo_uuid_signal and photo_path_signal are reactive, so this memo re-runs
+    // when the parent passes a new UUID or path (e.g. after a remote profile-photo change).
     let effective_photo_path = use_memo(move || {
-        profile_photo_path.clone().or_else(|| {
-            // If no path provided, dynamically look it up from photos table
-            if let Some(uuid) = &photo_uuid_for_lookup {
+        photo_path_signal().or_else(|| {
+            if let Some(uuid) = photo_uuid_signal().as_ref() {
                 photos_table()
                     .iter()
                     .find(|p| p.uuid == *uuid)

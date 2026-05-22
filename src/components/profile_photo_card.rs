@@ -19,13 +19,19 @@ pub fn ProfilePhotoCard(quail_id: String, profile_photo: Option<String>) -> Elem
 
     let quail_id_open = quail_id.clone();
 
-    // Clone profile_photo for use in memo (need separate clone for RSX)
-    let profile_photo_for_lookup = profile_photo.clone();
+    // Bridge `profile_photo` prop into a Signal so that `effective_photo_path` reacts
+    // when another device changes the quail's profile photo UUID via SpacetimeDB.
+    // A plain `let profile_photo_for_lookup = profile_photo.clone()` captured inside
+    // `use_memo` freezes the UUID at first render and misses all later prop updates.
+    let mut profile_photo_signal = use_signal(|| profile_photo.clone());
+    if *profile_photo_signal.peek() != profile_photo {
+        profile_photo_signal.set(profile_photo.clone());
+    }
 
-    // Dynamically look up photo path from profile_photo UUID
-    // This ensures we get the photo even if the photo path changes
+    // Reacts to both: the photo UUID changing (profile_photo_signal) and the photo
+    // record's relative_path changing inside photos_table (e.g. after a crop sync).
     let effective_photo_path = use_memo(move || {
-        if let Some(uuid) = &profile_photo_for_lookup {
+        if let Some(uuid) = profile_photo_signal().as_ref() {
             photos_table()
                 .iter()
                 .find(|p| p.uuid == *uuid)
