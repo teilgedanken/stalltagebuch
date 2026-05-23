@@ -220,14 +220,6 @@ impl Gender {
             _ => Gender::Unknown,
         }
     }
-
-    pub fn display_name(&self) -> &str {
-        match self {
-            Gender::Male => "Männlich",
-            Gender::Female => "Weiblich",
-            Gender::Unknown => "Unbekannt",
-        }
-    }
 }
 
 #[cfg(test)]

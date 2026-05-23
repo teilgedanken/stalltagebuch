@@ -18,26 +18,6 @@ pub struct CropRect {
 }
 
 impl CropRect {
-    /// Create a new CropRect with normalized coordinates (0.0-1.0)
-    pub fn normalized(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
-    }
-
-    /// Create a new CropRect with pixel coordinates
-    pub fn pixels(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
-    }
-
     /// Convert normalized coordinates to pixel coordinates
     pub fn to_pixels(&self, img_width: u32, img_height: u32) -> CropRect {
         CropRect {

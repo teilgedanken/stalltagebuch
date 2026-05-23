@@ -16,6 +16,10 @@ android_min_sdk_version = 28
 [bundle]
 # Package identifier (required for Android Play Store)
 identifier = "de.teilgedanken.stalltagebuch"
+publisher = "teilgedanken"
+icon = ["./assets/icon.png"]
+short_description = "A journaling app to manage and catalog quails"
+
 
 [bundle.android]
 # Development keystore for signing release builds; replace for production

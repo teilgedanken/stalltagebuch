@@ -1,5 +1,5 @@
 use super::synced_photo::{SyncedCollectionFullscreen, SyncedPreviewImage};
-use crate::{Screen, spacetime};
+use crate::spacetime;
 use dioxus::prelude::*;
 use dioxus_i18n::tid;
 
