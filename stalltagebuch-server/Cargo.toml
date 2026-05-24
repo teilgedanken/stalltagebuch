@@ -1,6 +1,6 @@
 [package]
 name = "stalltagebuch-server"
-version.workspace = true
+version = "0.2.1"
 edition = "2024"
 description = "SpacetimeDB server module for Stalltagebuch"
 license = "MIT OR Apache-2.0"
