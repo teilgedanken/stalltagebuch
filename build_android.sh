@@ -21,11 +21,9 @@ detect_device_rust_target() {
         arm64-v8a)
             echo "aarch64-linux-android"
             ;;
-        armeabi-v7a|armeabi)
-            echo "armv7-linux-androideabi"
-            ;;
-        x86)
-            echo "i686-linux-android"
+        armeabi-v7a|armeabi|x86)
+            # 32-bit targets not supported by Dioxus; fall back to default.
+            return 1
             ;;
         x86_64)
             echo "x86_64-linux-android"
@@ -226,7 +224,11 @@ DX_EXIT=${PIPESTATUS[0]}
 set -e
 
 if [[ $DX_EXIT -ne 0 ]]; then
-    if [[ "$BUILD_TYPE" == "release" ]] && grep -qi "lint" "$DX_LOG"; then
+    # Only bypass the failure when it is clearly a Gradle lint task that failed
+    # (which can be fixed by re-running with -x lintVital* below).
+    # We must NOT match "--cap-lints allow" from rustc output, which would hide
+    # real Rust build errors like missing linker objects.
+    if [[ "$BUILD_TYPE" == "release" ]] && grep -qiE "(lintVital.*FAILED|FAILED.*lintVital|Lint found [0-9])" "$DX_LOG"; then
         echo "⚠ dx build reported a lint failure; continuing with lint disabled for release"
     else
         echo "dx build failed (see $DX_LOG)"

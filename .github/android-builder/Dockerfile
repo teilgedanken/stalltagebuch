@@ -5,6 +5,7 @@
 # when any of these change:
 #   - DX_VERSION            (dioxus-cli version)
 #   - NDK_VERSION           (Android NDK)
+#   - ANDROID_API           (min SDK / NDK clang wrapper suffix)
 #   - ANDROID_COMPILE_SDK   (Android platform)
 #   - ANDROID_BUILD_TOOLS   (Android build-tools)
 #   - Rust toolchain (stable bumps handled automatically)
@@ -16,9 +17,10 @@ FROM eclipse-temurin:17-jdk-noble
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ── Pinned versions ───────────────────────────────────────────
+# ── Pinned versions ─────────────────────────────────────────────
 ARG DX_VERSION=0.7.9
 ARG NDK_VERSION=27.2.12479018
+ARG ANDROID_API=28
 ARG ANDROID_COMPILE_SDK=34
 ARG ANDROID_BUILD_TOOLS=34.0.0
 
@@ -29,9 +31,24 @@ ENV JAVA_HOME=/opt/java/openjdk
 ENV ANDROID_HOME=/opt/android-sdk
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
 ENV ANDROID_NDK_HOME=/opt/android-sdk/ndk/${NDK_VERSION}
+# ANDROID_NDK_ROOT is the alias preferred by some crates (openssl-sys, ring, …)
+ENV ANDROID_NDK_ROOT=/opt/android-sdk/ndk/${NDK_VERSION}
 ENV CARGO_HOME=/root/.cargo
 ENV RUSTUP_HOME=/root/.rustup
 ENV PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${CARGO_HOME}/bin:${PATH}"
+
+# ── Cargo / cc-crate / ar cross-compilation env for Android targets ─────
+# These are ENV (not ARG) so they persist into every container run from this
+# image and override the [target.*].linker and [env].CC_*/AR_* entries that
+# may be hardcoded to local dev machine paths in .cargo/config.toml.
+# NDK_TOOLCHAIN is set first so subsequent lines can reference it.
+ENV NDK_TOOLCHAIN=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin
+ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${NDK_TOOLCHAIN}/aarch64-linux-android${ANDROID_API}-clang \
+    CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=${NDK_TOOLCHAIN}/x86_64-linux-android${ANDROID_API}-clang \
+    CC_aarch64_linux_android=${NDK_TOOLCHAIN}/aarch64-linux-android${ANDROID_API}-clang \
+    CC_x86_64_linux_android=${NDK_TOOLCHAIN}/x86_64-linux-android${ANDROID_API}-clang \
+    AR_aarch64_linux_android=${NDK_TOOLCHAIN}/llvm-ar \
+    AR_x86_64_linux_android=${NDK_TOOLCHAIN}/llvm-ar
 
 # ── System packages ───────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -44,6 +61,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libssl-dev \
       # Required by the Rust linker for Android cross-compilation
       gcc \
+      # C runtime startup files (Scrt1.o, crti.o) and linker stubs (-lc, -lpthread…)
+      # needed when Cargo compiles build.rs scripts for the host (x86_64-unknown-linux-gnu).
+      # Technically a transitive dep of gcc, but the temurin base suppresses it.
+      libc6-dev \
+      # Required by the vendored OpenSSL build (openssl crate, features=["vendored"])
+      make \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Android SDK command-line tools ────────────────────────────
@@ -73,7 +96,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
            --profile minimal \
     && rustup target add \
          aarch64-linux-android \
-         armv7-linux-androideabi \
          x86_64-linux-android
 
 # ── dioxus-cli (dx) ───────────────────────────────────────────

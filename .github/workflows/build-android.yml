@@ -23,7 +23,6 @@ on:
         options:
           - aarch64-linux-android
           - x86_64-linux-android
-          - armv7-linux-androideabi
 
 permissions:
   contents: write # create GitHub Release + upload assets
