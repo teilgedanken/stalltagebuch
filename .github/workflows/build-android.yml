@@ -1,0 +1,132 @@
+name: Build & Publish Android APK
+
+# Triggers:
+#   - Push a semver tag (v1.2.3)  →  release build + GitHub Release
+#   - workflow_dispatch           →  manual build, choose type + target
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type"
+        required: true
+        default: "release"
+        type: choice
+        options: [release, debug]
+      target:
+        description: "Rust Android target triple"
+        required: true
+        default: "aarch64-linux-android"
+        type: choice
+        options:
+          - aarch64-linux-android
+          - x86_64-linux-android
+          - armv7-linux-androideabi
+
+permissions:
+  contents: write # create GitHub Release + upload assets
+  packages: read # pull Docker image from GHCR
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # ── Run inside the pre-baked builder image ─────────────────
+    # All tools (Java, Android SDK/NDK, Rust, dx) are already present.
+    # No caches needed – the image IS the cache, and it lives in GHCR
+    # independently of GitHub Actions cache TTLs.
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/stalltagebuch-android-builder:ndk27-dx0.7.9
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Resolve build parameters ──────────────────────────────
+      - name: Resolve build parameters
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "build_type=release"                >> "$GITHUB_OUTPUT"
+            echo "target=aarch64-linux-android"     >> "$GITHUB_OUTPUT"
+          else
+            echo "build_type=${{ inputs.build_type }}" >> "$GITHUB_OUTPUT"
+            echo "target=${{ inputs.target }}"         >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Signing keystore ──────────────────────────────────────
+      # For release builds: restore production keystore + inject secrets.
+      # Falls back gracefully to the committed dev keystore (password: android)
+      # if ANDROID_KEYSTORE_BASE64 is not set — useful for first-run testing.
+      - name: Restore signing keystore
+        if: steps.params.outputs.build_type == 'release'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/release.keystore
+            # Patch Dioxus.toml with production credentials in-place.
+            # The dev placeholder values are: password "android", alias "stalltagebuchReleaseKey"
+            sed -i "s|jks_password = \"android\"|jks_password = \"${KS_PASSWORD}\"|"    Dioxus.toml
+            sed -i "s|key_password = \"android\"|key_password = \"${KEY_PASSWORD}\"|"   Dioxus.toml
+            sed -i "s|key_alias = \"stalltagebuchReleaseKey\"|key_alias = \"${KEY_ALIAS}\"|" Dioxus.toml
+            echo "✓ Production keystore restored from secret"
+          else
+            echo "⚠ ANDROID_KEYSTORE_BASE64 not set – using committed dev keystore (dev builds only)"
+          fi
+
+      # ── Build ─────────────────────────────────────────────────
+      # ANDROID_HOME / ANDROID_SDK_ROOT / ANDROID_NDK_HOME are already set
+      # in the container ENV (baked into the builder image), so no explicit
+      # env: block is needed here. Changing the NDK in the Dockerfile is the
+      # single source of truth.
+      - name: Build APK
+        run: |
+          ARGS="--target ${{ steps.params.outputs.target }}"
+          if [ "${{ steps.params.outputs.build_type }}" = "release" ]; then
+            ARGS="$ARGS --release"
+          fi
+          ./build_android.sh $ARGS
+
+      # ── Locate APK output ─────────────────────────────────────
+      - name: Locate APK
+        id: apk
+        run: |
+          TYPE="${{ steps.params.outputs.build_type }}"
+          if [ "$TYPE" = "release" ]; then
+            APK="target/dx/stalltagebuch/release/android/app/app/build/outputs/apk/release/app-release.apk"
+          else
+            APK="target/dx/stalltagebuch/debug/android/app/app/build/outputs/apk/debug/app-debug.apk"
+          fi
+          echo "path=${APK}" >> "$GITHUB_OUTPUT"
+          # Rename to a descriptive filename for the artifact/release
+          VERSION="${{ github.ref_name }}"
+          [ -z "$VERSION" ] && VERSION="${{ github.sha }}"
+          DEST="stalltagebuch-${VERSION}-${{ steps.params.outputs.target }}-${TYPE}.apk"
+          cp "$APK" "$DEST"
+          echo "named=${DEST}" >> "$GITHUB_OUTPUT"
+
+      # ── Upload artifact (always, for debugging) ───────────────
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.named }}
+          path: ${{ steps.apk.outputs.named }}
+          retention-days: 30
+
+      # ── GitHub Release (tag pushes only) ─────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.named }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
