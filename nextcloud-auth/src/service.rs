@@ -89,10 +89,6 @@ impl NextcloudAuthService {
         let response = client
             .post(poll_url)
             .form(&[("token", token)])
-            .header(
-                "User-Agent",
-                concat!("NextcloudAuth/", env!("CARGO_PKG_VERSION")),
-            )
             .header("Accept", "application/json")
             .send()
             .await
