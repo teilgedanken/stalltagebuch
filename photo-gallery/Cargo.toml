@@ -1,6 +1,6 @@
 [package]
 name = "photo-gallery"
-version = "0.2.0"
+version.workspace = true
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "A reusable photo gallery management library with thumbnail generation and storage"

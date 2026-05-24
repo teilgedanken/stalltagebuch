@@ -12,6 +12,9 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     let spacetimedb_ctx = use_spacetimedb_context();
     let connection_state = spacetimedb_ctx.state;
 
+    let app_version = env!("CARGO_PKG_VERSION");
+    let git_commit = option_env!("GIT_COMMIT_HASH").unwrap_or("dev");
+
     // Initialize database on mount
     use_effect(move || {
         // Database initialization is now handled by SpacetimeDB context
@@ -70,6 +73,14 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                         p {
                             strong { "Arch: " }
                             "{std::env::consts::ARCH}"
+                        }
+                        p {
+                            strong { "Version: " }
+                            "{app_version}"
+                        }
+                        p {
+                            strong { "Commit: " }
+                            "{git_commit}"
                         }
                         p {
                             {

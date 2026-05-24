@@ -44,7 +44,7 @@ impl NextcloudAuthService {
             .timeout(std::time::Duration::from_secs(60))
             .connect_timeout(std::time::Duration::from_secs(10))
             .tcp_keepalive(std::time::Duration::from_secs(30))
-            .user_agent("NextcloudAuth/0.1.0")
+            .user_agent(concat!("NextcloudAuth/", env!("CARGO_PKG_VERSION")))
             .build()
             .map_err(|e| AuthError::NetworkError(format!("Client build failed: {}", e)))?;
 
@@ -80,7 +80,7 @@ impl NextcloudAuthService {
             .timeout(std::time::Duration::from_secs(30))
             .connect_timeout(std::time::Duration::from_secs(10))
             .tcp_keepalive(std::time::Duration::from_secs(30))
-            .user_agent("NextcloudAuth/0.1.0")
+            .user_agent(concat!("NextcloudAuth/", env!("CARGO_PKG_VERSION")))
             .pool_idle_timeout(std::time::Duration::from_secs(90))
             .pool_max_idle_per_host(4)
             .build()
@@ -89,7 +89,6 @@ impl NextcloudAuthService {
         let response = client
             .post(poll_url)
             .form(&[("token", token)])
-            .header("User-Agent", "NextcloudAuth/0.1.0")
             .header("Accept", "application/json")
             .send()
             .await
