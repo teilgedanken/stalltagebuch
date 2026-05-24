@@ -44,6 +44,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libssl-dev \
       # Required by the Rust linker for Android cross-compilation
       gcc \
+      # C runtime startup files (Scrt1.o, crti.o) and linker stubs (-lc, -lpthread…)
+      # needed when Cargo compiles build.rs scripts for the host (x86_64-unknown-linux-gnu).
+      # Technically a transitive dep of gcc, but the temurin base suppresses it.
+      libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Android SDK command-line tools ────────────────────────────
