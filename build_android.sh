@@ -21,11 +21,9 @@ detect_device_rust_target() {
         arm64-v8a)
             echo "aarch64-linux-android"
             ;;
-        armeabi-v7a|armeabi)
-            echo "armv7-linux-androideabi"
-            ;;
-        x86)
-            echo "i686-linux-android"
+        armeabi-v7a|armeabi|x86)
+            # 32-bit targets not supported by Dioxus; fall back to default.
+            return 1
             ;;
         x86_64)
             echo "x86_64-linux-android"

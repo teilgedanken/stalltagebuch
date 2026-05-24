@@ -70,8 +70,6 @@ web = ["dioxus/web"]
 desktop = ["dioxus/desktop", "openssl/vendored"]
 mobile = ["dioxus/mobile", "openssl/vendored"]
 
-# Android build targets
+# Android build targets (aarch64 = production devices, x86_64 = emulator)
 [target.aarch64-linux-android.dev-dependencies]
-[target.armv7-linux-androideabi.dev-dependencies]
-[target.i686-linux-android.dev-dependencies]
 [target.x86_64-linux-android.dev-dependencies]

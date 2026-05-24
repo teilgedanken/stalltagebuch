@@ -44,16 +44,10 @@ ENV PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HO
 # NDK_TOOLCHAIN is set first so subsequent lines can reference it.
 ENV NDK_TOOLCHAIN=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin
 ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${NDK_TOOLCHAIN}/aarch64-linux-android${ANDROID_API}-clang \
-    CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=${NDK_TOOLCHAIN}/armv7a-linux-androideabi${ANDROID_API}-clang \
-    CARGO_TARGET_I686_LINUX_ANDROID_LINKER=${NDK_TOOLCHAIN}/i686-linux-android${ANDROID_API}-clang \
     CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=${NDK_TOOLCHAIN}/x86_64-linux-android${ANDROID_API}-clang \
     CC_aarch64_linux_android=${NDK_TOOLCHAIN}/aarch64-linux-android${ANDROID_API}-clang \
-    CC_armv7_linux_androideabi=${NDK_TOOLCHAIN}/armv7a-linux-androideabi${ANDROID_API}-clang \
-    CC_i686_linux_android=${NDK_TOOLCHAIN}/i686-linux-android${ANDROID_API}-clang \
     CC_x86_64_linux_android=${NDK_TOOLCHAIN}/x86_64-linux-android${ANDROID_API}-clang \
     AR_aarch64_linux_android=${NDK_TOOLCHAIN}/llvm-ar \
-    AR_armv7_linux_androideabi=${NDK_TOOLCHAIN}/llvm-ar \
-    AR_i686_linux_android=${NDK_TOOLCHAIN}/llvm-ar \
     AR_x86_64_linux_android=${NDK_TOOLCHAIN}/llvm-ar
 
 # ── System packages ───────────────────────────────────────────
@@ -102,7 +96,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
            --profile minimal \
     && rustup target add \
          aarch64-linux-android \
-         armv7-linux-androideabi \
          x86_64-linux-android
 
 # ── dioxus-cli (dx) ───────────────────────────────────────────
