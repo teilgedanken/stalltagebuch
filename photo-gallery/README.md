@@ -6,7 +6,6 @@ A reusable photo gallery management library with thumbnail generation and storag
 
 - **Cross-platform photo management**: Works on any platform with Rust support
 - **Automatic thumbnail generation**: Creates WebP thumbnails in multiple sizes (small: 128px, medium: 512px)
-- **Database integration**: SQLite-based photo metadata storage
 - **WebDAV sync** (optional): Upload and download photos to/from Nextcloud or other WebDAV servers
 - **Flexible configuration**: Customizable storage paths and thumbnail sizes
 

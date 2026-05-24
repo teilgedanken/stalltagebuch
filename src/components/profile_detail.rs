@@ -1,12 +1,15 @@
-use crate::database;
+use super::profile_i18n::{format_age_years_months, gender_label};
+use super::profile_photo_card::ProfilePhotoCard;
+use super::ring_color_picker::ring_color_option_label;
+use super::synced_photo::{SyncedCollectionFullscreen, SyncedThumbnailImage};
 // image loading is handled by photo_gallery components (PreviewCollection / FullscreenCollection)
-use crate::models::{Quail, QuailEvent};
-use crate::services::{event_service, profile_service};
 use crate::Screen;
+use crate::models::{EventType, Gender, RingColor, ring_color_preview_bg, ring_color_select_bg};
+use crate::spacetime;
+use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_i18n::t;
-// Photo type is not needed in this file - preview/fullscreen components handle loading
-use photo_gallery::{CollectionFullscreen, PreviewCollection};
+use dioxus_i18n::tid;
+use spacetimedb_sdk::DbContext;
 
 /// Helper function to resolve photo path to absolute path
 /// Handles both full paths (starting with /) and relative filenames
@@ -14,469 +17,540 @@ use photo_gallery::{CollectionFullscreen, PreviewCollection};
 
 #[component]
 pub fn ProfileDetailScreen(quail_id: String, on_navigate: EventHandler<Screen>) -> Element {
-    let mut profile = use_signal(|| None::<Quail>);
-    let mut events = use_signal(|| Vec::<QuailEvent>::new());
-    let mut error = use_signal(|| String::new());
-    // preview UUID shown in the main profile area (PreviewCollection)
-    let mut quail_photo_collection_uuid = use_signal(|| None::<uuid::Uuid>);
-    // uuids for fullscreen viewer (filled when opening fullscreen)
-    let fullscreen_uuids = use_signal(|| Vec::<uuid::Uuid>::new());
-    let current_photo_index = use_signal(|| 0usize);
-    let mut show_fullscreen = use_signal(|| false);
-    let mut uploading = use_signal(|| false);
-    let mut upload_error = use_signal(|| String::new());
+    let quails = spacetime::use_table_quails();
+    let all_events = spacetime::use_table_quail_events();
+    let photo_collections_table = spacetime::use_table_photo_collections();
+    let photos_table = spacetime::use_table_photos();
 
-    #[cfg(target_os = "android")]
-    let quail_id_for_gallery = quail_id.clone();
-    #[cfg(target_os = "android")]
-    let quail_id_for_camera = quail_id.clone();
-    // clone used for opening fullscreen without moving the original id
-    let quail_id_for_fullscreen = quail_id.clone();
+    let connection = spacetime::use_connection();
 
-    // Retry failed downloads beim Mount
-    use_effect(move || {
-        spawn(async move {
-            if let Ok(conn) = database::init_database() {
-                if let Err(e) = crate::services::photo_service::retry_failed_downloads(&conn).await
-                {
-                    log::warn!("Failed to retry photo downloads: {}", e);
-                }
-            }
-        });
+    spacetime::use_subscription(&[
+        "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
+        "SELECT * FROM photo_collections",
+        "SELECT * FROM photos",
+    ]);
+
+    // Force refresh counter - incremented when returning from other screens
+    let mut refresh_counter = use_signal(|| 0u32);
+
+    let quail_id_for_profile_memo = quail_id.clone();
+    let profile = use_memo(move || {
+        // Depend on refresh_counter to force re-evaluation
+        let _ = refresh_counter();
+
+        let owner = connection()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        quails()
+            .iter()
+            .find(|quail| {
+                quail.uuid == quail_id_for_profile_memo
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &quail.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
     });
 
-    // Profil und Events laden
-    let quail_id_for_profile = quail_id.clone();
-    use_effect(move || {
-        if let Ok(conn) = database::init_database() {
-            if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_profile) {
-                match profile_service::get_profile(&conn, &uuid) {
-                    Ok(p) => {
-                        quail_photo_collection_uuid.set(Some(uuid));
-                        profile.set(Some(p));
-                        error.set(String::new());
-                    }
-                    Err(e) => error.set(t!("error-load-failed", error: e.to_string())), // Failed to load
-                }
+    let quail_id_for_events_memo = quail_id.clone();
+    let events = use_memo(move || {
+        let owner = connection()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
 
-                // Load events
-                match event_service::get_events_for_quail(&conn, &uuid) {
-                    Ok(evts) => events.set(evts),
-                    Err(e) => log::error!("{}: {}", t!("error-load-events-failed"), e), // Failed to load events
+        let mut rows: Vec<spacetime::QuailEvent> = all_events()
+            .iter()
+            .filter(|event| {
+                event.quail_uuid == quail_id_for_events_memo
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &event.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| {
+            b.event_date
+                .cmp(&a.event_date)
+                .then_with(|| b.uuid.cmp(&a.uuid))
+        });
+        rows
+    });
+
+    let age_display = use_memo(move || {
+        let today = Local::now().date_naive();
+        age_display_from_events(&events(), today)
+    });
+
+    let quail_id_for_photos_memo = quail_id.clone();
+    let photo_collections = use_memo(move || {
+        let owner = connection()
+            .as_ref()
+            .and_then(|conn| conn.try_identity())
+            .map(|id| id.to_string());
+
+        let mut rows: Vec<spacetime::PhotoCollection> = photo_collections_table()
+            .iter()
+            .filter(|coll| {
+                coll.quail_uuid.as_ref() == Some(&quail_id_for_photos_memo)
+                    && owner
+                        .as_ref()
+                        .map(|owner_value| &coll.owner == owner_value)
+                        .unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| b.uuid.cmp(&a.uuid));
+        rows
+    });
+
+    let photo_uuid_to_meta = use_memo(move || {
+        let mut map = std::collections::HashMap::new();
+        for photo in photos_table().iter() {
+            map.insert(
+                photo.uuid.clone(),
+                (photo.relative_path.clone(), photo.created_at),
+            );
+        }
+        map
+    });
+
+    let collection_to_photos = use_memo(move || {
+        let mut map = std::collections::HashMap::new();
+        for photo in photos_table().iter() {
+            map.entry(photo.collection_uuid.clone())
+                .or_insert_with(Vec::new)
+                .push(photo.uuid.clone());
+        }
+        map
+    });
+
+    let filtered_photo_items = use_memo(move || {
+        let collections = photo_collections();
+        let photo_map = photo_uuid_to_meta();
+        let coll_photos = collection_to_photos();
+
+        let mut rows: Vec<(String, String, i64)> = vec![];
+        for collection in collections {
+            if let Some(photo_uuids) = coll_photos.get(&collection.uuid) {
+                for uuid in photo_uuids {
+                    if let Some((path, created_at)) = photo_map.get(uuid) {
+                        rows.push((uuid.clone(), path.clone(), *created_at));
+                    }
                 }
+            }
+        }
+
+        // Stable chronological order by creation date (oldest first).
+        rows.sort_by(|a, b| a.2.cmp(&b.2).then_with(|| a.0.cmp(&b.0)));
+        rows
+    });
+
+    // Hooks for the photo gallery section — must live at component root (not inside conditionals)
+    let mut show_fullscreen = use_signal(|| false);
+    let mut selected_photo_items = use_signal(Vec::<(String, String)>::new);
+    let mut selected_index = use_signal(|| 0usize);
+
+    // Auto-refresh when quails table changes to pick up edits from profile_edit screen
+    let quail_id_for_auto_refresh = quail_id.clone();
+    use_effect(move || {
+        // Just reading quails() creates a dependency, forcing this effect to run
+        // whenever quails table updates
+        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_for_auto_refresh) {
+            if let Some(_) = quails().iter().find(|q| q.uuid == uuid.to_string()) {
+                // Increment refresh counter to force memo recalculation
+                refresh_counter.with_mut(|c| *c = c.wrapping_add(1));
             }
         }
     });
 
     rsx! {
-        div { style: "padding: 16px; max-width: 800px; margin: 0 auto;",
-            // Header
-            div { style: "display: flex; align-items: center; gap: 12px; margin-bottom: 24px;",
-                button {
-                    style: "padding: 8px 16px; background: #e0e0e0; color: #333; border-radius: 8px; font-size: 16px;",
-                    onclick: move |_| on_navigate.call(Screen::ProfileList),
-                    "← "
-                    {t!("action-back")}
+        section { class: "section pt-4 pb-3",
+            div { class: "container is-max-desktop",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        button {
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::ProfileList),
+                            "← "
+                            {tid!("action-back")}
+                        }
+                    }
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0", {tid!("profile-detail-title")} }
+                    }
+                    div { class: "level-right" }
                 }
-                h1 {
-                    style: "margin: 0; font-size: 26px; color: #0066cc; font-weight: 700;",
-                    {t!("profile-detail-title")} // Profile
-                }
-            }
 
-            if !error().is_empty() {
-                div { style: "background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "⚠️ "
-                    {error}
-                }
-            }
+                if let Some(p) = profile() {
+                    div {
+                        class: "is-flex is-flex-direction-column",
+                        style: "gap: 24px;",
+                        ProfilePhotoCard {
+                            quail_id: quail_id.clone(),
+                            profile_photo: p.profile_photo.clone(),
+                        }
 
-            if let Some(p) = profile() {
-                div { style: "display: flex; flex-direction: column; gap: 24px;",
-                    // Bild mit Plus-Button - zeigt Profilfoto, klickbar für Vollbild-Galerie
-                    div { style: "width: 100%; aspect-ratio: 1/1; background: #f0f0f0; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;",
-                        // Hauptbild (klickbar für Galerie)
-                        div {
-                            style: "width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer;",
-                            onclick: move |_| {
-                                let quail_id_open = quail_id_for_fullscreen.clone();
-                                let mut fullscreen_uuids_sig = fullscreen_uuids.clone();
-                                let mut current_idx_sig = current_photo_index.clone();
-                                let mut show_fullscreen_sig = show_fullscreen.clone();
-                                spawn(async move {
-                                    if let Ok(conn) = database::init_database() {
-                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_open) {
-                                            if let Ok(Some(collection_id)) = crate::services::photo_service::get_quail_collection(
-                                                &conn,
-                                                &uuid,
-                                            ) {
-                                                if let Ok(list) = crate::services::photo_service::list_collection_photos(
-                                                    &conn,
-                                                    &collection_id,
-                                                ) {
-                                                    let uuids = list
-                                                        .into_iter()
-                                                        .map(|p| p.uuid)
-                                                        .collect::<Vec<uuid::Uuid>>();
-                                                    if !uuids.is_empty() {
-                                                        log::debug!(
-                                                            "ProfileDetail: opening fullscreen with {} photos", uuids
-                                                            .len()
-                                                        );
-                                                        fullscreen_uuids_sig.set(uuids);
-                                                        current_idx_sig.set(0);
-                                                        show_fullscreen_sig.set(true);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            },
+                        div { class: "box",
+                            h2 { class: "title is-3 mb-3", "{p.name}" }
+
                             {
+                                let left_ring = p
+                                    .ring_color_left
+                                    .as_ref()
+                                    .map(|value| RingColor::from_str(value));
+                                let right_ring = p
+                                    .ring_color_right
+                                    .as_ref()
+                                    .map(|value| RingColor::from_str(value));
+
                                 rsx! {
-                                    PreviewCollection { preview_collection_uuid: quail_photo_collection_uuid(), on_click: None }
-                                }
-                            }
-                        }
-                        // Zwei halbtransparente Overlay-Buttons (Galerie Mehrfach / Kamera Einzel)
-                        // Galerie (Mehrfachauswahl)
-                        button {
-                            style: "position:absolute; bottom:12px; left:12px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
-                            disabled: uploading(),
-                            onclick: {
-                                move |e| {
-                                    e.stop_propagation();
-                                    uploading.set(true);
-                                    upload_error.set(String::new());
-                                    #[cfg(target_os = "android")]
-                                    let quail_id_clone = quail_id_for_gallery.clone();
-                                    spawn(async move {
-                                        #[cfg(target_os = "android")]
-                                        {
-                                            match crate::camera::pick_images() {
-                                                Ok(paths) => {
-                                                    if let Ok(conn) = database::init_database() {
-                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                                                            match crate::services::photo_service::get_or_create_quail_collection(
-                                                                &conn,
-                                                                &uuid,
-                                                            ) {
-                                                                Ok(collection_id) => {
-                                                                    for pth in paths {
-                                                                        let path_str = pth.to_string_lossy().to_string();
-                                                                        match crate::services::photo_service::add_photo_to_collection(
-                                                                                &conn,
-                                                                                &collection_id,
-                                                                                path_str,
-                                                                            )
-                                                                            .await
-                                                                        {
-                                                                            Ok(_) => {}
-                                                                            Err(e) => {
-                                                                                upload_error.set(format!("Fehler beim Speichern: {}", e));
-                                                                                break;
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
-                                                                        &conn,
-                                                                        &collection_id,
-                                                                    ) {
-                                                                        quail_photo_collection_uuid.set(Some(preview_opt));
-                                                                    }
-                                                                }
-                                                                Err(e) => {
-                                                                    upload_error
-                                                                        .set(format!("Fehler beim Erstellen der Sammlung: {}", e));
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    upload_error
-                                                        .set(format!("{}: {}", t!("error-selection-failed"), e))
+                                    div { class: "mb-2", style: "display: flex; width: 100%;",
+                                        button {
+                                            class: "button",
+                                            style: detail_ring_button_style(left_ring.as_ref(), true),
+                                            title: format!(
+                                                "{}: {}",
+                                                tid!("ring-color-side-left"),
+                                                detail_ring_label(left_ring.as_ref()),
+                                            ),
+                                            span { style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                                span { style: detail_ring_swatch_style(left_ring.as_ref()) }
+                                                span {
+                                                    class: "is-size-7 has-text-grey-dark",
+                                                    style: "overflow: hidden; text-overflow: ellipsis;",
+                                                    {detail_ring_label(left_ring.as_ref())}
                                                 }
                                             }
                                         }
-                                        #[cfg(not(target_os = "android"))]
-                                        {
-                                            upload_error.set(t!("error-multiselect-android-only"));
-                                        }
-                                        uploading.set(false);
-                                    });
-                                }
-                            },
-                            if uploading() {
-                                "⏳"
-                            } else {
-                                "🖼️ "
-                                {t!("action-gallery")}
-                            }
-                        }
-                        // Kamera (Einzelfoto)
-                        button {
-                            style: "position:absolute; bottom:12px; right:12px; padding:10px 14px; background:rgba(0,0,0,0.45); color:white; backdrop-filter:blur(4px); border-radius:8px; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer; z-index:11;",
-                            disabled: uploading(),
-                            onclick: {
-                                move |e| {
-                                    e.stop_propagation();
-                                    uploading.set(true);
-                                    upload_error.set(String::new());
-                                    #[cfg(target_os = "android")]
-                                    let quail_id_clone = quail_id_for_camera.clone();
-                                    spawn(async move {
-                                        #[cfg(target_os = "android")]
-                                        {
-                                            match crate::camera::capture_photo() {
-                                                Ok(path) => {
-                                                    if let Ok(conn) = database::init_database() {
-                                                        let path_str = path.to_string_lossy().to_string();
-                                                        if let Ok(uuid) = uuid::Uuid::parse_str(&quail_id_clone) {
-                                                            match crate::services::photo_service::get_or_create_quail_collection(
-                                                                &conn,
-                                                                &uuid,
-                                                            ) {
-                                                                Ok(collection_id) => {
-                                                                    match crate::services::photo_service::add_photo_to_collection(
-                                                                            &conn,
-                                                                            &collection_id,
-                                                                            path_str,
-                                                                        )
-                                                                        .await
-                                                                    {
-                                                                        Ok(_) => {
-                                                                            if let Ok(preview_opt) = photo_gallery::get_collection_preview_uuid(
-                                                                                &conn,
-                                                                                &collection_id,
-                                                                            ) {
-                                                                                quail_photo_collection_uuid.set(Some(preview_opt));
-                                                                            }
-                                                                        }
-                                                                        Err(e) => {
-                                                                            upload_error
-                                                                                .set(format!("{}: {}", t!("error-save-failed"), e))
-                                                                        }
-                                                                    }
-                                                                }
-                                                                Err(e) => {
-                                                                    upload_error
-                                                                        .set(format!("{}: {}", t!("error-collection-failed"), e))
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    upload_error
-                                                        .set(format!("{}: {}", t!("error-capture-failed"), e))
+                                        button {
+                                            class: "button",
+                                            style: detail_ring_button_style(right_ring.as_ref(), false),
+                                            title: format!(
+                                                "{}: {}",
+                                                tid!("ring-color-side-right"),
+                                                detail_ring_label(right_ring.as_ref()),
+                                            ),
+                                            span { style: "display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-width: 0;",
+                                                span { style: detail_ring_swatch_style(right_ring.as_ref()) }
+                                                span {
+                                                    class: "is-size-7 has-text-grey-dark",
+                                                    style: "overflow: hidden; text-overflow: ellipsis;",
+                                                    {detail_ring_label(right_ring.as_ref())}
                                                 }
                                             }
                                         }
-                                        #[cfg(not(target_os = "android"))]
-                                        {
-                                            upload_error.set(t!("error-camera-android-only"));
-                                        }
-                                        uploading.set(false);
-                                    });
+                                    }
                                 }
-                            },
-                            if uploading() {
-                                "⏳"
-                            } else {
-                                "📷 "
-                                {t!("action-photo")}
                             }
-                        }
-                    }
 
-                    // Upload Error anzeigen falls vorhanden
-                    if !upload_error().is_empty() {
-                        div { style: "padding: 12px; background: #ffe6e6; border-radius: 8px; color: #cc0000; font-size: 14px; margin-top: 12px;",
-                            "⚠️ "
-                            {upload_error}
-                        }
-                    }
-
-                    // Basisinfos
-                    div { style: "display: flex; flex-direction: column; gap: 12px;",
-                        h2 { style: "margin:0; font-size: 28px; color:#333; font-weight:600;",
-                            "{p.name}"
-                        }
-                        div { style: "display:flex; flex-wrap:wrap; gap:8px;",
-                            span { style: "padding:6px 14px; background:#e8f4f8; border-radius:16px; font-size:13px; color:#0066cc;",
-                                "ID {p.uuid.to_string().chars().take(8).collect::<String>()}"
-                            }
-                            span { style: "padding:6px 14px; background:#fff3e0; border-radius:16px; font-size:13px; color:#ff8c00;",
-                                "{p.gender.display_name()}"
-                            }
-                            // Status Badge basierend auf letztem Event
-                            if let Some(latest_event) = events().first() {
-                                match latest_event.event_type {
-                                    crate::models::EventType::Born => rsx! {
-                                        span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
-                                            "🐣 "
-                                            {t!("status-born")}
-                                        }
-                                    },
-                                    crate::models::EventType::Alive => rsx! {
-                                        span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
-                                            "✅ "
-                                            {t!("status-alive")}
-                                        }
-                                    },
-                                    crate::models::EventType::Sick => rsx! {
-                                        span { style: "padding:6px 14px; background:#ffe0e0; border-radius:16px; font-size:13px; color:#cc3333;",
-                                            "🤒 "
-                                            {t!("status-sick")}
-                                        }
-                                    },
-                                    crate::models::EventType::Healthy => rsx! {
-                                        span { style: "padding:6px 14px; background:#e0ffe6; border-radius:16px; font-size:13px; color:#228833;",
-                                            "💪 "
-                                            {t!("status-healthy")}
-                                        }
-                                    },
-                                    crate::models::EventType::MarkedForSlaughter => {
-                                        rsx! {
-                                            span { style: "padding:6px 14px; background:#fff3e0; border-radius:16px; font-size:13px; color:#ff8800;",
+                            div { class: "tags mb-3",
+                                span { class: "tag is-info is-light",
+                                    "ID {p.uuid.chars().take(8).collect::<String>()}"
+                                }
+                                span { class: "tag is-warning is-light",
+                                    "{gender_label(&Gender::from_str(&p.gender))}"
+                                }
+                                if let Some(latest_event) = events().first() {
+                                    match EventType::from_str(&latest_event.event_type) {
+                                        EventType::Born => rsx! {
+                                            span { class: "tag is-success is-light",
+                                                "🐣 "
+                                                {tid!("status-born")}
+                                            }
+                                        },
+                                        EventType::Alive => rsx! {
+                                            span { class: "tag is-success is-light",
+                                                "✅ "
+                                                {tid!("status-alive")}
+                                            }
+                                        },
+                                        EventType::Sick => rsx! {
+                                            span { class: "tag is-danger is-light",
+                                                "🤒 "
+                                                {tid!("status-sick")}
+                                            }
+                                        },
+                                        EventType::Healthy => rsx! {
+                                            span { class: "tag is-success is-light",
+                                                "💪 "
+                                                {tid!("status-healthy")}
+                                            }
+                                        },
+                                        EventType::MarkedForSlaughter => rsx! {
+                                            span { class: "tag is-warning is-light",
                                                 "🥩 "
-                                                {t!("status-marked")}
+                                                {tid!("status-marked")}
+                                            }
+                                        },
+                                        EventType::Slaughtered => rsx! {
+                                            span { class: "tag is-dark is-light",
+                                                "🥩 "
+                                                {tid!("status-slaughtered")}
+                                            }
+                                        },
+                                        EventType::Died => rsx! {
+                                            span { class: "tag is-dark is-light",
+                                                "🪦 "
+                                                {tid!("status-died")}
+                                            }
+                                        },
+                                    }
+                                }
+                            }
+
+                            div { class: "columns is-mobile is-multiline",
+                                if let Some(age) = age_display() {
+                                    div { class: "column is-half",
+                                        article { class: "message is-light",
+                                            div { class: "message-body",
+                                                p { class: "is-size-7 has-text-grey mb-1",
+                                                    {tid!("field-age")}
+                                                }
+                                                p { class: "has-text-weight-semibold",
+                                                    "{age}"
+                                                }
                                             }
                                         }
                                     }
-                                    crate::models::EventType::Slaughtered => rsx! {
-                                        span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
-                                            "🥩 "
-                                            {t!("status-slaughtered")}
+                                }
+
+                                div { class: "column is-half",
+                                    article { class: "message is-light",
+                                        div { class: "message-body",
+                                            p { class: "is-size-7 has-text-grey mb-1",
+                                                "UUID"
+                                            }
+                                            p {
+                                                class: "is-size-7 has-text-grey",
+                                                style: "word-break: break-all;",
+                                                "{p.uuid}"
+                                            }
                                         }
-                                    },
-                                    crate::models::EventType::Died => rsx! {
-                                        span { style: "padding:6px 14px; background:#f0f0f0; border-radius:16px; font-size:13px; color:#666;",
-                                            "🪦 "
-                                            {t!("status-died")}
-                                        }
-                                    },
+                                    }
                                 }
                             }
                         }
-                    }
-                    // Detail Grid
-                    div { style: "display:grid; gap:16px;",
-                        div { style: "padding:14px; background:#f5f5f5; border-radius:8px;",
-                            div { style: "font-size:11px; color:#666; font-weight:600; margin-bottom:4px;",
-                                "UUID"
-                            }
-                            div { style: "font-size:11px; color:#999; word-break:break-all; font-family:monospace;",
-                                "{p.uuid}"
-                            }
-                        }
-                    }
 
-                    // Events Timeline
-                    div { style: "margin-top:24px;",
-                        div { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;",
-                            h3 { style: "margin:0; font-size:18px; color:#333; font-weight:600;",
-                                "📅 "
-                                {t!("events-timeline-title")}
-                            }
-                            button {
-                                style: "padding:8px 16px; background:#0066cc; color:white; border-radius:8px; font-size:14px; font-weight:500;",
-                                onclick: move |_| {
-                                    if let Some(p) = profile() {
-                                        on_navigate
-                                            .call(Screen::EventAdd {
-                                                quail_id: p.uuid.to_string(),
-                                                quail_name: p.name.clone(),
-                                            });
+                        {
+                            let photo_items = filtered_photo_items();
+                            if !photo_items.is_empty() {
+                                let all_photo_items: Vec<(String, String)> = photo_items
+                                    .iter()
+                                    .map(|(uuid, path, _)| (uuid.clone(), path.clone()))
+                                    .collect();
+
+                                rsx! {
+                                    h3 { class: "title is-5 mb-0",
+                                        "📸 "
+                                        {tid!("photos-title")}
                                     }
-                                },
-                                "+ "
-                                {t!("action-add-event")} // Add event
+
+                                    div { class: "grid is-col-min-5 is-gap-0",
+                                        for (idx, (photo_uuid, photo_path, _created_at)) in photo_items.iter().enumerate() {
+                                            div {
+                                                key: "{photo_uuid}",
+                                                class: "cell is-clickable",
+                                                onclick: {
+                                                    let all_photo_items_click = all_photo_items.clone();
+                                                    move |_| {
+                                                        if !all_photo_items_click.is_empty() {
+                                                            selected_photo_items.set(all_photo_items_click.clone());
+                                                            selected_index.set(idx);
+                                                            show_fullscreen.set(true);
+                                                        }
+                                                    }
+                                                },
+                                                SyncedThumbnailImage {
+                                                    photo_uuid: Some(photo_uuid.clone()),
+                                                    relative_path: photo_path.clone(),
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if show_fullscreen() && !selected_photo_items().is_empty() {
+                                        SyncedCollectionFullscreen {
+                                            photo_items: selected_photo_items(),
+                                            initial_index: selected_index(),
+                                            on_close: move |_| show_fullscreen.set(false),
+                                        }
+                                    }
+                                }
+                            } else {
+                                rsx! {
+                                    div {}
+                                }
                             }
                         }
 
-                        if events().is_empty() {
-                            div {
-                                style: "padding:24px; text-align:center; background:#f5f5f5; border-radius:8px; color:#999;",
-                                {t!("events-empty")} // No events available
-                            }
-                        } else {
-                            div { style: "display:flex; flex-direction:column; gap:12px;",
-                                for event in events() {
-                                    div {
-                                        key: "{event.uuid}",
-                                        style: "padding:14px; background:white; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer;",
-                                        onclick: {
-                                            let quail_id_for_event = quail_id.clone();
-                                            move |_| {
+                        div { class: "box",
+                            div { class: "level mb-3",
+                                div { class: "level-left",
+                                    h3 { class: "title is-5 mb-0",
+                                        "📅 "
+                                        {tid!("events-timeline-title")}
+                                    }
+                                }
+                                div { class: "level-right",
+                                    button {
+                                        class: "button is-primary is-small",
+                                        onclick: move |_| {
+                                            if let Some(p) = profile() {
                                                 on_navigate
-                                                    .call(Screen::EventEdit {
-                                                        event_id: event.uuid.to_string(),
-                                                        quail_id: quail_id_for_event.clone(),
+                                                    .call(Screen::EventAdd {
+                                                        quail_id: p.uuid.to_string(),
+                                                        quail_name: p.name.clone(),
                                                     });
                                             }
                                         },
-                                        div { style: "display:flex; gap:10px; align-items:center; margin-bottom:8px;",
-                                            span { style: "font-size:20px;",
-                                                match event.event_type {
-                                                    crate::models::EventType::Born => "🐣",
-                                                    crate::models::EventType::Alive => "✅",
-                                                    crate::models::EventType::Sick => "🤒",
-                                                    crate::models::EventType::Healthy => "💪",
-                                                    crate::models::EventType::MarkedForSlaughter => "🥩",
-                                                    crate::models::EventType::Slaughtered => "🥩",
-                                                    crate::models::EventType::Died => "🪦",
+                                        "+ "
+                                        {tid!("action-add-event")}
+                                    }
+                                }
+                            }
+
+                            if events().is_empty() {
+                                div { class: "notification is-light has-text-centered",
+                                    {tid!("events-empty")}
+                                }
+                            } else {
+                                div {
+                                    class: "is-flex is-flex-direction-column",
+                                    style: "gap: 12px;",
+                                    for event in events() {
+                                        div {
+                                            key: "{event.uuid}",
+                                            class: "box",
+                                            style: "cursor: pointer; margin-bottom: 0;",
+                                            onclick: {
+                                                let quail_id_for_event = quail_id.clone();
+                                                move |_| {
+                                                    on_navigate
+                                                        .call(Screen::EventEdit {
+                                                            event_id: event.uuid.to_string(),
+                                                            quail_id: quail_id_for_event.clone(),
+                                                        });
                                                 }
-                                            }
+                                            },
                                             div {
-                                                div { style: "font-size:14px; font-weight:600; color:#333;",
-                                                    "{event.event_type.display_name()}"
+                                                class: "is-flex is-align-items-center mb-2",
+                                                style: "gap: 10px;",
+                                                span {
+                                                    class: "tag is-light",
+                                                    style: "font-size: 18px;",
+                                                    match EventType::from_str(&event.event_type) {
+                                                        EventType::Born => "🐣",
+                                                        EventType::Alive => "✅",
+                                                        EventType::Sick => "🤒",
+                                                        EventType::Healthy => "💪",
+                                                        EventType::MarkedForSlaughter => "🥩",
+                                                        EventType::Slaughtered => "🥩",
+                                                        EventType::Died => "🪦",
+                                                    }
                                                 }
-                                                div { style: "font-size:12px; color:#666;",
-                                                    {event.event_date.format("%d.%m.%Y").to_string()}
+                                                div {
+                                                    p { class: "has-text-weight-semibold mb-0",
+                                                        "{EventType::from_str(&event.event_type).display_name()}"
+                                                    }
+                                                    p { class: "is-size-7 has-text-grey mb-0",
+                                                        {format_event_date(&event.event_date)}
+                                                    }
                                                 }
                                             }
-                                        }
-                                        if let Some(notes) = &event.notes {
-                                            div { style: "font-size:13px; color:#555; line-height:1.4; white-space:pre-wrap;",
-                                                "{notes}"
+                                            if let Some(notes) = &event.notes {
+                                                p {
+                                                    class: "is-size-7",
+                                                    style: "white-space: pre-wrap;",
+                                                    "{notes}"
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Bearbeiten Button
-                    button {
-                        class: "btn-primary",
-                        style: "width:100%; padding:14px; font-size:16px; font-weight:600; margin-top:24px;",
-                        onclick: {
-                            let quail_id_for_edit = quail_id.clone();
-                            move |_| on_navigate.call(Screen::ProfileEdit(quail_id_for_edit.clone()))
-                        },
-                        "✏️ "
-                        {t!("action-edit")}
+                        button {
+                            class: "button is-primary is-fullwidth is-medium",
+                            onclick: {
+                                let quail_id_for_edit = quail_id.clone();
+                                move |_| on_navigate.call(Screen::ProfileEdit(quail_id_for_edit.clone()))
+                            },
+                            "✏️ "
+                            {tid!("action-edit")}
+                        }
                     }
-                }
-            } else {
-                div { style: "padding:48px; text-align:center;",
-                    div { style: "font-size:48px; margin-bottom:16px;", "⏳" }
-                    div { style: "color:#666;", {t!("loading-profile")} } // Loading profile...
-                }
-            }
-
-            // Vollbild-Galerie Overlay
-            if show_fullscreen() && !fullscreen_uuids().is_empty() {
-                CollectionFullscreen {
-                    photo_uuids: fullscreen_uuids(),
-                    initial_index: current_photo_index(),
-                    on_close: move |_| show_fullscreen.set(false),
+                } else {
+                    div { class: "notification is-light has-text-centered",
+                        "⏳ "
+                        {tid!("loading-profile")}
+                    }
                 }
             }
         }
     }
+}
+fn format_event_date(value: &str) -> String {
+    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map(|date| date.format("%d.%m.%Y").to_string())
+        .unwrap_or_else(|_| value.to_string())
+}
+
+fn age_display_from_events(events: &[spacetime::QuailEvent], today: NaiveDate) -> Option<String> {
+    let birth_date = events
+        .iter()
+        .filter(|event| EventType::from_str(&event.event_type) == EventType::Born)
+        .filter_map(|event| NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d").ok())
+        .min()?;
+
+    Some(format_age_years_months(birth_date, today))
+}
+
+fn detail_ring_label(color: Option<&RingColor>) -> String {
+    color
+        .map(ring_color_option_label)
+        .unwrap_or_else(|| tid!("ring-color-none"))
+}
+
+fn detail_ring_button_style(color: Option<&RingColor>, is_left: bool) -> String {
+    let background = color
+        .map(|value| ring_color_select_bg(value.as_str()))
+        .unwrap_or("#ffffff");
+    let border_radius = if is_left {
+        "0.75rem 0 0 0.75rem"
+    } else {
+        "0 0.75rem 0.75rem 0"
+    };
+    let border_right = if is_left { "border-right: none;" } else { "" };
+
+    format!(
+        "flex: 1 1 0; min-height: 2.55rem; display: flex; align-items: center; justify-content: center; padding: 0.45rem 0.65rem; background: {}; border: 1px solid #e5e5e5; {} border-radius: {}; box-shadow: none; font-size: 0.8rem;",
+        background, border_right, border_radius
+    )
+}
+
+fn detail_ring_swatch_style(color: Option<&RingColor>) -> String {
+    let background = color
+        .map(|value| ring_color_preview_bg(value.as_str()))
+        .unwrap_or(
+            "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ececec 45%, #ececec 55%, #ffffff 55%, #ffffff 100%)",
+        );
+    let border = if color.is_some() {
+        "1px solid rgba(0, 0, 0, 0.35)"
+    } else {
+        "1px dashed #bbb"
+    };
+
+    format!(
+        "display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 999px; border: {}; background: {}; flex-shrink: 0;",
+        border, background
+    )
 }

@@ -1,0 +1,670 @@
+use crate::models::export::{
+    DeviceExport, EggRecordExport, ExportData, PhotoCollectionExport, PhotoExport,
+    QuailEventExport, QuailExport,
+};
+use crate::services::export_service;
+use crate::services::export_service::ExportProgress;
+use crate::services::spacetime_settings_service;
+use chrono::{Local, TimeZone};
+use dioxus::prelude::*;
+use dioxus_i18n::tid;
+
+#[component]
+pub fn BackupCard(
+    on_status_message: EventHandler<String>,
+    is_nextcloud_configured: bool,
+) -> Element {
+    crate::spacetime::use_subscription(&[
+        "SELECT * FROM devices",
+        "SELECT * FROM quails",
+        "SELECT * FROM quail_events",
+        "SELECT * FROM egg_records",
+        "SELECT * FROM photos",
+        "SELECT * FROM photo_collections",
+        "SELECT * FROM backups",
+    ]);
+
+    let devices = crate::spacetime::use_table_devices();
+    let quails = crate::spacetime::use_table_quails();
+    let quail_events = crate::spacetime::use_table_quail_events();
+    let egg_records = crate::spacetime::use_table_egg_records();
+    let photos = crate::spacetime::use_table_photos();
+    let photo_collections = crate::spacetime::use_table_photo_collections();
+
+    let mut export_progress = use_signal_sync(|| None::<ExportProgress>);
+    let mut export_status = use_signal_sync(|| String::new());
+    let mut is_exporting = use_signal_sync(|| false);
+
+    let import_progress = use_signal(|| None::<String>);
+    let mut import_status = use_signal(|| String::new());
+    #[allow(unused_mut)]
+    let mut is_importing = use_signal(|| false);
+
+    let mut is_backup_uploading = use_signal_sync(|| false);
+    let mut include_photo_files = use_signal_sync(|| true);
+    let backup_history = crate::spacetime::use_table_backups();
+    let mut expanded_backup_id = use_signal_sync(|| None::<String>);
+    let mut show_all_backups = use_signal_sync(|| false);
+    let create_backup_started = crate::spacetime::use_reducer_create_backup_started();
+    let finish_backup = crate::spacetime::use_reducer_finish_backup();
+    let create_backup_started_for_export = create_backup_started.clone();
+    let finish_backup_for_export = finish_backup.clone();
+    let create_backup_started_for_upload = create_backup_started.clone();
+    let finish_backup_for_upload = finish_backup.clone();
+
+    let create_export_archive =
+        move |include_images: bool, mut progress_callback: Box<dyn FnMut(ExportProgress)>| {
+            let devices_snapshot = devices();
+            let quails_snapshot = quails();
+            let quail_events_snapshot = quail_events();
+            let egg_records_snapshot = egg_records();
+            let photos_snapshot = photos();
+            let photo_collections_snapshot = photo_collections();
+
+            async move {
+                progress_callback(ExportProgress::Starting);
+                let metadata = export_service::build_export_metadata()?;
+
+                progress_callback(ExportProgress::ReadingQuails);
+                let export_devices = devices_snapshot
+                    .into_iter()
+                    .map(|device| DeviceExport {
+                        device_id: device.device_id,
+                        name: device.name,
+                        comment: device.comment,
+                        first_seen: device.first_seen,
+                        last_seen: device.last_seen,
+                        owner: device.owner,
+                    })
+                    .collect();
+                let export_quails = quails_snapshot
+                    .into_iter()
+                    .map(|quail| QuailExport {
+                        uuid: quail.uuid,
+                        name: quail.name,
+                        gender: quail.gender,
+                        ring_color_left: quail.ring_color_left,
+                        ring_color_right: quail.ring_color_right,
+                        profile_photo: quail.profile_photo,
+                        device_id: quail.device_id,
+                        owner: quail.owner,
+                        created_at: quail.created_at,
+                    })
+                    .collect();
+
+                progress_callback(ExportProgress::ReadingEvents);
+                let export_events = quail_events_snapshot
+                    .into_iter()
+                    .map(|event| QuailEventExport {
+                        uuid: event.uuid,
+                        quail_uuid: event.quail_uuid,
+                        event_type: event.event_type,
+                        event_date: event.event_date,
+                        notes: event.notes,
+                        photos: event.photos,
+                        device_id: event.device_id,
+                        owner: event.owner,
+                    })
+                    .collect();
+
+                progress_callback(ExportProgress::ReadingEggRecords);
+                let export_egg_records = egg_records_snapshot
+                    .into_iter()
+                    .map(|record| EggRecordExport {
+                        uuid: record.uuid,
+                        record_date: record.record_date,
+                        total_eggs: record.total_eggs,
+                        notes: record.notes,
+                        device_id: record.device_id,
+                        owner: record.owner,
+                    })
+                    .collect();
+
+                progress_callback(ExportProgress::ReadingPhotos);
+                let export_photos = photos_snapshot
+                    .into_iter()
+                    .map(|photo| PhotoExport {
+                        uuid: photo.uuid,
+                        collection_uuid: photo.collection_uuid,
+                        relative_path: photo.relative_path,
+                        sync_status: photo.sync_status,
+                        sync_error: photo.sync_error,
+                        last_sync_attempt: photo.last_sync_attempt,
+                        retry_count: photo.retry_count,
+                        device_id: photo.device_id,
+                        owner: photo.owner,
+                        created_at: photo.created_at,
+                        updated_at: photo.updated_at,
+                    })
+                    .collect();
+                let export_photo_collections = photo_collections_snapshot
+                    .into_iter()
+                    .map(|collection| PhotoCollectionExport {
+                        uuid: collection.uuid,
+                        quail_uuid: collection.quail_uuid,
+                        event_uuid: collection.event_uuid,
+                        preview_photo_uuid: collection.preview_photo_uuid,
+                        name: collection.name,
+                        device_id: collection.device_id,
+                        owner: collection.owner,
+                        created_at: collection.created_at,
+                        updated_at: collection.updated_at,
+                    })
+                    .collect();
+
+                let export = ExportData {
+                    metadata,
+                    devices: export_devices,
+                    quails: export_quails,
+                    quail_events: export_events,
+                    egg_records: export_egg_records,
+                    photos: export_photos,
+                    photo_collections: export_photo_collections,
+                };
+
+                export_service::export_to_zip(export, include_images, move |progress| {
+                    progress_callback(progress)
+                })
+                .await
+            }
+        };
+
+    let handle_export = move |_| {
+        if is_exporting() {
+            return;
+        }
+
+        is_exporting.set(true);
+        export_status.set(tid!("export-in-progress"));
+        export_progress.set(Some(ExportProgress::Starting));
+
+        let include_images = include_photo_files();
+        let tracking_id = ulid::Ulid::new().to_string();
+        if let Err(err) =
+            create_backup_started_for_export(crate::spacetime::CreateBackupStartedArgs {
+                backup_id: tracking_id.clone(),
+                kind: "file".to_string(),
+                include_images,
+                local_path: None,
+            })
+        {
+            log::warn!(
+                "Failed to record export backup start in SpacetimeDB: {}",
+                err
+            );
+            export_status.set(format!("❌ {}: {}", tid!("export-failed"), err));
+            export_progress.set(None);
+            is_exporting.set(false);
+            return;
+        }
+        let finish_backup_reducer = finish_backup_for_export.clone();
+
+        spawn(async move {
+            let mut progress_sig = export_progress;
+            let mut status_sig = export_status;
+            let mut exporting_sig = is_exporting;
+
+            match create_export_archive(
+                include_images,
+                Box::new(move |p| {
+                    progress_sig.with_mut(|s| *s = Some(p));
+                }),
+            )
+            .await
+            {
+                Ok(stats) => {
+                    let path_str = stats.path.display().to_string();
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                        backup_id: tracking_id.clone(),
+                        status: "success".to_string(),
+                        local_path: Some(path_str.clone()),
+                        remote_filename: None,
+                        zip_size_bytes: Some(stats.zip_size_bytes as i64),
+                        quails: stats.quails as i32,
+                        events: stats.events as i32,
+                        egg_records: stats.egg_records as i32,
+                        photos_meta: stats.photos_meta as i32,
+                        photos_files_included: stats.photos_files_included as i32,
+                        photos_files_missing: stats.photos_files_missing as i32,
+                        error_message: None,
+                    }) {
+                        log::warn!(
+                            "Failed to record successful export backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
+                    status_sig.with_mut(|s| {
+                        *s = format!("✅ {}\n📁 {}", tid!("export-success"), path_str)
+                    });
+                    progress_sig.with_mut(|s| *s = Some(ExportProgress::Complete));
+                }
+                Err(e) => {
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                        backup_id: tracking_id.clone(),
+                        status: "failed".to_string(),
+                        local_path: None,
+                        remote_filename: None,
+                        zip_size_bytes: None,
+                        quails: 0,
+                        events: 0,
+                        egg_records: 0,
+                        photos_meta: 0,
+                        photos_files_included: 0,
+                        photos_files_missing: 0,
+                        error_message: Some(e.to_string()),
+                    }) {
+                        log::warn!(
+                            "Failed to record failed export backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
+                    status_sig.with_mut(|s| *s = format!("❌ {}: {}", tid!("export-failed"), e));
+                    progress_sig.with_mut(|s| *s = None);
+                }
+            }
+
+            exporting_sig.set(false);
+        });
+    };
+
+    let handle_import = move |_| {
+        if is_importing() {
+            return;
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            spawn(async move {
+                if let Err(e) = crate::camera::launch_document_picker() {
+                    import_status.set(format!("❌ {}: {}", tid!("import-failed"), e));
+                    return;
+                }
+
+                let mut selected_path = None;
+                for _ in 0..120 {
+                    if let Some(path) = crate::camera::get_last_document_path() {
+                        selected_path = Some(path);
+                        break;
+                    }
+
+                    if let Some(err) = crate::camera::get_last_error() {
+                        import_status.set(format!("❌ {}: {}", tid!("import-failed"), err));
+                        return;
+                    }
+
+                    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                }
+
+                if let Some(path) = selected_path {
+                    is_importing.set(true);
+                    import_status.set(tid!("import-in-progress"));
+
+                    let mut progress_sig = import_progress;
+                    let mut status_sig = import_status;
+                    let mut importing_sig = is_importing;
+
+                    match crate::services::import_service::import_from_zip(&path, move |msg| {
+                        progress_sig.with_mut(|s| *s = Some(msg));
+                    })
+                    .await
+                    {
+                        Ok((count, photo_count)) => {
+                            status_sig.with_mut(|s| {
+                                *s = tid!(
+                                    "backup-import-success-with-counts",
+                                    count: count,
+                                    photos: photo_count
+                                )
+                                .to_string()
+                            });
+                            progress_sig.with_mut(|s| *s = None);
+                        }
+                        Err(e) => {
+                            status_sig
+                                .with_mut(|s| *s = format!("❌ {}: {}", tid!("import-failed"), e));
+                            progress_sig.with_mut(|s| *s = None);
+                        }
+                    }
+                    importing_sig.set(false);
+                } else {
+                    import_status.set(tid!("backup-import-no-file-selected").to_string());
+                }
+            });
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            import_status.set(tid!("backup-import-android-only").to_string());
+        }
+    };
+
+    let upload_backup = move |_| {
+        if is_backup_uploading() {
+            return;
+        }
+
+        let is_currently_configured = spacetime_settings_service::load_spacetime_settings()
+            .map(|s| s.is_nextcloud_configured())
+            .unwrap_or(false);
+
+        if !is_currently_configured {
+            on_status_message.call(tid!("sync-setup-title").to_string());
+            return;
+        }
+
+        is_backup_uploading.set(true);
+        on_status_message.call(tid!("backup-upload-running").to_string());
+        export_progress.set(Some(ExportProgress::Starting));
+
+        let include_images = include_photo_files();
+        let tracking_id = ulid::Ulid::new().to_string();
+        if let Err(err) =
+            create_backup_started_for_upload(crate::spacetime::CreateBackupStartedArgs {
+                backup_id: tracking_id.clone(),
+                kind: "nextcloud".to_string(),
+                include_images,
+                local_path: None,
+            })
+        {
+            log::warn!(
+                "Failed to record upload backup start in SpacetimeDB: {}",
+                err
+            );
+            export_progress.set(None);
+            is_backup_uploading.set(false);
+            on_status_message
+                .call(tid!("backup-upload-failed", error : err.to_string()).to_string());
+            return;
+        }
+        let finish_backup_reducer = finish_backup_for_upload.clone();
+
+        spawn(async move {
+            let mut progress_sig = export_progress;
+
+            match create_export_archive(
+                include_images,
+                Box::new(move |p| {
+                    progress_sig.with_mut(|s| *s = Some(p));
+                }),
+            )
+            .await
+            {
+                Ok(stats) => {
+                    let local_path = stats.path.display().to_string();
+                    let upload_path = stats.path.clone();
+                    match crate::services::backup_service::upload_backup_to_nextcloud(upload_path)
+                        .await
+                    {
+                        Ok(filename) => {
+                            if let Err(err) =
+                                finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                                    backup_id: tracking_id.clone(),
+                                    status: "success".to_string(),
+                                    local_path: Some(local_path),
+                                    remote_filename: Some(filename.clone()),
+                                    zip_size_bytes: Some(stats.zip_size_bytes as i64),
+                                    quails: stats.quails as i32,
+                                    events: stats.events as i32,
+                                    egg_records: stats.egg_records as i32,
+                                    photos_meta: stats.photos_meta as i32,
+                                    photos_files_included: stats.photos_files_included as i32,
+                                    photos_files_missing: stats.photos_files_missing as i32,
+                                    error_message: None,
+                                })
+                            {
+                                log::warn!(
+                                    "Failed to record successful uploaded backup {} in SpacetimeDB: {}",
+                                    tracking_id,
+                                    err
+                                );
+                            }
+                            on_status_message.call(
+                                tid!("backup-upload-success", filename : filename).to_string(),
+                            );
+                        }
+                        Err(error) => {
+                            if let Err(err) =
+                                finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                                    backup_id: tracking_id.clone(),
+                                    status: "failed".to_string(),
+                                    local_path: None,
+                                    remote_filename: None,
+                                    zip_size_bytes: None,
+                                    quails: 0,
+                                    events: 0,
+                                    egg_records: 0,
+                                    photos_meta: 0,
+                                    photos_files_included: 0,
+                                    photos_files_missing: 0,
+                                    error_message: Some(error.to_string()),
+                                })
+                            {
+                                log::warn!(
+                                    "Failed to record failed uploaded backup {} in SpacetimeDB: {}",
+                                    tracking_id,
+                                    err
+                                );
+                            }
+                            on_status_message.call(
+                                tid!("backup-upload-failed", error : error.to_string()).to_string(),
+                            );
+                        }
+                    }
+                }
+                Err(error) => {
+                    if let Err(err) = finish_backup_reducer(crate::spacetime::FinishBackupArgs {
+                        backup_id: tracking_id.clone(),
+                        status: "failed".to_string(),
+                        local_path: None,
+                        remote_filename: None,
+                        zip_size_bytes: None,
+                        quails: 0,
+                        events: 0,
+                        egg_records: 0,
+                        photos_meta: 0,
+                        photos_files_included: 0,
+                        photos_files_missing: 0,
+                        error_message: Some(error.to_string()),
+                    }) {
+                        log::warn!(
+                            "Failed to record export/upload preparation failure for backup {} in SpacetimeDB: {}",
+                            tracking_id,
+                            err
+                        );
+                    }
+                    on_status_message
+                        .call(tid!("backup-upload-failed", error : error.to_string()).to_string());
+                }
+            }
+
+            is_backup_uploading.set(false);
+        });
+    };
+
+    rsx! {
+        div { class: "box mb-4",
+            h2 { class: "title is-5 mb-3", {tid!("backup-card-title")} }
+
+            div { class: "mb-4",
+                p { class: "is-size-7 has-text-grey mb-3",
+                    {tid!("backup-card-actions-description")}
+                }
+
+                div { class: "field mb-3",
+                    label { class: "checkbox",
+                        input {
+                            r#type: "checkbox",
+                            checked: include_photo_files(),
+                            onchange: move |e| include_photo_files.set(e.checked()),
+                        }
+                        span { class: "ml-2", {tid!("backup-card-include-photo-files")} }
+                    }
+                }
+
+                div { class: "buttons has-addons is-centered",
+                        button {
+                            class: "button is-link is-small",
+                            disabled: is_exporting(),
+                            onclick: handle_export,
+                            if is_exporting() { {tid!("backup-card-button-file-running")} } else { {tid!("backup-card-button-file")} }
+                        }
+                        button {
+                            class: "button is-info is-small",
+                            disabled: is_backup_uploading() || !is_nextcloud_configured,
+                            onclick: upload_backup,
+                            if is_backup_uploading() {
+                                {tid!("backup-upload-button-running")}
+                            } else {
+                                {tid!("backup-card-button-nextcloud")}
+                            }
+                    }
+                }
+
+                if !is_nextcloud_configured {
+                    div { class: "notification is-warning is-light mt-3",
+                        {tid!("backup-card-nextcloud-not-connected")}
+                    }
+                }
+
+                if let Some(progress) = export_progress() {
+                    div { class: "notification is-light mt-3",
+                        match progress {
+                            ExportProgress::Starting => rsx! { {tid!("backup-card-progress-starting")} },
+                            ExportProgress::ReadingQuails => rsx! { {tid!("backup-card-progress-reading-quails")} },
+                            ExportProgress::ReadingEvents => rsx! { {tid!("backup-card-progress-reading-events")} },
+                            ExportProgress::ReadingEggRecords => rsx! { {tid!("backup-card-progress-reading-egg-records")} },
+                            ExportProgress::ReadingPhotos => rsx! { {tid!("backup-card-progress-reading-photos")} },
+                            ExportProgress::PackingZip => rsx! { {tid!("backup-card-progress-packing-zip")} },
+                            ExportProgress::Complete => rsx! { {tid!("backup-card-progress-complete")} },
+                        }
+                    }
+                }
+            }
+
+            div { class: "mb-4",
+                h3 { class: "title is-6 mb-2", {tid!("backup-card-history-title")} }
+
+                if backup_history().is_empty() {
+                    p { class: "is-size-7 has-text-grey", {tid!("backup-card-history-empty")} }
+                } else {
+                    div { class: "is-flex is-flex-direction-column", style: "gap: 8px;",
+                        for (idx, item) in {
+                            let mut items = backup_history();
+                            items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                            items.into_iter().enumerate().collect::<Vec<_>>()
+                        } {
+                            if show_all_backups() || idx == 0 {
+                                button {
+                                    class: "button is-fullwidth is-light",
+                                    onclick: {
+                                        let id = item.backup_id.clone();
+                                        move |_| {
+                                            if expanded_backup_id().as_ref() == Some(&id) {
+                                                expanded_backup_id.set(None);
+                                            } else {
+                                                expanded_backup_id.set(Some(id.clone()));
+                                            }
+                                        }
+                                    },
+                                    div { class: "is-flex is-align-items-center is-justify-content-space-between is-fullwidth",
+                                        span {
+                                            {
+                                                let status_icon = match item.status.as_str() {
+                                                    "success" => "✅",
+                                                    "failed" => "❌",
+                                                    _ => "⏳",
+                                                };
+                                                let kind_icon = if item.kind == "nextcloud" { "☁️" } else { "💾" };
+                                                let backup_date = Local
+                                                    .timestamp_opt(item.created_at, 0)
+                                                    .single()
+                                                    .map(|dt| dt.format("%d.%m.%Y %H:%M").to_string())
+                                                    .unwrap_or_else(|| tid!("backup-card-unknown").to_string());
+                                                format!("{} {} {}", status_icon, kind_icon, backup_date)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if expanded_backup_id().as_ref() == Some(&item.backup_id) {
+                                    div { class: "notification is-light",
+                                        p { class: "mb-1",
+                                            {
+                                                let status_label = match item.status.as_str() {
+                                                    "success" => tid!("backup-card-status-success"),
+                                                    "failed" => tid!("backup-card-status-failed"),
+                                                    _ => tid!("backup-card-status-pending"),
+                                                };
+                                                tid!("backup-card-history-status", status: status_label)
+                                            }
+                                        }
+                                        p { class: "mb-1",
+                                            {
+                                                let include_images = if item.include_images {
+                                                    tid!("backup-card-yes")
+                                                } else {
+                                                    tid!("backup-card-no")
+                                                };
+                                                tid!("backup-card-history-include-images", include_images: include_images)
+                                            }
+                                        }
+                                        if let Some(path) = item.local_path.as_ref() {
+                                            p { class: "mb-1", {tid!("backup-card-history-file", path: path.clone())} }
+                                        }
+                                        if let Some(name) = item.remote_filename.as_ref() {
+                                            p { class: "mb-1", {tid!("backup-card-history-nextcloud", name: name.clone())} }
+                                        }
+                                        if let Some(size) = item.zip_size_bytes {
+                                            p { class: "mb-1", {tid!("backup-card-history-size", size: size)} }
+                                        }
+                                        p { class: "mb-1",
+                                            {tid!("backup-card-history-items", quails: item.quails, events: item.events, egg_records: item.egg_records)}
+                                        }
+                                        p {
+                                            {tid!("backup-card-history-photos", photos_meta: item.photos_meta, photos_files_included: item.photos_files_included, photos_files_missing: item.photos_files_missing)}
+                                        }
+                                        if let Some(err) = item.error_message.as_ref() {
+                                            p { class: "has-text-danger mt-2", {tid!("backup-card-history-error", error: err.clone())} }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if !show_all_backups() && backup_history().len() > 1 {
+                            button {
+                                class: "button is-link is-light is-fullwidth",
+                                onclick: move |_| show_all_backups.set(true),
+                                {tid!("backup-card-history-more", count: backup_history().len() - 1)}
+                            }
+                        }
+                    }
+                }
+            }
+
+            div {
+                h2 { class: "title is-6 mb-2", {tid!("backup-card-import-title")} }
+                p { class: "is-size-7 has-text-grey mb-3", {tid!("import-description")} }
+
+                if let Some(progress) = import_progress() {
+                    div { class: "notification is-light mb-3",
+                        "{progress}"
+                    }
+                }
+
+                button {
+                    class: "button is-link is-fullwidth",
+                    disabled: is_importing(),
+                    onclick: handle_import,
+                    if is_importing() { {tid!("backup-card-import-button-running")} } else { {tid!("backup-card-import-button")} }
+                }
+
+                if !import_status().is_empty() {
+                    p { class: "is-size-7 has-text-grey mt-3", style: "white-space: pre-wrap;", "{import_status}" }
+                }
+            }
+        }
+    }
+}

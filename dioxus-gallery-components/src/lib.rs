@@ -20,6 +20,8 @@ pub struct GalleryConfig {
     pub allow_select: bool,
     /// ID of the currently selected item (for selection mode)
     pub selected_id: Option<String>,
+    /// Whether to show edit/crop buttons
+    pub allow_edit: bool,
 }
 
 /// A reusable photo gallery component for Dioxus
@@ -69,6 +71,9 @@ pub fn Gallery(
     /// Callback when user wants to view an item in fullscreen
     #[props(default)]
     on_view_fullscreen: Option<EventHandler<String>>,
+    /// Callback when user wants to edit/crop an item
+    #[props(default)]
+    on_edit: Option<EventHandler<String>>,
 ) -> Element {
     if items.is_empty() {
         return rsx! {
@@ -88,9 +93,11 @@ pub fn Gallery(
                     is_selected: config.selected_id.as_ref().map(|s| s.as_str()) == Some(&item.id),
                     allow_delete: config.allow_delete,
                     allow_select: config.allow_select,
+                    allow_edit: config.allow_edit,
                     on_delete: on_delete.clone(),
                     on_select: on_select.clone(),
                     on_view_fullscreen: on_view_fullscreen.clone(),
+                    on_edit: on_edit.clone(),
                 }
             }
         }
@@ -104,9 +111,11 @@ fn GalleryItemView(
     is_selected: bool,
     allow_delete: bool,
     allow_select: bool,
+    allow_edit: bool,
     on_delete: Option<EventHandler<String>>,
     on_select: Option<EventHandler<String>>,
     on_view_fullscreen: Option<EventHandler<String>>,
+    on_edit: Option<EventHandler<String>>,
 ) -> Element {
     let border_color = if is_selected { "#0066cc" } else { "#e0e0e0" };
     let photo_style = format!(
@@ -148,6 +157,21 @@ fn GalleryItemView(
                         }
                     },
                     "×"
+                }
+            }
+            // Edit/Crop button
+            if allow_edit {
+                button {
+                    style: "position: absolute; top: 4px; right: 36px; width: 28px; height: 28px; background: rgba(66, 165, 245, 0.9); color: white; border-radius: 50%; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none;",
+                    onclick: {
+                        let item_id = item.id.clone();
+                        move |_| {
+                            if let Some(handler) = &on_edit {
+                                handler.call(item_id.clone());
+                            }
+                        }
+                    },
+                    "✂️"
                 }
             }
             // Selection indicator

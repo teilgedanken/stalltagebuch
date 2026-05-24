@@ -1,194 +1,336 @@
 use crate::error::AppError;
-use rusqlite::Connection;
+use crate::services::nextcloud_webdav::NextcloudWebDav;
+use crate::services::photo_paths;
+use crate::services::photo_sync_metadata::{
+    PhotoSyncRow, SpacetimePhotoMetadataClient, load_runtime,
+};
+use std::collections::HashSet;
+use std::path::Path;
 
-/// Liefert stabile device_id (erzeugt & speichert falls fehlend)
-pub fn get_device_id(conn: &Connection) -> Result<String, AppError> {
-    use crate::services::sync_service;
-    if let Some(mut settings) = sync_service::load_sync_settings(conn)? {
-        if let Some(id) = &settings.device_id {
-            return Ok(id.clone());
-        }
-        let new_id = uuid::Uuid::new_v4().to_string();
-        settings.device_id = Some(new_id.clone());
-        sync_service::save_sync_settings(conn, &settings)?;
-        Ok(new_id)
-    } else {
-        // Fallback: ephemeral ID (Settings noch nicht konfiguriert)
-        Ok(uuid::Uuid::new_v4().to_string())
-    }
+const MAX_UPLOAD_RETRIES: i32 = 5;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PhotoUploadFailure {
+    pub uuid: String,
+    pub relative_path: String,
+    pub error: String,
+    pub retry_count: i32,
 }
 
-/// Uploads a batch of operations to sync/ops/<device>/<YYYYMM>/<ULID>.ndjson
-///
-/// This is a minimal skeleton for the new multi-master sync.
-/// If sync is not configured or disabled, this function returns Ok() without error.
-pub async fn upload_ops_batch(
-    conn: &Connection,
-    ops: Vec<crate::services::crdt_service::Operation>,
-) -> Result<(), AppError> {
-    use crate::services::{sync_paths, sync_service};
+#[derive(Debug, Clone, PartialEq)]
+pub struct UploadBatchStats {
+    pub photos_uploaded: usize,
+    pub failed_photos: Vec<PhotoUploadFailure>,
+    pub local_original_files: usize,
+    pub remote_original_files: usize,
+    pub all_updated: bool,
+}
 
-    if ops.is_empty() {
-        return Ok(());
-    }
+pub async fn upload_photos_batch_with_progress<F>(
+    mut on_progress: F,
+) -> Result<UploadBatchStats, AppError>
+where
+    F: FnMut(usize, usize),
+{
+    let runtime = load_runtime()?;
+    let metadata_client = SpacetimePhotoMetadataClient::new(&runtime).await?;
+    let webdav = NextcloudWebDav::new(&runtime).await?;
 
-    // If sync is not configured, just skip upload (app works locally)
-    let settings = match sync_service::load_sync_settings(conn)? {
-        Some(s) => s,
-        None => {
-            log::debug!("Sync not configured, skipping operation upload");
-            return Ok(());
-        }
-    };
-
-    // If sync is disabled, skip upload
-    if !settings.enabled {
-        log::debug!("Sync disabled, skipping operation upload");
-        return Ok(());
-    }
-
-    let device_id = get_device_id(conn)?;
-    let year_month = sync_paths::current_year_month();
-    let ulid = ulid::Ulid::new().to_string();
-
-    // Build NDJSON content
-    let mut ndjson_lines = Vec::new();
-    for op in &ops {
-        let line = serde_json::to_string(op)
-            .map_err(|e| AppError::Other(format!("JSON serialize failed: {}", e)))?;
-        ndjson_lines.push(line);
-    }
-    let ndjson_content = ndjson_lines.join("\n") + "\n";
-
-    // Build remote path
-    let ops_dir = sync_paths::ops_path(&device_id, &year_month);
-    let filename = format!("{}.ndjson", ulid);
-    let full_path = format!(
-        "{}/{}/{}",
-        settings.remote_path.trim_end_matches('/'),
-        ops_dir,
-        filename
+    let pending_photos = metadata_client
+        .query_pending_photos(MAX_UPLOAD_RETRIES)
+        .await?;
+    let total = pending_photos.len();
+    let mut uploaded = 0usize;
+    let mut failed_photos = Vec::new();
+    log::info!(
+        "Photo sync upload batch started: {} pending photo(s)",
+        total
     );
+    on_progress(0, total);
 
-    // Create WebDAV client
-    let webdav_url = format!(
-        "{}/remote.php/dav/files/{}",
-        settings.server_url.trim_end_matches('/'),
-        settings.username
-    );
+    for (index, photo) in pending_photos.iter().enumerate() {
+        let current = index + 1;
+        log::debug!(
+            "Uploading photo {}/{} uuid={} relative_path={}",
+            current,
+            total,
+            photo.uuid,
+            photo.relative_path
+        );
 
-    let client = reqwest_dav::ClientBuilder::new()
-        .set_host(webdav_url)
-        .set_auth(reqwest_dav::Auth::Basic(
-            settings.username.clone(),
-            settings.app_password.clone(),
-        ))
-        .build()
-        .map_err(|e| AppError::Other(format!("WebDAV client error: {:?}", e)))?;
+        let absolute_path = photo_paths::relative_to_absolute(&photo.relative_path);
+        let local_exists = absolute_path.exists();
+        if !local_exists {
+            let error = format!(
+                "local sync source not found for {}: {}",
+                photo.relative_path,
+                absolute_path.display()
+            );
+            log::warn!("{error}");
+            metadata_client
+                .update_photo_sync_status(
+                    &photo.uuid,
+                    "error",
+                    Some(error),
+                    photo.retry_count.saturating_add(1),
+                )
+                .await?;
+            failed_photos.push(PhotoUploadFailure {
+                uuid: photo.uuid.clone(),
+                relative_path: photo.relative_path.clone(),
+                error: format!(
+                    "local sync source not found for {}: {}",
+                    photo.relative_path,
+                    absolute_path.display()
+                ),
+                retry_count: photo.retry_count.saturating_add(1),
+            });
+            on_progress(current, total);
+            continue;
+        }
 
-    // Create directories if needed (WebDAV cannot create nested collections in one call)
-    let base = settings.remote_path.trim_end_matches('/');
-    let sync_base = format!("{}/sync", base);
-    let ops_base = format!("{}/ops", sync_base);
-    let device_base = format!("{}/{}", ops_base, device_id);
-    let month_base = format!("{}/{}", device_base, year_month);
+        metadata_client
+            .update_photo_sync_status(&photo.uuid, "uploading", None, photo.retry_count)
+            .await?;
 
-    // Try to create each level; ignore errors like 405 Method Not Allowed or 409 Conflict
-    for path in [&sync_base, &ops_base, &device_base, &month_base] {
-        if let Err(e) = client.mkcol(path).await {
-            // Best-effort: path may already exist; only log
-            log::debug!("MKCOL '{}' note: {:?}", path, e);
+        // Upload currently active photo path from metadata.
+        let mut photo_error = webdav
+            .upload_original(&absolute_path, &photo.relative_path)
+            .await
+            .err()
+            .map(|err| err.to_string());
+
+        // Upload all versioned originals that are present locally.
+        if photo_error.is_none() {
+            let versioned_paths = collect_versioned_original_paths(photo)?;
+            for versioned_path in versioned_paths {
+                let versioned_local = photo_paths::relative_to_absolute(&versioned_path);
+                match webdav
+                    .upload_original(&versioned_local, &versioned_path)
+                    .await
+                {
+                    Ok(()) => {
+                        log::info!("Uploaded versioned original: {}", versioned_path);
+                    }
+                    Err(err) => {
+                        let message = format!(
+                            "failed to upload versioned original {}: {}",
+                            versioned_path, err
+                        );
+                        log::warn!("{message}");
+                        photo_error = Some(message);
+                        break;
+                    }
+                }
+            }
+        }
+
+        match photo_error {
+            None => {
+                metadata_client
+                    .update_photo_sync_status(&photo.uuid, "synced", None, 0)
+                    .await?;
+                log::info!(
+                    "Uploaded photo uuid={} path={}",
+                    photo.uuid,
+                    photo.relative_path
+                );
+                uploaded += 1;
+            }
+            Some(error) => {
+                log::warn!(
+                    "Photo upload failed uuid={} path={}: {}",
+                    photo.uuid,
+                    photo.relative_path,
+                    error
+                );
+                metadata_client
+                    .update_photo_sync_status(
+                        &photo.uuid,
+                        "error",
+                        Some(error.clone()),
+                        photo.retry_count.saturating_add(1),
+                    )
+                    .await?;
+                failed_photos.push(PhotoUploadFailure {
+                    uuid: photo.uuid.clone(),
+                    relative_path: photo.relative_path.clone(),
+                    error,
+                    retry_count: photo.retry_count.saturating_add(1),
+                });
+            }
+        }
+
+        on_progress(current, total);
+    }
+
+    // Reconcile missing remote files:
+    // for all DB photo entries, upload local originals/versioned originals that are absent on Nextcloud.
+    let all_photos = metadata_client.query_all_photos().await?;
+    let mut local_original_paths: HashSet<String> = HashSet::new();
+    for photo in &all_photos {
+        for candidate in build_original_candidates(photo)? {
+            let local_path = photo_paths::relative_to_absolute(&candidate);
+            if local_path.exists() {
+                local_original_paths.insert(candidate);
+            }
         }
     }
 
-    // Upload (atomic create via If-None-Match not directly supported, use put)
-    client
-        .put(&full_path, ndjson_content.into_bytes())
-        .await
-        .map_err(|e| AppError::Other(format!("Upload ops batch failed: {:?}", e)))?;
+    let mut remote_paths: HashSet<String> = webdav
+        .list_remote_photos()
+        .await?
+        .into_iter()
+        .map(|p| normalize_relative_path(&p))
+        .filter(|p| is_original_file_path(p))
+        .collect();
+
+    for photo in &all_photos {
+        let candidates = build_original_candidates(photo)?;
+        let mut first_error: Option<String> = None;
+        let mut uploaded_any_for_photo = false;
+
+        for candidate in candidates {
+            if remote_paths.contains(&candidate) {
+                continue;
+            }
+
+            let local_path = photo_paths::relative_to_absolute(&candidate);
+            if !local_path.exists() {
+                continue;
+            }
+
+            log::info!(
+                "Uploading missing remote original for photo uuid={} path={}",
+                photo.uuid,
+                candidate
+            );
+
+            match webdav.upload_original(&local_path, &candidate).await {
+                Ok(()) => {
+                    remote_paths.insert(candidate.clone());
+                    uploaded += 1;
+                    uploaded_any_for_photo = true;
+                }
+                Err(err) => {
+                    let error = format!("missing-remote upload failed for {}: {}", candidate, err);
+                    if first_error.is_none() {
+                        first_error = Some(error.clone());
+                    }
+                    failed_photos.push(PhotoUploadFailure {
+                        uuid: photo.uuid.clone(),
+                        relative_path: candidate,
+                        error,
+                        retry_count: photo.retry_count.saturating_add(1),
+                    });
+                }
+            }
+        }
+
+        if let Some(error) = first_error {
+            metadata_client
+                .update_photo_sync_status(
+                    &photo.uuid,
+                    "error",
+                    Some(error),
+                    photo.retry_count.saturating_add(1),
+                )
+                .await?;
+        } else if uploaded_any_for_photo {
+            metadata_client
+                .update_photo_sync_status(&photo.uuid, "synced", None, 0)
+                .await?;
+        }
+    }
 
     log::info!(
-        "Uploaded ops batch: {} operations to {}",
-        ops.len(),
-        full_path
+        "Photo sync upload batch finished: {} uploaded, {} total",
+        uploaded,
+        total
     );
 
-    Ok(())
+    let remote_original_files = local_original_paths
+        .iter()
+        .filter(|path| remote_paths.contains(*path))
+        .count();
+    let local_original_files = local_original_paths.len();
+    let all_updated = remote_original_files == local_original_files;
+
+    Ok(UploadBatchStats {
+        photos_uploaded: uploaded,
+        failed_photos,
+        local_original_files,
+        remote_original_files,
+        all_updated,
+    })
 }
 
-/// Counts how many photos are pending upload (sync_status='local_only')
-pub fn count_pending_photos(conn: &Connection) -> Result<usize, AppError> {
-    use crate::services::sync_service;
+fn build_original_candidates(photo: &PhotoSyncRow) -> Result<Vec<String>, AppError> {
+    let mut seen = HashSet::new();
+    let mut candidates = Vec::new();
 
-    // Get sync settings to create upload service
-    let settings = match sync_service::load_sync_settings(conn)? {
-        Some(s) if s.enabled => s,
-        _ => return Ok(0),
-    };
+    let primary = normalize_relative_path(&photo.relative_path);
+    if is_original_file_path(&primary) && seen.insert(primary.clone()) {
+        candidates.push(primary);
+    }
 
-    let upload_config = photo_gallery::PhotoUploadConfig {
-        server_url: settings.server_url,
-        username: settings.username,
-        password: settings.app_password,
-        remote_path: settings.remote_path,
-        storage_path: get_storage_path(),
-    };
-
-    let upload_service = photo_gallery::PhotoUploadService::new(upload_config);
-    upload_service
-        .count_pending_photos(conn)
-        .map_err(|e| AppError::Other(format!("Photo upload error: {}", e)))
-}
-
-/// Uploads binary photo files to sync/photos/ with the original image only
-///
-/// Only uploads photos with sync_status='local_only'. Thumbnails are no
-/// longer uploaded — they are generated locally on the receiving side.
-/// Uses JoinSet for parallel uploads (max 3 concurrent photos).
-/// If sync is not configured or disabled, this function returns Ok(0) without error.
-pub async fn upload_photos_batch(conn: &Connection) -> Result<usize, AppError> {
-    use crate::services::sync_service;
-
-    // If sync is not configured, just skip upload (app works locally)
-    let settings = match sync_service::load_sync_settings(conn)? {
-        Some(s) => s,
-        None => {
-            log::debug!("Sync not configured, skipping photo upload");
-            return Ok(0);
+    for versioned in collect_versioned_original_paths(photo)? {
+        if seen.insert(versioned.clone()) {
+            candidates.push(versioned);
         }
-    };
-
-    // If sync is disabled, skip upload
-    if !settings.enabled {
-        log::debug!("Sync disabled, skipping photo upload");
-        return Ok(0);
     }
 
-    // Use photo-gallery upload service
-    let upload_config = photo_gallery::PhotoUploadConfig {
-        server_url: settings.server_url,
-        username: settings.username,
-        password: settings.app_password,
-        remote_path: settings.remote_path,
-        storage_path: get_storage_path(),
-    };
-
-    let upload_service = photo_gallery::PhotoUploadService::new(upload_config);
-    upload_service
-        .upload_photos_batch(conn)
-        .await
-        .map_err(|e| AppError::Other(format!("Photo upload error: {}", e)))
+    Ok(candidates)
 }
 
-/// Get the storage path based on platform
-fn get_storage_path() -> String {
-    #[cfg(target_os = "android")]
-    {
-        "/storage/emulated/0/Android/data/de.teilgedanken.stalltagebuch/files/photos".to_string()
+fn normalize_relative_path(path: &str) -> String {
+    path.trim_start_matches('/').replace('\\', "/")
+}
+
+fn is_original_file_path(path: &str) -> bool {
+    let lower = path.to_ascii_lowercase();
+    !(lower.ends_with("_128.webp") || lower.ends_with("_512.webp") || lower.ends_with(".webp"))
+}
+
+fn collect_versioned_original_paths(photo: &PhotoSyncRow) -> Result<Vec<String>, AppError> {
+    let normalized_relative = normalize_relative_path(&photo.relative_path);
+    let relative_path = Path::new(&normalized_relative);
+    let relative_dir = relative_path.parent().unwrap_or_else(|| Path::new(""));
+    let absolute_dir = photo_paths::photo_storage_root().join(relative_dir);
+
+    if !absolute_dir.exists() {
+        return Ok(Vec::new());
     }
 
-    #[cfg(not(target_os = "android"))]
-    {
-        "./photos".to_string()
+    let prefix = format!("{}-v", photo.uuid);
+    let mut versioned_paths = Vec::new();
+
+    for entry in std::fs::read_dir(&absolute_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        if !file_name.starts_with(&prefix) {
+            continue;
+        }
+        if !is_original_file_path(&file_name) {
+            continue;
+        }
+
+        let rel = if relative_dir.as_os_str().is_empty() {
+            file_name
+        } else {
+            relative_dir
+                .join(file_name)
+                .to_string_lossy()
+                .replace('\\', "/")
+        };
+        versioned_paths.push(rel);
     }
+
+    versioned_paths.sort_unstable();
+    versioned_paths.dedup();
+    Ok(versioned_paths)
 }

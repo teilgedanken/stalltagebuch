@@ -12,128 +12,31 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
     padding: 0;
+    padding-bottom: 6rem;
+    /* Space for bottom navigation */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
 }
 
-/* Card styling */
-.card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.is-fixed-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    /* Damit er über anderen Elementen bleibt */
 }
 
-.card-header {
-    background: #e8f4f8;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px 0;
-}
-
-/* Button styling */
-button {
-    font-family: inherit;
-    cursor: pointer;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    -webkit-tap-highlight-color: transparent;
-}
-
-button:active {
-    transform: scale(0.98);
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Primary button */
-.btn-primary {
-    background: #0066cc;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #0052a3;
-}
-
-/* Success button */
-.btn-success {
-    background: #00aa00;
-    color: white;
-}
-
-.btn-success:hover {
-    background: #008800;
-}
-
-/* Secondary button */
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-}
-
-/* Danger button */
-.btn-danger {
-    background: #cc0000;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #aa0000;
-}
-
-/* Back button */
-.btn-back {
-    background: #6c757d;
-    color: white;
-    padding: 8px 16px;
-    font-size: 14px;
-}
-
-.btn-back:hover {
-    background: #5a6268;
-}
-
-/* Input styling */
-input,
-textarea {
-    font-family: inherit;
-    font-size: 16px;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    width: 100%;
-    transition: border-color 0.2s ease;
-}
-
-input:focus,
-textarea:focus {
-    outline: none;
-    border-color: #0066cc;
+.tabs ul li a {
+    background-color: #fff;
+    height: 48px;
 }
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
     body {
         font-size: 14px;
-    }
-
-    button {
-        min-height: 44px;
-        /* iOS touch target */
     }
 }
 
@@ -236,56 +139,6 @@ textarea:focus {
     font-size: 12px;
     color: #666;
     font-weight: 500;
-}
-
-/* Delete Button */
-.profile-delete-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 50%;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    z-index: 10;
-    opacity: 0.9;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.profile-delete-btn:hover {
-    opacity: 1;
-}
-
-.profile-delete-btn:active {
-    transform: scale(0.95);
-}
-
-/* Delete Confirmation Dialog */
-.delete-confirm {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 20;
-    min-width: 80%;
-    text-align: center;
-}
-
-.delete-confirm p {
-    margin-bottom: 12px;
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
 }
 
 /* Responsive adjustments */

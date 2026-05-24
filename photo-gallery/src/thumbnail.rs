@@ -1,4 +1,4 @@
-use image::{imageops::FilterType, ImageFormat};
+use image::{ImageFormat, imageops::FilterType};
 use std::io::Cursor;
 use std::path::Path;
 
@@ -48,8 +48,8 @@ pub fn create_thumbnails(
         .parent()
         .ok_or_else(|| ThumbnailError::PathError("No parent directory found".to_string()))?;
 
-    // Create small thumbnail (128px, 70% quality)
-    let small_filename = format!("{}_small.webp", uuid);
+    // Create small thumbnail (128px)
+    let small_filename = format!("{}_128.webp", uuid);
     let small_path = parent_dir.join(&small_filename);
     let small_img = img.resize(small_size, small_size, FilterType::Lanczos3);
 
@@ -64,8 +64,8 @@ pub fn create_thumbnails(
 
     log::debug!("Small thumbnail created: {:?}", small_path);
 
-    // Create medium thumbnail (512px, 75% quality)
-    let medium_filename = format!("{}_medium.webp", uuid);
+    // Create medium thumbnail (512px)
+    let medium_filename = format!("{}_512.webp", uuid);
     let medium_path = parent_dir.join(&medium_filename);
     let medium_img = img.resize(medium_size, medium_size, FilterType::Lanczos3);
 

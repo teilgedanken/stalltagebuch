@@ -1,7 +1,4 @@
-use crate::error::AppError;
 use chrono::NaiveDate;
-use rusqlite::types::Type;
-use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -76,68 +73,5 @@ impl EventType {
     #[allow(dead_code)]
     pub fn is_health_status(&self) -> bool {
         matches!(self, EventType::Sick | EventType::Healthy)
-    }
-}
-
-impl QuailEvent {
-    /// Creates a new event
-    pub fn new(quail_id: Uuid, event_type: EventType, event_date: NaiveDate) -> Self {
-        Self {
-            uuid: Uuid::new_v4(),
-            quail_id,
-            event_type,
-            event_date,
-            notes: None,
-            photos: None,
-        }
-    }
-
-    /// Validates the event
-    pub fn validate(&self) -> Result<(), AppError> {
-        // Event date should not be in the future, except for planned events
-        let allows_future = matches!(self.event_type, EventType::MarkedForSlaughter);
-        if !allows_future && self.event_date > chrono::Local::now().date_naive() {
-            return Err(AppError::Validation(
-                "Event date must not be in the future".to_string(),
-            ));
-        }
-
-        // Notes should not be too long
-        if let Some(notes) = &self.notes {
-            if notes.len() > 1000 {
-                return Err(AppError::Validation(
-                    "Notes must not exceed 1000 characters".to_string(),
-                ));
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl<'r> TryFrom<&Row<'r>> for QuailEvent {
-    type Error = rusqlite::Error;
-
-    fn try_from(row: &Row<'r>) -> Result<Self, Self::Error> {
-        let uuid_str: String = row.get(0)?;
-        let uuid = Uuid::parse_str(&uuid_str).map_err(|_| rusqlite::Error::InvalidQuery)?;
-        let quail_id_str: String = row.get(1)?;
-        let quail_id = Uuid::parse_str(&quail_id_str).map_err(|_| rusqlite::Error::InvalidQuery)?;
-        let event_type_str: String = row.get(2)?;
-        let event_date_str: String = row.get(3)?;
-        let notes: Option<String> = row.get(4)?;
-        let photos_string: Option<String> = row.get(5)?;
-
-        let event_date = NaiveDate::parse_from_str(&event_date_str, "%Y-%m-%d")
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(3, Type::Text, Box::new(e)))?;
-        let photos: Option<Uuid> = photos_string.map(|s| Uuid::parse_str(&s).ok()).flatten();
-        Ok(QuailEvent {
-            uuid,
-            quail_id,
-            event_type: EventType::from_str(&event_type_str),
-            event_date,
-            notes,
-            photos,
-        })
     }
 }

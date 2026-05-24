@@ -245,7 +245,6 @@ The picker uses polling to communicate with the MainActivity. All operations are
 ## Dependencies
 
 ### Android
-- `jni = "0.21"`
 - `ndk-context = "0.1"`
 
 These dependencies are automatically included when targeting Android.

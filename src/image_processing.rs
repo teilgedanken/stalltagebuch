@@ -1,12 +1,127 @@
 use crate::error::AppError;
 use base64::Engine;
+use image::{GenericImageView, ImageReader};
 use std::path::{Path, PathBuf};
 
-// Note: Image processing dependencies will be added in Phase 2.3
-// For now, this is a placeholder implementation
+/// Crop rectangle with normalized coordinates (0.0 to 1.0)
+/// or pixel coordinates depending on context
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CropRect {
+    /// X coordinate (normalized 0.0-1.0 or pixel value)
+    pub x: f32,
+    /// Y coordinate (normalized 0.0-1.0 or pixel value)
+    pub y: f32,
+    /// Width (normalized 0.0-1.0 or pixel value)
+    pub width: f32,
+    /// Height (normalized 0.0-1.0 or pixel value)
+    pub height: f32,
+}
 
-/// Process a photo: resize and create thumbnail
-/// Returns (main_photo_path, thumbnail_path)
+impl CropRect {
+    /// Convert normalized coordinates to pixel coordinates
+    pub fn to_pixels(&self, img_width: u32, img_height: u32) -> CropRect {
+        CropRect {
+            x: (self.x * img_width as f32).max(0.0),
+            y: (self.y * img_height as f32).max(0.0),
+            width: (self.width * img_width as f32)
+                .min(img_width as f32 - self.x * img_width as f32),
+            height: (self.height * img_height as f32)
+                .min(img_height as f32 - self.y * img_height as f32),
+        }
+    }
+}
+
+/// Crop an image file and save it to the output path
+///
+/// Supports JPEG, PNG, and WebP formats (detects from file extension)
+/// Crop rect with normalized coordinates (0.0-1.0) will be converted to pixels
+///
+/// # Arguments
+/// * `input_path` - Path to the image to crop
+/// * `output_path` - Path where the cropped image will be saved
+/// * `crop_rect` - Crop bounds with normalized coordinates (0.0-1.0)
+///
+/// # Returns
+/// Result with (output_path, width, height) of cropped image
+pub fn crop_image(
+    input_path: &Path,
+    output_path: &Path,
+    crop_rect: CropRect,
+) -> Result<(PathBuf, u32, u32), AppError> {
+    // Load the image
+    let img = ImageReader::open(input_path)
+        .map_err(|e| AppError::ImageProcessing(format!("Failed to open image: {}", e)))?
+        .decode()
+        .map_err(|e| AppError::ImageProcessing(format!("Failed to decode image: {}", e)))?;
+
+    let (img_width, img_height) = img.dimensions();
+
+    // Convert normalized crop rect to pixel coordinates
+    let pixel_crop = crop_rect.to_pixels(img_width, img_height);
+
+    // Clamp values to valid range
+    let x = (pixel_crop.x as u32).min(img_width.saturating_sub(1));
+    let y = (pixel_crop.y as u32).min(img_height.saturating_sub(1));
+    let w = (pixel_crop.width as u32).min(img_width - x);
+    let h = (pixel_crop.height as u32).min(img_height - y);
+
+    if w == 0 || h == 0 {
+        return Err(AppError::ImageProcessing(
+            "Crop dimensions are invalid or result in empty image".to_string(),
+        ));
+    }
+
+    // Perform the crop
+    let cropped = image::ImageBuffer::from_fn(w, h, |px, py| {
+        let img_x = x + px;
+        let img_y = y + py;
+        img.get_pixel(img_x, img_y).clone()
+    });
+
+    // Ensure output directory exists
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| AppError::Filesystem(e))?;
+    }
+
+    // Save the cropped image in the same format as the input
+    let format = infer_image_format(input_path)?;
+
+    // Convert to RGB8 if saving as JPEG (JPEG doesn't support alpha channel)
+    if format == image::ImageFormat::Jpeg {
+        let rgb_image = image::DynamicImage::ImageRgba8(cropped).to_rgb8();
+        rgb_image
+            .save_with_format(output_path, format)
+            .map_err(|e| {
+                AppError::ImageProcessing(format!("Failed to save cropped image: {}", e))
+            })?;
+    } else {
+        cropped.save_with_format(output_path, format).map_err(|e| {
+            AppError::ImageProcessing(format!("Failed to save cropped image: {}", e))
+        })?;
+    }
+
+    Ok((output_path.to_path_buf(), w, h))
+}
+
+/// Infer image format from file extension
+fn infer_image_format(path: &Path) -> Result<image::ImageFormat, AppError> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .ok_or_else(|| AppError::ImageProcessing("No file extension found".to_string()))?;
+
+    match ext.as_str() {
+        "jpg" | "jpeg" => Ok(image::ImageFormat::Jpeg),
+        "png" => Ok(image::ImageFormat::Png),
+        "webp" => Ok(image::ImageFormat::WebP),
+        _ => Err(AppError::ImageProcessing(format!(
+            "Unsupported image format: {}",
+            ext
+        ))),
+    }
+}
+
 #[allow(dead_code)]
 pub fn process_photo(
     input_path: &Path,
@@ -59,22 +174,6 @@ pub fn image_path_to_data_url(path: &str) -> Result<String, AppError> {
         .map_err(|e| AppError::ImageProcessing(format!("Reading image failed: {}", e)))?;
     let b64 = base64::engine::general_purpose::STANDARD.encode(data);
     Ok(format!("data:{};base64,{}", mime, b64))
-}
-
-/// Creates a thumbnail for an image (placeholder implementation)
-/// Currently only copies the file with _thumb.jpg suffix
-pub fn create_thumbnail(path: &str) -> Result<String, AppError> {
-    let p = Path::new(path);
-    let parent = p.parent().unwrap_or(Path::new("/"));
-    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("img");
-    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("jpg");
-    let thumb_path = parent.join(format!("{}_thumb.{}", stem, ext));
-
-    // Copy file as thumbnail (TODO: real resizing)
-    std::fs::copy(p, &thumb_path)
-        .map_err(|e| AppError::ImageProcessing(format!("Thumbnail creation failed: {}", e)))?;
-
-    Ok(thumb_path.to_string_lossy().to_string())
 }
 
 /// Resize an image maintaining aspect ratio

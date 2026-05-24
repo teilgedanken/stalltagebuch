@@ -132,14 +132,6 @@ adb logcat | grep -i stalltagebuch
 adb logcat *:E | grep -i stalltagebuch  # Nur Errors
 ```
 
-### Datenbank inspizieren
-
-```bash
-adb shell run-as de.teilgedanken.stalltagebuch cp /data/data/de.teilgedanken.stalltagebuch/files/stalltagebuch.db /sdcard/
-adb pull /sdcard/stalltagebuch.db .
-sqlite3 stalltagebuch.db
-```
-
 ## Troubleshooting
 
 ### Camera/Gallery crashed
@@ -178,18 +170,56 @@ adb logcat | grep -i stalltagebuch
 - **Dioxus Docs:** https://dioxuslabs.com/learn/0.7
 - **Android Developer:** https://developer.android.com/
 - **JNI Guide:** https://docs.rs/jni/latest/jni/
+- **SpacetimeDB Docs:** https://spacetimedb.com/docs
 
 ---
 
-## Experimental Sync Integration Plan (Nextcloud/WebDAV)
+## SpacetimeDB Backend
 
-Ziel: Multi‑Master, Offline‑First Sync ohne Konflikte. Umsetzung stufenweise hinter Feature‑Flag `experimental_sync`.
+Starting with this PR the primary backend is SpacetimeDB instead of local SQLite + WebDAV sync.
+
+### Architecture
+
+| Layer | Role |
+|-------|------|
+| `stalltagebuch-server/` | SpacetimeDB server module (Rust → WASM). Defines tables (`quails`, `quail_events`, `egg_records`) and reducers. Deployed once per environment. |
+| `src/spacetime/` | Client-side integration. `SpacetimeClient` calls the SpacetimeDB HTTP API; `SpacetimeContext` wraps table data in Dioxus `Signal<Vec<...>>`. |
+| Nextcloud WebDAV | Photo storage only (unchanged). |
+
+### Deploying the server module
+
+```bash
+# Install the SpacetimeDB CLI (see https://spacetimedb.com/install – verify the script)
+spacetime login
+
+# From the repo root:
+spacetime publish --project-path stalltagebuch-server stalltagebuch-server
+```
+
+### Generating typed client bindings
+
+Once the Dioxus binding generator is merged (https://github.com/enaut/SpacetimeDB/pull/4):
+
+```bash
+spacetime generate \
+  --lang dioxus \
+  --out-dir src/spacetime/module_bindings \
+  --project-path stalltagebuch-server
+```
+
+Until then, the hand-written types in `src/spacetime/types.rs` and the context in
+`src/spacetime/context.rs` serve as the reactive layer.
+
+### Connecting the app
+
+1. Open Settings in the app.
+2. Fill in **SpacetimeDB server URL**, **database name**, and **auth token**.
+3. Tap **Save & Connect** – the app will load all quails, events and egg records from the server.
 
 ### Code‑Integrationspunkte
 - Services
   - `src/services/sync_service.rs`: Pull (PROPFIND/GET), Manifestpflege (ETag), Replay‑Pipeline, Snapshot‑Nutzung
   - `src/services/upload_service.rs`: Batch‑Upload neuer NDJSON‑Dateien, atomar via `If-None-Match: *`
-  - Neu: `src/services/crdt_service.rs` (geplant): HLC, Feld‑CRDTs (LWW/OR‑Set/PN‑Counter), Merge API
 - Datenbank/Schema
   - `src/database/schema.rs`: additive Spalten `rev INTEGER`, `logical_clock INTEGER`, `deleted INTEGER` je Entität; Tabellen `op_log`, `device_state`, `sync_checkpoint`
   - Migrations sind additive und rückwärtskompatibel; keine Legacy‑Änderungen entfernen

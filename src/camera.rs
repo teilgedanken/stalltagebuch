@@ -4,8 +4,8 @@
 use crate::error::AppError;
 use std::path::PathBuf;
 
-// Re-export photo-gallery picker functionality
-pub use photo_gallery::picker::{AndroidPickerConfig, PickerError};
+#[cfg(target_os = "android")]
+use dioxus::prelude::jni::objects::{JClass, JObject, JString, JValue};
 
 // Helper function to convert PickerError to AppError
 fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError {
@@ -22,14 +22,17 @@ fn picker_error_to_app_error(e: photo_gallery::picker::PickerError) -> AppError 
     }
 }
 
+#[allow(dead_code)]
 pub fn pick_image() -> Result<PathBuf, AppError> {
     photo_gallery::picker::pick_image().map_err(picker_error_to_app_error)
 }
 
+#[allow(dead_code)]
 pub fn pick_images() -> Result<Vec<PathBuf>, AppError> {
     photo_gallery::picker::pick_images().map_err(picker_error_to_app_error)
 }
 
+#[allow(dead_code)]
 pub fn capture_photo() -> Result<PathBuf, AppError> {
     photo_gallery::picker::capture_photo().map_err(picker_error_to_app_error)
 }
@@ -37,4 +40,216 @@ pub fn capture_photo() -> Result<PathBuf, AppError> {
 #[allow(dead_code)]
 pub fn has_camera_permission() -> Result<bool, AppError> {
     photo_gallery::picker::has_camera_permission().map_err(picker_error_to_app_error)
+}
+
+/// Gets the path of the last selected document (e.g., ZIP file).
+/// Returns `None` if no selection has been made or the operation was cancelled.
+/// On non-Android platforms, always returns `None`.
+#[cfg(target_os = "android")]
+pub fn get_last_document_path() -> Option<PathBuf> {
+    get_main_activity_static_string("getLastDocumentPath", "()Ljava/lang/String;")
+        .map(PathBuf::from)
+}
+
+/// Launches the Android document picker implemented in MainActivity.
+#[cfg(target_os = "android")]
+pub fn launch_document_picker() -> Result<(), AppError> {
+    with_android_env(|env| {
+        let activity_class = load_main_activity_class(env)?;
+
+        // Call MainActivity.getInstance() to invoke instance method launchDocumentPicker().
+        let instance = env
+            .call_static_method(
+                &activity_class,
+                "getInstance",
+                "()Ldev/dioxus/main/MainActivity;",
+                &[],
+            )
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("getInstance failed: {}", e))
+            })?
+            .l()
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("getInstance invalid: {}", e))
+            })?;
+
+        if instance.is_null() {
+            return Err(AppError::PermissionDenied(
+                "MainActivity instance is null".to_string(),
+            ));
+        }
+
+        env.call_method(&instance, "launchDocumentPicker", "()V", &[])
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("launchDocumentPicker failed: {}", e))
+            })?;
+
+        clear_pending_exception(env);
+        Ok(())
+    })
+}
+
+#[cfg(target_os = "android")]
+pub fn get_last_error() -> Option<String> {
+    get_main_activity_static_string("getLastError", "()Ljava/lang/String;")
+}
+
+/// Returns the current Android system language tag (for example `de-DE` or `en-US`).
+/// Falls back to `en-US` if JNI access fails or returns an empty value.
+#[cfg(target_os = "android")]
+pub fn get_system_language_tag() -> String {
+    get_main_activity_static_string("getSystemLanguageTag", "()Ljava/lang/String;")
+        .map(|tag| tag.trim().replace('_', "-"))
+        .filter(|tag| !tag.is_empty())
+        .unwrap_or_else(|| "en-US".to_string())
+}
+
+#[cfg(target_os = "android")]
+fn with_android_env<T>(
+    f: impl FnOnce(&mut dioxus::prelude::jni::JNIEnv<'_>) -> Result<T, AppError>,
+) -> Result<T, AppError> {
+    use ndk_context::android_context;
+
+    let ctx = android_context();
+    let vm_ptr = ctx.vm() as *mut dioxus::prelude::jni::sys::JavaVM;
+    if vm_ptr.is_null() {
+        return Err(AppError::PermissionDenied("JavaVM unavailable".to_string()));
+    }
+
+    let vm = unsafe { dioxus::prelude::jni::JavaVM::from_raw(vm_ptr) }
+        .map_err(|e| AppError::PermissionDenied(format!("JavaVM init failed: {}", e)))?;
+    let mut guard = vm
+        .attach_current_thread()
+        .map_err(|e| AppError::PermissionDenied(format!("JNI attach failed: {}", e)))?;
+    f(&mut *guard)
+}
+
+#[cfg(target_os = "android")]
+fn clear_pending_exception(env: &mut dioxus::prelude::jni::JNIEnv<'_>) {
+    if env.exception_check().unwrap_or(false) {
+        let _ = env.exception_clear();
+    }
+}
+
+#[cfg(target_os = "android")]
+fn load_main_activity_class<'a>(
+    env: &mut dioxus::prelude::jni::JNIEnv<'a>,
+) -> Result<JClass<'a>, AppError> {
+    let at_cls = env
+        .find_class("android/app/ActivityThread")
+        .map_err(|e| AppError::PermissionDenied(format!("ActivityThread missing: {}", e)))?;
+
+    let at = env
+        .call_static_method(
+            &at_cls,
+            "currentActivityThread",
+            "()Landroid/app/ActivityThread;",
+            &[],
+        )
+        .map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("currentActivityThread failed: {}", e))
+        })?
+        .l()
+        .map_err(|e| AppError::PermissionDenied(format!("ActivityThread invalid: {}", e)))?;
+
+    let app = env
+        .call_method(&at, "getApplication", "()Landroid/app/Application;", &[])
+        .map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("getApplication failed: {}", e))
+        })?
+        .l()
+        .map_err(|e| AppError::PermissionDenied(format!("Application invalid: {}", e)))?;
+
+    let loader = env
+        .call_method(&app, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+        .map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("getClassLoader failed: {}", e))
+        })?
+        .l()
+        .map_err(|e| AppError::PermissionDenied(format!("ClassLoader invalid: {}", e)))?;
+
+    let class_name: JString = env
+        .new_string("dev.dioxus.main.MainActivity")
+        .map_err(|e| AppError::PermissionDenied(format!("new_string failed: {}", e)))?;
+
+    let cls_obj = env
+        .call_method(
+            &loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&JObject::from(class_name))],
+        )
+        .map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("ClassLoader.loadClass failed: {}", e))
+        })?
+        .l()
+        .map_err(|e| AppError::PermissionDenied(format!("Loaded class invalid: {}", e)))?;
+
+    Ok(JClass::from(cls_obj))
+}
+
+#[cfg(target_os = "android")]
+fn get_main_activity_static_string(method: &str, sig: &str) -> Option<String> {
+    with_android_env(|env| {
+        let activity_class = load_main_activity_class(env)?;
+        let result = env
+            .call_static_method(&activity_class, method, sig, &[])
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("{} failed: {}", method, e))
+            })?;
+
+        let obj = result.l().map_err(|e| {
+            clear_pending_exception(env);
+            AppError::PermissionDenied(format!("{} returned invalid object: {}", method, e))
+        })?;
+
+        if obj.is_null() {
+            return Ok(None);
+        }
+
+        let obj_str: JString<'_> = JString::from(obj);
+
+        let s: String = env
+            .get_string(&obj_str)
+            .map_err(|e| {
+                clear_pending_exception(env);
+                AppError::PermissionDenied(format!("{} string conversion failed: {}", method, e))
+            })?
+            .into();
+        Ok(Some::<String>(s))
+    })
+    .ok()
+    .flatten()
+}
+
+/// Gets the path of the last selected document (e.g., ZIP file).
+/// On non-Android platforms, always returns `None`.
+#[cfg(not(target_os = "android"))]
+pub fn get_last_document_path() -> Option<PathBuf> {
+    None
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn launch_document_picker() -> Result<(), AppError> {
+    Err(AppError::PermissionDenied(
+        "Document picker is only available on Android".to_string(),
+    ))
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn get_last_error() -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn get_system_language_tag() -> String {
+    "en-US".to_string()
 }

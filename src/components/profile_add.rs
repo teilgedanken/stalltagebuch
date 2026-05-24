@@ -1,322 +1,434 @@
+use super::ring_color_picker::RingColorField;
 use crate::{
-    database,
-    models::{Gender, Quail, RingColor},
-    services, Screen,
+    Screen,
+    models::{Gender, RingColor, ring_color_combination_conflicts, ring_color_selection_value},
+    spacetime,
 };
 use dioxus::prelude::*;
-use dioxus_i18n::t;
+use dioxus_i18n::tid;
 use std::path::PathBuf;
 
 #[component]
 pub fn AddProfileScreen(on_navigate: EventHandler<Screen>) -> Element {
     let mut name = use_signal(|| String::new());
     let mut gender = use_signal(|| "unknown".to_string());
-    let mut ring_color = use_signal(|| String::new());
+    let mut birthday = use_signal(|| String::new());
+    let mut ring_color_left = use_signal(|| None::<RingColor>);
+    let mut ring_color_right = use_signal(|| None::<RingColor>);
+    let mut active_ring_color_slot = use_signal(|| None::<usize>);
     let mut photo_path = use_signal(|| None::<PathBuf>);
     let mut uploading = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut success = use_signal(|| false);
     let mut saving = use_signal(|| false);
+    let quails = spacetime::use_table_quails();
+    let create_quail = spacetime::use_reducer_create_quail();
+    let create_event = spacetime::use_reducer_create_event();
+    let create_photo_collection = spacetime::use_reducer_create_photo_collection();
+    let create_photo = spacetime::use_reducer_create_photo();
+    let set_quail_photo = spacetime::use_reducer_set_quail_photo();
+    let connection = spacetime::use_connection();
+
+    spacetime::use_subscription(&["SELECT * FROM quails"]);
 
     let mut handle_submit = move || {
         error.set(None);
         success.set(false);
 
-        let name_value = name();
-        let name_trimmed = name_value.trim();
+        let name_trimmed = name().trim().to_string();
         if name_trimmed.is_empty() {
-            error.set(Some(t!("error-name-required"))); // Name cannot be empty
+            error.set(Some(tid!("error-name-required"))); // Name cannot be empty
+            return;
+        }
+
+        if connection().is_none() {
+            error.set(Some(tid!("error", error: "SpacetimeDB not connected")));
+            return;
+        }
+
+        let ring_color_left_value = ring_color_selection_value(ring_color_left().as_ref());
+        let ring_color_right_value = ring_color_selection_value(ring_color_right().as_ref());
+
+        if quails().iter().any(|quail| {
+            ring_color_combination_conflicts(
+                ring_color_left_value.as_deref(),
+                ring_color_right_value.as_deref(),
+                quail.ring_color_left.as_deref(),
+                quail.ring_color_right.as_deref(),
+            )
+        }) {
+            error.set(Some(tid!("error-ring-color-combination-not-unique")));
             return;
         }
 
         saving.set(true);
-
-        let mut quail = Quail::new(name_trimmed.to_string());
-
-        quail.gender = match gender().as_str() {
+        let quail_uuid = uuid::Uuid::new_v4().to_string();
+        let gender_value = match gender().as_str() {
             "male" => Gender::Male,
             "female" => Gender::Female,
             _ => Gender::Unknown,
         };
+        let birthday_value = normalize_optional_date_input(&birthday());
 
-        let ring_color_value = ring_color();
-        let ring_color_trimmed = ring_color_value.trim();
-        quail.ring_color = if ring_color_trimmed.is_empty() {
-            None
-        } else {
-            Some(RingColor::from_str(ring_color_trimmed))
-        };
+        let device_id = crate::services::device_id_service::get_device_id()
+            .unwrap_or_else(|_| "unknown-device".to_string());
+
+        // Capture photo_path BEFORE moving into async
+        let selected_photo_path = photo_path();
+        let photo_name_for_display = name_trimmed.clone();
+
+        if let Err(err) = create_quail(spacetime::CreateQuailArgs {
+            uuid: quail_uuid.clone(),
+            name: name_trimmed.to_string(),
+            gender: gender_value.as_str().to_string(),
+            ring_color_left: ring_color_left_value,
+            ring_color_right: ring_color_right_value,
+            profile_photo: None,
+            device_id: device_id.clone(),
+        }) {
+            error.set(Some(err.to_string()));
+            saving.set(false);
+            return;
+        }
+
+        let birthday_event_date = birthday_value.clone();
+        let on_navigate_submit = on_navigate.clone();
+        let create_event_reducer = create_event.clone();
+        let create_photo_collection_reducer = create_photo_collection.clone();
+        let create_photo_reducer = create_photo.clone();
+        let set_quail_photo_reducer = set_quail_photo.clone();
 
         spawn(async move {
-            match database::init_database() {
-                Ok(conn) => {
-                    match services::create_profile(&conn, &quail).await {
-                        Ok(quail_id) => {
-                            // Speichere Profilfoto falls vorhanden
-                            if let Some(path) = photo_path() {
-                                let path_str = path.to_string_lossy().to_string();
-                                // Use collection-based API
-                                match crate::services::photo_service::get_or_create_quail_collection(
-                                    &conn, &quail_id,
+            if let Some(event_date) = birthday_event_date {
+                if let Err(err) = create_event_reducer(spacetime::CreateEventArgs {
+                    uuid: uuid::Uuid::new_v4().to_string(),
+                    quail_uuid: quail_uuid.clone(),
+                    event_type: "born".to_string(),
+                    event_date,
+                    notes: None,
+                    photos: None,
+                    device_id: device_id.clone(),
+                }) {
+                    error.set(Some(err.to_string()));
+                    saving.set(false);
+                    return;
+                }
+            }
+
+            if let Some(path) = selected_photo_path {
+                let collection_uuid = quail_uuid.clone();
+
+                // Create photo collection in Spacetime
+                if let Err(err) =
+                    create_photo_collection_reducer(spacetime::CreatePhotoCollectionArgs {
+                        uuid: collection_uuid.clone(),
+                        quail_uuid: Some(quail_uuid.clone()),
+                        event_uuid: None,
+                        name: format!("Fotos für {}", photo_name_for_display),
+                        device_id: device_id.clone(),
+                    })
+                {
+                    log::warn!(
+                        "Failed to create photo collection for new quail {}: {}",
+                        quail_uuid,
+                        err
+                    );
+                } else {
+                    // Process the selected photo
+                    let source = path.to_string_lossy().to_string();
+                    match crate::services::photo_service::process_photo(source).await {
+                        Ok((relative_original, _, _)) => {
+                            if let Some(photo_uuid) = std::path::Path::new(&relative_original)
+                                .file_stem()
+                                .and_then(|s| s.to_str())
+                            {
+                                // Create photo record in Spacetime
+                                if let Err(err) = create_photo_reducer(spacetime::CreatePhotoArgs {
+                                    uuid: photo_uuid.to_string(),
+                                    collection_uuid: collection_uuid.clone(),
+                                    relative_path: relative_original.clone(),
+                                    device_id: device_id.clone(),
+                                }) {
+                                    log::warn!(
+                                        "Failed to create photo {} for new quail {}: {}",
+                                        photo_uuid,
+                                        quail_uuid,
+                                        err
+                                    );
+                                } else if let Err(err) = set_quail_photo_reducer(
+                                    quail_uuid.to_string(),
+                                    Some(photo_uuid.to_string()),
                                 ) {
-                                    Ok(collection_id) => {
-                                        match crate::services::photo_service::add_photo_to_collection(
-                                            &conn,
-                                            &collection_id,
-                                            path_str,
-                                        )
-                                        .await
-                                        {
-                                            Ok(photo_uuid) => {
-                                                // Setze dieses Foto als Profilbild
-                                                let _ = crate::services::photo_service::set_profile_photo(
-                                                    &conn,
-                                                    &quail_id,
-                                                    &photo_uuid,
-                                                )
-                                                .await;
-                                            }
-                                            Err(e) => {
-                                                log::error!(
-                                                    "Fehler beim Hinzufügen des Profilfotos: {}",
-                                                    e
-                                                );
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        log::error!(
-                                            "Fehler beim Erstellen der Foto-Sammlung: {}",
-                                            e
-                                        );
-                                    }
+                                    // The profile already exists; keep the flow successful and log the partial failure.
+                                    log::warn!(
+                                        "Failed to set profile photo {} for new quail {}: {}",
+                                        photo_uuid,
+                                        quail_uuid,
+                                        err
+                                    );
                                 }
                             }
-                            success.set(true);
-                            saving.set(false);
-                            on_navigate.call(Screen::ProfileList);
                         }
-                        Err(e) => {
-                            error.set(Some(format!("{}: {}", t!("error-save"), e)));
-                            saving.set(false);
+                        Err(err) => {
+                            log::warn!("Failed to process photo in AddProfileScreen: {}", err);
                         }
                     }
                 }
-                Err(e) => {
-                    error.set(Some(t!("error-database", error: e.to_string())));
-                    saving.set(false);
-                }
             }
+
+            success.set(true);
+            saving.set(false);
+            on_navigate_submit.call(Screen::ProfileList);
         });
     };
 
     rsx! {
-        div { style: "padding: 16px; max-width: 600px; margin: 0 auto; min-height: 100vh; background: #f5f5f5;",
-
-            div { style: "display: flex; align-items: center; margin-bottom: 24px;",
-                button {
-                    class: "btn-secondary",
-                    style: "margin-right: 12px; padding: 8px 16px;",
-                    onclick: move |_| on_navigate.call(Screen::ProfileList),
-                    "← "
-                    {t!("action-back")}
-                }
-                h1 { style: "color: #0066cc; font-size: 24px; font-weight: 700; margin: 0;",
-                    {t!("profile-add-title")} // New profile page title
-                }
-            }
-
-            if let Some(err) = error() {
-                div { style: "background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "⚠️ {err}"
-                }
-            }
-
-            if success() {
-                div { style: "background: #efe; border: 1px solid #cfc; color: #3a3; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 14px;",
-                    "✅ "
-                    {t!("profile-created-success")}
-                }
-            }
-
-            div { class: "card",
-
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-name-label")} // Name field label with required marker
+        section { class: "section pt-4 pb-4",
+            div { class: "container is-max-tablet",
+                div { class: "level mb-4",
+                    div { class: "level-left",
+                        button {
+                            class: "button is-light",
+                            onclick: move |_| on_navigate.call(Screen::ProfileList),
+                            "← "
+                            {tid!("action-back")}
+                        }
                     }
-                    input {
-                        r#type: "text",
-                        class: "input",
-                        placeholder: t!("profile-name-placeholder"), // Example name placeholder
-                        value: "{name}",
-                        oninput: move |e| name.set(e.value()),
-                        autofocus: true,
+                    div { class: "level-item",
+                        h1 { class: "title is-4 mb-0", {tid!("profile-add-title")} }
+                    }
+                    div { class: "level-right" }
+                }
+
+                if let Some(err) = error() {
+                    div { class: "notification is-danger is-light", "⚠️ {err}" }
+                }
+
+                if success() {
+                    div { class: "notification is-success is-light",
+                        "✅ "
+                        {tid!("profile-created-success")}
                     }
                 }
 
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-gender-label")} // Gender field label
-                    }
-                    select {
-                        class: "input",
-                        value: "{gender}",
-                        onchange: move |e| gender.set(e.value()),
-                        option { value: "unknown", {t!("gender-unknown")} } // Unknown gender option
-                        option { value: "female", {t!("gender-female")} } // Female gender option
-                        option { value: "male", {t!("gender-male")} } // Male gender option
-                    }
-                }
-
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-ring-color-label")} // Ring color field label
-                    }
-                    select {
-                        class: "input",
-                        value: "{ring_color}",
-                        onchange: move |e| ring_color.set(e.value()),
-                        option { value: "", {t!("ring-color-none")} } // No ring color option
-                        option { value: "lila", {t!("ring-color-purple")} } // Purple ring color
-                        option { value: "rosa", {t!("ring-color-pink")} } // Pink ring color
-                        option { value: "hellblau", {t!("ring-color-light-blue")} } // Light blue ring color
-                        option { value: "dunkelblau", {t!("ring-color-dark-blue")} } // Dark blue ring color
-                        option { value: "rot", {t!("ring-color-red")} } // Red ring color
-                        option { value: "orange", {t!("ring-color-orange")} } // Orange ring color
-                        option { value: "weiss", {t!("ring-color-white")} } // White ring color
-                        option { value: "gelb", {t!("ring-color-yellow")} } // Yellow ring color
-                        option { value: "schwarz", {t!("ring-color-black")} } // Black ring color
-                        option { value: "gruen", {t!("ring-color-green")} } // Green ring color
-                    }
-                }
-
-                div { style: "padding: 12px; background: #e3f2fd; border-radius: 8px; color: #0066cc; font-size: 13px; margin-bottom: 20px;",
-                    "ℹ️ "
-                    {t!("profile-add-info")}
-                }
-
-                div { style: "margin-bottom: 20px;",
-                    label { style: "display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px;",
-                        {t!("profile-photo-label")} // Photo field label
+                div { class: "box",
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-name-label")} }
+                        div { class: "control",
+                            input {
+                                r#type: "text",
+                                class: "input",
+                                placeholder: tid!("profile-name-placeholder"),
+                                value: "{name}",
+                                oninput: move |e| name.set(e.value()),
+                                autofocus: true,
+                            }
+                        }
                     }
 
-                    div { style: "margin-bottom: 12px;",
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-gender-label")} }
+                        div { class: "control",
+                            div { class: "select is-fullwidth",
+                                select {
+                                    value: "{gender}",
+                                    onchange: move |e| gender.set(e.value()),
+                                    option { value: "unknown", {tid!("gender-unknown")} }
+                                    option { value: "female", {tid!("gender-female")} }
+                                    option { value: "male", {tid!("gender-male")} }
+                                }
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("field-date")} }
+                        div { class: "control",
+                            input {
+                                r#type: "date",
+                                class: "input",
+                                value: "{birthday}",
+                                oninput: move |e| birthday.set(e.value()),
+                            }
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-ring-color-label")} }
+                        div { class: "columns is-mobile",
+                            RingColorField {
+                                field_label: tid!("profile-ring-color-label"),
+                                side_label: tid!("ring-color-side-left"),
+                                selected: ring_color_left(),
+                                is_open: active_ring_color_slot() == Some(0),
+                                disabled: saving(),
+                                key_prefix: "add-left".to_string(),
+                                on_toggle: move |_| {
+                                    active_ring_color_slot
+                                        .set(if active_ring_color_slot() == Some(0) { None } else { Some(0) });
+                                },
+                                on_select: move |value| {
+                                    ring_color_left.set(value);
+                                    active_ring_color_slot.set(None);
+                                },
+                            }
+                            RingColorField {
+                                field_label: tid!("profile-ring-color-label"),
+                                side_label: tid!("ring-color-side-right"),
+                                selected: ring_color_right(),
+                                is_open: active_ring_color_slot() == Some(1),
+                                disabled: saving(),
+                                key_prefix: "add-right".to_string(),
+                                on_toggle: move |_| {
+                                    active_ring_color_slot
+                                        .set(if active_ring_color_slot() == Some(1) { None } else { Some(1) });
+                                },
+                                on_select: move |value| {
+                                    ring_color_right.set(value);
+                                    active_ring_color_slot.set(None);
+                                },
+                            }
+                        }
+                    }
+
+                    article { class: "message is-info is-light",
+                        div { class: "message-body",
+                            "ℹ️ "
+                            {tid!("profile-add-info")}
+                        }
+                    }
+
+                    div { class: "field",
+                        label { class: "label", {tid!("profile-photo-label")} }
+
                         if let Some(path) = photo_path() {
-                            div { style: "display: flex; align-items: center; gap: 12px; padding: 12px; background: #f0f0f0; border-radius: 8px;",
-                                div { style: "width: 60px; height: 60px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px;",
-                                    "📷"
-                                }
-                                div { style: "flex: 1;",
-                                    div { style: "font-size: 14px; font-weight: 600; color: #333;",
-                                        {t!("photo-selected")} // Photo selected status message
+                            div { class: "notification is-light",
+                                div { class: "is-flex is-align-items-center is-justify-content-space-between",
+                                    div {
+                                        strong { "📷 " }
+                                        {tid!("photo-selected")}
+                                        p { class: "help",
+                                            {path.file_name().and_then(|n| n.to_str()).unwrap_or("Unbekannt")}
+                                        }
                                     }
-                                    div { style: "font-size: 12px; color: #666; word-break: break-all;",
-                                        "{path.file_name().and_then(|n| n.to_str()).unwrap_or(\"Unbekannt\")}"
+                                    button {
+                                        class: "button is-small is-light",
+                                        onclick: move |_| photo_path.set(None),
+                                        span { class: "icon", "🗑️" }
                                     }
                                 }
+                            }
+                        } else {
+                            div {
+                                class: "notification is-light has-text-centered",
+                                style: "border: 2px dashed #ccc;",
+                                {tid!("photo-none-selected")}
+                            }
+                        }
+
+                        div { class: "field is-grouped mt-3",
+                            p { class: "control is-expanded",
                                 button {
-                                    class: "btn-secondary",
-                                    style: "padding: 6px 12px; font-size: 12px;",
-                                    onclick: move |_| photo_path.set(None),
-                                    "🗑️"
+                                    class: "button is-light is-fullwidth",
+                                    disabled: uploading(),
+                                    onclick: move |_| {
+                                        uploading.set(true);
+                                        error.set(None);
+                                        spawn(async move {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match crate::camera::pick_image() {
+                                                    Ok(path) => photo_path.set(Some(path)),
+                                                    Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                error.set(Some(tid!("error-android-only")));
+                                            }
+                                            uploading.set(false);
+                                        });
+                                    },
+                                    if uploading() {
+                                        span { class: "icon", "⏳ " }
+                                        span { {tid!("action-loading")} }
+                                    } else {
+                                        span { class: "icon", "🖼️ " }
+                                        span { {tid!("action-gallery")} }
+                                    }
                                 }
                             }
-                        } else {
-                            div { style: "width: 100%; height: 120px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px;",
-                                {t!("photo-none-selected")} // No photo selected message
+
+                            p { class: "control is-expanded",
+                                button {
+                                    class: "button is-light is-fullwidth",
+                                    disabled: uploading(),
+                                    onclick: move |_| {
+                                        uploading.set(true);
+                                        error.set(None);
+                                        spawn(async move {
+                                            #[cfg(target_os = "android")]
+                                            {
+                                                match crate::camera::capture_photo() {
+                                                    Ok(path) => photo_path.set(Some(path)),
+                                                    Err(e) => error.set(Some(format!("{}: {}", tid!("error"), e))),
+                                                }
+                                            }
+                                            #[cfg(not(target_os = "android"))]
+                                            {
+                                                error.set(Some(tid!("error-android-only")));
+                                            }
+                                            uploading.set(false);
+                                        });
+                                    },
+                                    if uploading() {
+                                        span { class: "icon", "⏳ " }
+                                        span { {tid!("action-loading")} }
+                                    } else {
+                                        span { class: "icon", "📷 " }
+                                        span { {tid!("action-camera")} }
+                                    }
+                                }
                             }
                         }
                     }
 
-                    div { style: "display: flex; gap: 8px;",
-                        button {
-                            class: "btn-secondary",
-                            style: "flex: 1; padding: 10px; font-size: 14px;",
-                            disabled: uploading(),
-                            onclick: move |_| {
-                                uploading.set(true);
-                                error.set(None);
-                                spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::pick_image() {
-                                            Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", t!("error"), e))),
-                                        }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        error.set(Some(t!("error-android-only")));
-                                    }
-                                    uploading.set(false);
-                                });
-                            },
-                            if uploading() {
-                                "⏳ "
-                                {t!("action-loading")}
-                            } else {
-                                "🖼️ "
-                                {t!("action-gallery")}
+                    div { class: "field has-addons mt-5",
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-primary is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| handle_submit(),
+                                if saving() {
+                                    span { class: "icon", "⏳ " }
+                                    span { {tid!("action-saving")} }
+                                } else {
+                                    span { class: "icon", "💾 " }
+                                    span { {tid!("action-save")} }
+                                }
                             }
                         }
-                        button {
-                            class: "btn-secondary",
-                            style: "flex: 1; padding: 10px; font-size: 14px;",
-                            disabled: uploading(),
-                            onclick: move |_| {
-                                uploading.set(true);
-                                error.set(None);
-                                spawn(async move {
-                                    #[cfg(target_os = "android")]
-                                    {
-                                        match crate::camera::capture_photo() {
-                                            Ok(path) => photo_path.set(Some(path)),
-                                            Err(e) => error.set(Some(format!("{}: {}", t!("error"), e))),
-                                        }
-                                    }
-                                    #[cfg(not(target_os = "android"))]
-                                    {
-                                        error.set(Some(t!("error-android-only")));
-                                    }
-                                    uploading.set(false);
-                                });
-                            },
-                            if uploading() {
-                                "⏳ "
-                                {t!("action-loading")}
-                            } else {
-                                "📷 "
-                                {t!("action-camera")}
+                        p { class: "control is-expanded",
+                            button {
+                                class: "button is-light is-fullwidth",
+                                disabled: saving(),
+                                onclick: move |_| on_navigate.call(Screen::ProfileList),
+                                span { class: "icon", "❌ " }
+                                span { {tid!("action-cancel")} }
                             }
                         }
-                    }
-                }
-
-                div { style: "display: flex; gap: 12px; margin-top: 24px;",
-                    button {
-                        class: "btn-primary",
-                        style: "flex: 1; padding: 14px;",
-                        disabled: saving(),
-                        onclick: move |_| handle_submit(),
-                        if saving() {
-                            "⏳ "
-                            {t!("action-saving")}
-                        } else {
-                            "💾 "
-                            {t!("action-save")}
-                        }
-                    }
-                    button {
-                        class: "btn-secondary",
-                        style: "flex: 1; padding: 14px;",
-                        disabled: saving(),
-                        onclick: move |_| on_navigate.call(Screen::ProfileList),
-                        "❌ "
-                        {t!("action-cancel")}
                     }
                 }
             }
         }
+    }
+}
+
+fn normalize_optional_date_input(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
     }
 }

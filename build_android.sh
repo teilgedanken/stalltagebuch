@@ -10,6 +10,74 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+detect_device_rust_target() {
+    if ! command -v adb >/dev/null 2>&1; then
+        return 1
+    fi
+
+    local abi
+    abi=$(adb shell getprop ro.product.cpu.abi 2>/dev/null | tr -d '\r' | tail -n1 || true)
+    case "$abi" in
+        arm64-v8a)
+            echo "aarch64-linux-android"
+            ;;
+        armeabi-v7a|armeabi)
+            echo "armv7-linux-androideabi"
+            ;;
+        x86)
+            echo "i686-linux-android"
+            ;;
+        x86_64)
+            echo "x86_64-linux-android"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+inject_rustls_android_helper_sources() {
+    # The jni-0.22 branch currently doesn't ship populated Maven artifacts in git checkouts.
+    # Copy the Kotlin helper directly from the crate checkout into the generated app sources.
+    local verifier_src
+    verifier_src=$(find "$HOME/.cargo" -type f -path "*/rustls-platform-verifier*/android/rustls-platform-verifier/src/main/java/org/rustls/platformverifier/CertificateVerifier.kt" 2>/dev/null | sort | tail -n1 || true)
+    if [[ -z "$verifier_src" ]]; then
+        echo "⚠ rustls-platform-verifier CertificateVerifier.kt not found in Cargo cache"
+        return 0
+    fi
+
+    local verifier_dir="$APP_SRC_MAIN/kotlin/org/rustls/platformverifier"
+    mkdir -p "$verifier_dir"
+    local verifier_file="$verifier_dir/CertificateVerifier.kt"
+    cp "$verifier_src" "$verifier_file"
+
+    # Avoid false-positive "Revoked" on Android when certs omit OCSP responder URLs.
+    # This keeps strict revocation failures for real revoked certs, but treats
+    # "undetermined" / "missing OCSP responder" as non-fatal.
+    if ! grep -q 'UNDETERMINED_REVOCATION_STATUS' "$verifier_file"; then
+        awk '
+            /return VerificationResult\(StatusCode\.Revoked, e\.toString\(\)\)/ && !done {
+                print "                if (e.reason == CertPathValidatorException.BasicReason.UNDETERMINED_REVOCATION_STATUS || (e.message?.contains(\"Certificate does not specify OCSP responder\") == true)) {"
+                print "                    Log.w(TAG, \"revocation status undetermined (missing OCSP responder): $e\")"
+                print "                    return VerificationResult(StatusCode.Ok)"
+                print "                }"
+                print ""
+                done = 1
+            }
+            { print }
+        ' "$verifier_file" > "$verifier_file.tmp"
+        mv "$verifier_file.tmp" "$verifier_file"
+    fi
+
+    cat > "$verifier_dir/BuildConfig.kt" <<EOF
+package org.rustls.platformverifier
+
+internal object BuildConfig {
+    const val TEST: Boolean = false
+}
+EOF
+}
+
 # Extract bundle identifier from Dioxus.toml (fallback to dev.dioxus.main)
 BUNDLE_IDENTIFIER=$(sed -n 's/^[[:space:]]*identifier[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$ROOT_DIR/Dioxus.toml" | head -n1)
 if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
@@ -17,29 +85,82 @@ if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
 fi
 
 # Determine build mode
-RELEASE_FLAG=""
 BUILD_TYPE="debug"
-if [[ "${1:-}" == "--release" ]]; then
-    RELEASE_FLAG="--release --codesign true"
-    BUILD_TYPE="release"
+RUST_TARGET=""
+DX_VERBOSE=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --release)
+            BUILD_TYPE="release"
+            shift
+            ;;
+        --target)
+            if [[ $# -lt 2 ]]; then
+                echo "Missing value for --target"
+                exit 1
+            fi
+            RUST_TARGET="$2"
+            shift 2
+            ;;
+        --target=*)
+            RUST_TARGET="${1#*=}"
+            shift
+            ;;
+        --verbose)
+            DX_VERBOSE=true
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            echo "Usage: $0 [--release] [--target <rust-target-triple>] [--verbose]"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$RUST_TARGET" ]]; then
+    if detected_target=$(detect_device_rust_target); then
+        RUST_TARGET="$detected_target"
+        echo "Detected device ABI target: $RUST_TARGET"
+    else
+        echo "No Android device ABI detected; using dx default target selection"
+    fi
+fi
+
+DX_BUILD_ARGS=(build --platform android)
+if [[ "$BUILD_TYPE" == "release" ]]; then
+    DX_BUILD_ARGS+=(--release --codesign true)
+fi
+if [[ -n "$RUST_TARGET" ]]; then
+    DX_BUILD_ARGS+=(--target "$RUST_TARGET")
 fi
 
 DX_APP_DIR="$ROOT_DIR/target/dx/stalltagebuch/$BUILD_TYPE/android/app"
 APP_SRC_MAIN="$DX_APP_DIR/app/src/main"
-RES_XML_DIR="$APP_SRC_MAIN/res/xml"
 BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/dev/dioxus/main/BuildConfig.kt"
+BUNDLE_PATH="${BUNDLE_IDENTIFIER//./\/}"
+BUNDLE_BUILD_CONFIG_FILE="$APP_SRC_MAIN/kotlin/$BUNDLE_PATH/BuildConfig.kt"
 
 prepare_android_overrides() {
     local step_label="$1"
     echo "$step_label Preparing Android overrides (resources & BuildConfig alias)"
 
-    mkdir -p "$RES_XML_DIR"
-    cp "$ROOT_DIR/android/res/xml/file_paths.xml" "$RES_XML_DIR/file_paths.xml"
+    local app_res_dir="$APP_SRC_MAIN/res"
+    mkdir -p "$app_res_dir"
+
+    # Remove stale custom launcher resources so file-type changes (png -> xml) don't collide.
+    find "$app_res_dir" -type f \( -name 'stalltagebuch_launcher*' -o -name 'stalltagebuch_launcher_*' \) -delete
+
+    cp -r "$ROOT_DIR/android/res/." "$app_res_dir/"
 
     # Copy project-level proguard rules into the generated app module so R8 keeps JNI-used members
     if [[ -f "$ROOT_DIR/android/proguard-rules.pro" ]]; then
         cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
     fi
+
+    # Remove stale/generated alias files that can trigger redeclaration loops.
+    rm -f "$BUILD_CONFIG_FILE" "$BUNDLE_BUILD_CONFIG_FILE"
 
     if [[ "$BUNDLE_IDENTIFIER" != "dev.dioxus.main" ]]; then
         mkdir -p "$(dirname "$BUILD_CONFIG_FILE")"
@@ -64,12 +185,12 @@ find_build_tools() {
             fi
         done
     fi
-    
+
     if [[ -z "$sdk_path" || ! -d "$sdk_path/build-tools" ]]; then
         echo ""
         return
     fi
-    
+
     # Find the latest build-tools version
     local latest_version
     latest_version=$(ls -1 "$sdk_path/build-tools" 2>/dev/null | sort -V | tail -1)
@@ -82,10 +203,25 @@ find_build_tools() {
 prepare_android_overrides "[1/2]"
 
 # 2) Dioxus Build (capture lint failures so we can re-run Gradle without lint for release)
-echo "[2/2] Running dx build --platform android ${RELEASE_FLAG}"
+echo "[2/2] Running dx ${DX_BUILD_ARGS[*]}"
 DX_LOG=$(mktemp)
 set +e
-dx build --platform android ${RELEASE_FLAG} 2>&1 | tee "$DX_LOG"
+if [[ "$DX_VERBOSE" == true ]]; then
+    dx "${DX_BUILD_ARGS[@]}" 2>&1 | tee "$DX_LOG"
+else
+    dx "${DX_BUILD_ARGS[@]}" 2>&1 \
+        | tee "$DX_LOG" \
+        | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' \
+        | awk '
+            # Hide repetitive dx progress spam; warnings/errors are still shown.
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Compiled[[:space:]]+\[/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Building project\.\.\.$/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Bundling app\.\.\.$/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Copying asset[[:space:]]+\([0-9]+\/[0-9]+\):/ { next }
+            /^[[:space:]]*[0-9]+\.[0-9]+s[[:space:]]+INFO[[:space:]]+Finished Build process$/ { next }
+            { print }
+        '
+fi
 DX_EXIT=${PIPESTATUS[0]}
 set -e
 
@@ -104,17 +240,71 @@ if [[ -f "$ROOT_DIR/android/proguard-rules.pro" && -d "$DX_APP_DIR/app" ]]; then
     cp "$ROOT_DIR/android/proguard-rules.pro" "$DX_APP_DIR/app/proguard-rules.pro"
 fi
 
+# Ensure rustls-platform-verifier Android Kotlin helper is available to the generated app.
+inject_rustls_android_helper_sources
+
+# dx can (re)generate alias files under the bundle package; remove stale self-aliases,
+# then recreate only the dev.dioxus.main indirection if needed.
+rm -f "$BUNDLE_BUILD_CONFIG_FILE"
+if [[ "$BUNDLE_IDENTIFIER" != "dev.dioxus.main" ]]; then
+    mkdir -p "$(dirname "$BUILD_CONFIG_FILE")"
+    cat > "$BUILD_CONFIG_FILE" <<EOF
+package dev.dioxus.main
+
+typealias BuildConfig = ${BUNDLE_IDENTIFIER}.BuildConfig
+EOF
+fi
+
 rm -f "$DX_LOG"
 
 if [[ "$BUILD_TYPE" == "release" ]]; then
     echo "[3/3] Running Gradle assembleRelease with lint disabled"
     pushd "$DX_APP_DIR" >/dev/null
-    ./gradlew \
-        -x lintVitalAnalyzeRelease \
-        -x lintVitalReportRelease \
-        -x lintReportRelease \
-        -x lintVitalRelease \
-        assembleRelease
+    chmod +x ./gradlew
+    GRADLE_LOG=$(mktemp)
+    set +e
+    if [[ "$DX_VERBOSE" == true ]]; then
+        ./gradlew \
+            -x lintVitalAnalyzeRelease \
+            -x lintVitalReportRelease \
+            -x lintReportRelease \
+            -x lintVitalRelease \
+            assembleRelease 2>&1 | tee "$GRADLE_LOG"
+    else
+        ./gradlew \
+            -x lintVitalAnalyzeRelease \
+            -x lintVitalReportRelease \
+            -x lintReportRelease \
+            -x lintVitalRelease \
+            assembleRelease 2>&1 \
+            | tee "$GRADLE_LOG" \
+            | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g' \
+            | awk '
+                /^> Task / { next }
+                /^> Configure project :app$/ { next }
+                /^WARNING: The option setting .*android\.defaults\.buildfeatures\.buildconfig=true.*deprecated\.$/ { next }
+                /^The current default is .*$/ { next }
+                /^It will be removed in version .*$/ { next }
+                /^To keep using this feature, add the following to your module-level build\.gradle files:$/ { next }
+                /^[[:space:]]+android\.buildFeatures\.buildConfig = true$/ { next }
+                /^or from Android Studio, click: .*$/ { next }
+                /^\[Incubating\] Problems report is available at: .*$/ { next }
+                /^Deprecated Gradle features were used in this build, making it incompatible with Gradle .*\.$/ { next }
+                /^[[:space:]]*You can use .*--warning-mode all.*$/ { next }
+                /^[[:space:]]*For more on this, please refer to .*$/ { next }
+                /^[[:space:]]*BUILD SUCCESSFUL in .*$/ { next }
+                /^[[:space:]]*[0-9]+ actionable tasks: .*$/ { next }
+                /^[[:space:]]*Consider enabling configuration cache to speed up this build: .*$/ { next }
+                { print }
+            '
+    fi
+    GRADLE_EXIT=${PIPESTATUS[0]}
+    set -e
+    rm -f "$GRADLE_LOG"
+    if [[ $GRADLE_EXIT -ne 0 ]]; then
+        popd >/dev/null
+        exit $GRADLE_EXIT
+    fi
     popd >/dev/null
 fi
 
