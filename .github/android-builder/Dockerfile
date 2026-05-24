@@ -48,6 +48,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       # needed when Cargo compiles build.rs scripts for the host (x86_64-unknown-linux-gnu).
       # Technically a transitive dep of gcc, but the temurin base suppresses it.
       libc6-dev \
+      # Required by the vendored OpenSSL build (openssl crate, features=["vendored"])
+      make \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Android SDK command-line tools ────────────────────────────
