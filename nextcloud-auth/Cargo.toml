@@ -1,6 +1,6 @@
 [package]
 name = "nextcloud-auth"
-version = "0.2.0"
+version.workspace = true
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Nextcloud Login Flow v2 authentication library with Dioxus UI components"

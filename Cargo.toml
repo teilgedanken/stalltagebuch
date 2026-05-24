@@ -20,12 +20,18 @@ reqwest_dav = { version = "0.2", default-features = false, features = [
     "rustls-tls",
 ] }
 
-[package]
-name = "stalltagebuch"
-version = "0.2.0"
+[workspace.package]
+version = "0.2.1"
 authors = ["Franz Dietrich <dietrich@teilgedanken.de>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
+
+[package]
+name = "stalltagebuch"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
