@@ -22,7 +22,7 @@ reqwest_dav = { version = "0.2", default-features = false, features = [
 
 [package]
 name = "stalltagebuch"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Franz Dietrich <dietrich@teilgedanken.de>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
