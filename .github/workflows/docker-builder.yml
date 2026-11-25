@@ -35,11 +35,11 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/stalltagebuch-android-builder
           # Two tags:
-          #   ndk27-dx0.7.9  → pinned, safe to reference in build-android.yml
-          #   latest         → convenience alias, always points to newest image
-          # Bump ndk27-dx0.7.9 when NDK_VERSION or DX_VERSION changes in the Dockerfile.
+          #   ndk27-dx0.8.0-alpha.3  → pinned, safe to reference in build-android.yml
+          #   latest                  → convenience alias, always points to newest image
+          # Bump the pinned tag when NDK_VERSION or DX_VERSION changes in the Dockerfile.
           tags: |
-            type=raw,value=ndk27-dx0.7.9
+            type=raw,value=ndk27-dx0.8.0-alpha.3
             type=raw,value=latest
 
       # GitHub Actions layer cache so repeated image rebuilds are fast

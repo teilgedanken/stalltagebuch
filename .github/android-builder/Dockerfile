@@ -18,7 +18,7 @@ FROM eclipse-temurin:17-jdk-noble
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ── Pinned versions ─────────────────────────────────────────────
-ARG DX_VERSION=0.7.9
+ARG DX_VERSION=0.8.0-alpha.3
 ARG NDK_VERSION=27.2.12479018
 ARG ANDROID_API=28
 ARG ANDROID_COMPILE_SDK=34

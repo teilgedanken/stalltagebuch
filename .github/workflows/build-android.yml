@@ -37,7 +37,7 @@ jobs:
     # No caches needed – the image IS the cache, and it lives in GHCR
     # independently of GitHub Actions cache TTLs.
     container:
-      image: ghcr.io/${{ github.repository_owner }}/stalltagebuch-android-builder:ndk27-dx0.7.9
+      image: ghcr.io/${{ github.repository_owner }}/stalltagebuch-android-builder:ndk27-dx0.8.0-alpha.3
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
