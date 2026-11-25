@@ -6,4 +6,4 @@ license = "MIT OR Apache-2.0"
 description = "A reusable photo gallery component for Dioxus"
 
 [dependencies]
-dioxus = { version = "0.7.1" }
+dioxus = { workspace = true }

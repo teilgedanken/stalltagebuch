@@ -222,19 +222,33 @@ else
 fi
 DX_EXIT=${PIPESTATUS[0]}
 set -e
+GRADLE_RETRY_REQUIRED=false
 
 if [[ $DX_EXIT -ne 0 ]]; then
+    WRAPPER_PROPERTIES="$DX_APP_DIR/gradle/wrapper/gradle-wrapper.properties"
+    if grep -Fq "DefaultTaskCollection#configureEach(Action) on task set cannot be executed in the current context" "$DX_LOG" \
+        && [[ -f "$WRAPPER_PROPERTIES" ]] \
+        && grep -qE 'distributionUrl=.*gradle-9\.1\.0-(bin|all)\.zip' "$WRAPPER_PROPERTIES"; then
+        # Gradle 9.1 has a sporadic task-configuration regression that can prevent
+        # Kotlin compile tasks from being created. Retry using the last known-good
+        # Gradle 8 line for this generated Android project.
+        sed -E 's/gradle-9\.1\.0-(bin|all)\.zip/gradle-8.12.1-\1.zip/' \
+            "$WRAPPER_PROPERTIES" > "$WRAPPER_PROPERTIES.tmp"
+        mv "$WRAPPER_PROPERTIES.tmp" "$WRAPPER_PROPERTIES"
+        GRADLE_RETRY_REQUIRED=true
+        echo "⚠ Gradle 9.1 task configuration failed; retrying with Gradle 8.12.1"
     # Only bypass the failure when it is clearly a Gradle lint task that failed
-    # (which can be fixed by re-running with -x lintVital* below).
+    # (which can be fixed by re-running Gradle without lintVital* below).
     # We must NOT match "--cap-lints allow" from rustc output, which would hide
     # real Rust build errors like missing linker objects.
-    if [[ "$BUILD_TYPE" == "release" ]] && grep -qiE "(lintVital.*FAILED|FAILED.*lintVital|Lint found [0-9])" "$DX_LOG"; then
+    elif [[ "$BUILD_TYPE" == "release" ]] && grep -qiE "(lintVital.*FAILED|FAILED.*lintVital|Lint found [0-9])" "$DX_LOG"; then
         echo "⚠ dx build reported a lint failure; continuing with lint disabled for release"
     else
         echo "dx build failed (see $DX_LOG)"
         exit $DX_EXIT
     fi
 fi
+
 
 # Ensure project-level ProGuard rules are present in the generated Gradle module
 # (dx may have regenerated app/proguard-rules.pro) — copy again right before Gradle packaging.
@@ -307,6 +321,14 @@ if [[ "$BUILD_TYPE" == "release" ]]; then
         popd >/dev/null
         exit $GRADLE_EXIT
     fi
+    popd >/dev/null
+fi
+
+if [[ "$BUILD_TYPE" == "debug" && "$GRADLE_RETRY_REQUIRED" == true ]]; then
+    echo "[3/3] Running Gradle assembleDebug with Gradle 8.12.1"
+    pushd "$DX_APP_DIR" >/dev/null
+    chmod +x ./gradlew
+    ./gradlew assembleDebug
     popd >/dev/null
 fi
 

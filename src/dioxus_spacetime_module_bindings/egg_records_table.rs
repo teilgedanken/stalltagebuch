@@ -18,6 +18,18 @@ pub struct EggRecordsTableHandle<'ctx> {
     ctx: std::marker::PhantomData<&'ctx super::RemoteTables>,
 }
 
+/// Lifetime-aware accessor marker for the table `egg_records`.
+pub struct EggRecordsTableAccessor;
+
+impl __sdk::TableAccessor<super::RemoteTables> for EggRecordsTableAccessor {
+    type Row = EggRecord;
+    type Handle<'db> = EggRecordsTableHandle<'db>;
+
+    fn get<'db>(db: &'db super::RemoteTables) -> Self::Handle<'db> {
+        db.egg_records()
+    }
+}
+
 #[allow(non_camel_case_types)]
 /// Extension trait for access to the table `egg_records`.
 ///
@@ -39,6 +51,18 @@ impl EggRecordsTableAccess for super::RemoteTables {
 
 pub struct EggRecordsInsertCallbackId(__sdk::CallbackId);
 pub struct EggRecordsDeleteCallbackId(__sdk::CallbackId);
+
+impl<'ctx> __sdk::TableLike for EggRecordsTableHandle<'ctx> {
+    type Row = EggRecord;
+    type EventContext = super::EventContext;
+
+    fn count(&self) -> u64 {
+        self.imp.count()
+    }
+    fn iter(&self) -> impl Iterator<Item = EggRecord> + '_ {
+        self.imp.iter()
+    }
+}
 
 impl<'ctx> __sdk::Table for EggRecordsTableHandle<'ctx> {
     type Row = EggRecord;
@@ -78,9 +102,54 @@ impl<'ctx> __sdk::Table for EggRecordsTableHandle<'ctx> {
     }
 }
 
+impl<'ctx> __sdk::WithInsert for EggRecordsTableHandle<'ctx> {
+    type InsertCallbackId = EggRecordsInsertCallbackId;
+
+    fn on_insert(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> EggRecordsInsertCallbackId {
+        EggRecordsInsertCallbackId(self.imp.on_insert(Box::new(callback)))
+    }
+
+    fn remove_on_insert(&self, callback: EggRecordsInsertCallbackId) {
+        self.imp.remove_on_insert(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithDelete for EggRecordsTableHandle<'ctx> {
+    type DeleteCallbackId = EggRecordsDeleteCallbackId;
+
+    fn on_delete(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> EggRecordsDeleteCallbackId {
+        EggRecordsDeleteCallbackId(self.imp.on_delete(Box::new(callback)))
+    }
+
+    fn remove_on_delete(&self, callback: EggRecordsDeleteCallbackId) {
+        self.imp.remove_on_delete(callback.0)
+    }
+}
+
 pub struct EggRecordsUpdateCallbackId(__sdk::CallbackId);
 
 impl<'ctx> __sdk::TableWithPrimaryKey for EggRecordsTableHandle<'ctx> {
+    type UpdateCallbackId = EggRecordsUpdateCallbackId;
+
+    fn on_update(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row, &Self::Row) + Send + 'static,
+    ) -> EggRecordsUpdateCallbackId {
+        EggRecordsUpdateCallbackId(self.imp.on_update(Box::new(callback)))
+    }
+
+    fn remove_on_update(&self, callback: EggRecordsUpdateCallbackId) {
+        self.imp.remove_on_update(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithUpdate for EggRecordsTableHandle<'ctx> {
     type UpdateCallbackId = EggRecordsUpdateCallbackId;
 
     fn on_update(

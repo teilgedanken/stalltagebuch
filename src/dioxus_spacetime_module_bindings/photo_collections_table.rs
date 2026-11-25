@@ -18,6 +18,18 @@ pub struct PhotoCollectionsTableHandle<'ctx> {
     ctx: std::marker::PhantomData<&'ctx super::RemoteTables>,
 }
 
+/// Lifetime-aware accessor marker for the table `photo_collections`.
+pub struct PhotoCollectionsTableAccessor;
+
+impl __sdk::TableAccessor<super::RemoteTables> for PhotoCollectionsTableAccessor {
+    type Row = PhotoCollection;
+    type Handle<'db> = PhotoCollectionsTableHandle<'db>;
+
+    fn get<'db>(db: &'db super::RemoteTables) -> Self::Handle<'db> {
+        db.photo_collections()
+    }
+}
+
 #[allow(non_camel_case_types)]
 /// Extension trait for access to the table `photo_collections`.
 ///
@@ -39,6 +51,18 @@ impl PhotoCollectionsTableAccess for super::RemoteTables {
 
 pub struct PhotoCollectionsInsertCallbackId(__sdk::CallbackId);
 pub struct PhotoCollectionsDeleteCallbackId(__sdk::CallbackId);
+
+impl<'ctx> __sdk::TableLike for PhotoCollectionsTableHandle<'ctx> {
+    type Row = PhotoCollection;
+    type EventContext = super::EventContext;
+
+    fn count(&self) -> u64 {
+        self.imp.count()
+    }
+    fn iter(&self) -> impl Iterator<Item = PhotoCollection> + '_ {
+        self.imp.iter()
+    }
+}
 
 impl<'ctx> __sdk::Table for PhotoCollectionsTableHandle<'ctx> {
     type Row = PhotoCollection;
@@ -78,9 +102,54 @@ impl<'ctx> __sdk::Table for PhotoCollectionsTableHandle<'ctx> {
     }
 }
 
+impl<'ctx> __sdk::WithInsert for PhotoCollectionsTableHandle<'ctx> {
+    type InsertCallbackId = PhotoCollectionsInsertCallbackId;
+
+    fn on_insert(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> PhotoCollectionsInsertCallbackId {
+        PhotoCollectionsInsertCallbackId(self.imp.on_insert(Box::new(callback)))
+    }
+
+    fn remove_on_insert(&self, callback: PhotoCollectionsInsertCallbackId) {
+        self.imp.remove_on_insert(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithDelete for PhotoCollectionsTableHandle<'ctx> {
+    type DeleteCallbackId = PhotoCollectionsDeleteCallbackId;
+
+    fn on_delete(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> PhotoCollectionsDeleteCallbackId {
+        PhotoCollectionsDeleteCallbackId(self.imp.on_delete(Box::new(callback)))
+    }
+
+    fn remove_on_delete(&self, callback: PhotoCollectionsDeleteCallbackId) {
+        self.imp.remove_on_delete(callback.0)
+    }
+}
+
 pub struct PhotoCollectionsUpdateCallbackId(__sdk::CallbackId);
 
 impl<'ctx> __sdk::TableWithPrimaryKey for PhotoCollectionsTableHandle<'ctx> {
+    type UpdateCallbackId = PhotoCollectionsUpdateCallbackId;
+
+    fn on_update(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row, &Self::Row) + Send + 'static,
+    ) -> PhotoCollectionsUpdateCallbackId {
+        PhotoCollectionsUpdateCallbackId(self.imp.on_update(Box::new(callback)))
+    }
+
+    fn remove_on_update(&self, callback: PhotoCollectionsUpdateCallbackId) {
+        self.imp.remove_on_update(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithUpdate for PhotoCollectionsTableHandle<'ctx> {
     type UpdateCallbackId = PhotoCollectionsUpdateCallbackId;
 
     fn on_update(

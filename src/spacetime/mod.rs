@@ -4,7 +4,7 @@
 //! The bindings are generated using:
 //! ```sh
 //! spacetime generate --lang dioxus \
-//!     --out-dir src/spacetime_module_bindings \
+//!     --out-dir src/dioxus_spacetime_module_bindings \
 //!     --module-path stalltagebuch-server
 //! ```
 //!
@@ -13,6 +13,10 @@
 //! - [`use_spacetimedb_context`] – Access the context in child components
 //! - [`use_table_quails`], [`use_table_quail_events`], [`use_table_egg_records`] – Get table signals
 //! - [`use_reducer_create_quail`], [`use_reducer_update_quail`], etc. – Call reducers
+//!
+//! ## Non-UI code
+//! [`client::SpacetimeClient`] wraps a short-lived connection and exposes the typed reducers as
+//! `async` methods for plain services such as the ZIP importers.
 //!
 //! ## Token Persistence
 //! Use [`auth::load_saved_token`] and [`auth::use_persist_spacetime_token`] to handle

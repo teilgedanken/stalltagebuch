@@ -1,3 +1,7 @@
+use crate::dioxus_spacetime_module_bindings::{
+    CreateEventArgs, CreatePhotoArgs, CreatePhotoCollectionArgs, CreateQuailArgs, UpdateEventArgs,
+    UpdatePhotoCollectionArgs, UpdateQuailArgs, UpsertEggRecordArgs,
+};
 use crate::error::AppError;
 use crate::models::import_v1::*;
 use crate::services::device_id_service;
@@ -6,13 +10,6 @@ use crate::spacetime::client::SpacetimeClient;
 use std::collections::HashMap;
 use std::io::Read;
 use zip::ZipArchive;
-
-fn sats_option_string(value: Option<String>) -> serde_json::Value {
-    match value {
-        Some(v) => serde_json::json!({ "some": v }),
-        None => serde_json::Value::Null,
-    }
-}
 
 /// Import v1 format ZIP to SpacetimeDB with full migration
 ///
@@ -41,7 +38,12 @@ pub async fn import_v1_from_zip(
             "Spacetime settings are missing; cannot import data".to_string(),
         ));
     }
-    let client = SpacetimeClient::new(settings.server_url, settings.database_name, settings.token);
+    let client = SpacetimeClient::connect(
+        &settings.server_url,
+        &settings.database_name,
+        &settings.token,
+    )
+    .await?;
 
     log::info!("Starting v1 import with device_id: {}", device_id);
 
@@ -123,12 +125,10 @@ pub async fn import_v1_from_zip(
             continue;
         }
         if let Some(profile_photo_uuid) = &quail.profile_photo {
-            let payload = serde_json::json!({
-                "quail_uuid": quail.uuid.clone(),
-                "photo_uuid": sats_option_string(Some(profile_photo_uuid.clone())),
-            });
-
-            if let Err(e) = client.call_reducer_raw("set_quail_photo", &payload).await {
+            if let Err(e) = client
+                .set_quail_photo(quail.uuid.clone(), Some(profile_photo_uuid.clone()))
+                .await
+            {
                 log::warn!(
                     "Failed to set profile photo for quail {}: {}",
                     quail.uuid,
@@ -253,27 +253,27 @@ async fn import_quail_v1(
     let _ = owner;
     let _ = created_at;
 
-    let create_args = serde_json::json!({
-        "uuid": quail.uuid.clone(),
-        "name": quail.name.clone(),
-        "gender": quail.gender.clone(),
-        "ring_color_left": sats_option_string(quail.ring_color.clone()),
-        "ring_color_right": serde_json::Value::Null,
-        "profile_photo": serde_json::Value::Null,
-        "device_id": device_id,
-    });
-    if let Err(create_err) = client.call_reducer("create_quail", &create_args).await {
+    let create_args = CreateQuailArgs {
+        uuid: quail.uuid.clone(),
+        name: quail.name.clone(),
+        gender: quail.gender.clone(),
+        ring_color_left: quail.ring_color.clone(),
+        ring_color_right: None,
+        profile_photo: None,
+        device_id: device_id.to_string(),
+    };
+    if let Err(create_err) = client.create_quail(create_args).await {
         // Re-import support: if record already exists, try update_quail instead.
-        let update_args = serde_json::json!({
-            "uuid": quail.uuid.clone(),
-            "name": quail.name.clone(),
-            "gender": quail.gender.clone(),
-            "ring_color_left": sats_option_string(quail.ring_color.clone()),
-            "ring_color_right": serde_json::Value::Null,
-            "profile_photo": serde_json::Value::Null,
-        });
+        let update_args = UpdateQuailArgs {
+            uuid: quail.uuid.clone(),
+            name: quail.name.clone(),
+            gender: quail.gender.clone(),
+            ring_color_left: quail.ring_color.clone(),
+            ring_color_right: None,
+            profile_photo: None,
+        };
         client
-            .call_reducer("update_quail", &update_args)
+            .update_quail(update_args)
             .await
             .map_err(|update_err| {
                 AppError::Other(format!(
@@ -308,25 +308,25 @@ async fn import_event_v1(
 
     let _ = owner;
 
-    let create_args = serde_json::json!({
-        "uuid": event.uuid.clone(),
-        "quail_uuid": event.quail_id.clone(),
-        "event_type": event.event_type.clone(),
-        "event_date": event.event_date.clone(),
-        "notes": sats_option_string(event.notes.clone()),
-        "photos": serde_json::Value::Null,
-        "device_id": device_id,
-    });
-    if let Err(create_err) = client.call_reducer("create_event", &create_args).await {
-        let update_args = serde_json::json!({
-            "uuid": event.uuid.clone(),
-            "event_type": event.event_type.clone(),
-            "event_date": event.event_date.clone(),
-            "notes": sats_option_string(event.notes.clone()),
-            "photos": serde_json::Value::Null,
-        });
+    let create_args = CreateEventArgs {
+        uuid: event.uuid.clone(),
+        quail_uuid: event.quail_id.clone(),
+        event_type: event.event_type.clone(),
+        event_date: event.event_date.clone(),
+        notes: event.notes.clone(),
+        photos: None,
+        device_id: device_id.to_string(),
+    };
+    if let Err(create_err) = client.create_event(create_args).await {
+        let update_args = UpdateEventArgs {
+            uuid: event.uuid.clone(),
+            event_type: event.event_type.clone(),
+            event_date: event.event_date.clone(),
+            notes: event.notes.clone(),
+            photos: None,
+        };
         client
-            .call_reducer("update_event", &update_args)
+            .update_event(update_args)
             .await
             .map_err(|update_err| {
                 AppError::Other(format!(
@@ -364,14 +364,14 @@ async fn import_egg_record_v1(
 
     let _ = owner;
 
-    let args = serde_json::json!({
-        "uuid": egg_record.uuid.clone(),
-        "record_date": record_date,
-        "total_eggs": egg_record.total_eggs,
-        "notes": sats_option_string(egg_record.notes.clone()),
-        "device_id": device_id,
-    });
-    client.call_reducer("upsert_egg_record", &args).await?;
+    let args = UpsertEggRecordArgs {
+        uuid: egg_record.uuid.clone(),
+        record_date: record_date,
+        total_eggs: egg_record.total_eggs,
+        notes: egg_record.notes.clone(),
+        device_id: device_id.to_string(),
+    };
+    client.upsert_egg_record(args).await?;
 
     Ok(())
 }
@@ -443,83 +443,67 @@ async fn import_photo_v1(
 
     // Use canonical path format expected by current app/photo service.
     let relative_path = crate::services::photo_paths::original_relative_path(&photo.uuid);
-    let (collection_uuid, create_collection_args) = if let Some(quail_id) = &photo.quail_id {
-        // Requirement: merge all photos of a quail into exactly one collection.
-        let col_uuid = quail_collections
-            .entry(quail_id.clone())
-            .or_insert_with(|| format!("v1-col-quail-{}", quail_id))
-            .clone();
-        (
-            col_uuid,
-            Some(serde_json::json!({
-                "uuid": quail_collections
-                    .get(quail_id)
-                    .cloned()
-                    .unwrap_or_else(|| format!("v1-col-quail-{}", quail_id)),
-                "quail_uuid": sats_option_string(Some(quail_id.clone())),
-                "event_uuid": serde_json::Value::Null,
-                "name": format!("Imported quail {}", quail_id),
-                "device_id": device_id,
-            })),
-        )
-    } else if let Some(event_id) = &photo.event_id {
-        let col_uuid = event_collections
-            .entry(event_id.clone())
-            .or_insert_with(|| format!("v1-col-event-{}", event_id))
-            .clone();
-        (
-            col_uuid,
-            Some(serde_json::json!({
-                "uuid": event_collections
-                    .get(event_id)
-                    .cloned()
-                    .unwrap_or_else(|| format!("v1-col-event-{}", event_id)),
-                "quail_uuid": serde_json::Value::Null,
-                "event_uuid": sats_option_string(Some(event_id.clone())),
-                "name": format!("Imported event {}", event_id),
-                "device_id": device_id,
-            })),
-        )
-    } else {
-        // Fallback for orphaned photos.
-        let col_uuid = format!("v1-col-photo-{}", photo.uuid);
-        (
-            col_uuid.clone(),
-            Some(serde_json::json!({
-                "uuid": col_uuid,
-                "quail_uuid": serde_json::Value::Null,
-                "event_uuid": serde_json::Value::Null,
-                "name": "Imported photo".to_string(),
-                "device_id": device_id,
-            })),
-        )
+    let (collection_uuid, quail_uuid, event_uuid, collection_name) =
+        if let Some(quail_id) = &photo.quail_id {
+            // Requirement: merge all photos of a quail into exactly one collection.
+            let col_uuid = quail_collections
+                .entry(quail_id.clone())
+                .or_insert_with(|| format!("v1-col-quail-{}", quail_id))
+                .clone();
+            (
+                col_uuid,
+                Some(quail_id.clone()),
+                None,
+                format!("Imported quail {}", quail_id),
+            )
+        } else if let Some(event_id) = &photo.event_id {
+            let col_uuid = event_collections
+                .entry(event_id.clone())
+                .or_insert_with(|| format!("v1-col-event-{}", event_id))
+                .clone();
+            (
+                col_uuid,
+                None,
+                Some(event_id.clone()),
+                format!("Imported event {}", event_id),
+            )
+        } else {
+            // Fallback for orphaned photos.
+            (
+                format!("v1-col-photo-{}", photo.uuid),
+                None,
+                None,
+                "Imported photo".to_string(),
+            )
+        };
+
+    // Collection may already exist (e.g., subsequent photo of same quail).
+    // Ignore reducer errors in that case and continue with photo create.
+    let _ = client
+        .create_photo_collection(CreatePhotoCollectionArgs {
+            uuid: collection_uuid.clone(),
+            quail_uuid,
+            event_uuid,
+            name: collection_name,
+            device_id: device_id.to_string(),
+        })
+        .await;
+
+    let create_photo_args = CreatePhotoArgs {
+        uuid: photo.uuid.clone(),
+        collection_uuid: collection_uuid.clone(),
+        relative_path,
+        device_id: device_id.to_string(),
     };
+    client.create_photo(create_photo_args).await?;
 
-    if let Some(create_collection_args) = create_collection_args {
-        // Collection may already exist (e.g., subsequent photo of same quail).
-        // Ignore reducer errors in that case and continue with photo create.
-        let _ = client
-            .call_reducer("create_photo_collection", &create_collection_args)
-            .await;
-    }
-
-    let create_photo_args = serde_json::json!({
-        "uuid": photo.uuid.clone(),
-        "collection_uuid": collection_uuid.clone(),
-        "relative_path": relative_path,
-        "device_id": device_id,
-    });
+    let update_collection_args = UpdatePhotoCollectionArgs {
+        uuid: collection_uuid,
+        preview_photo_uuid: Some(photo.uuid.clone()),
+        updated_at: chrono::Utc::now().timestamp(),
+    };
     client
-        .call_reducer("create_photo", &create_photo_args)
-        .await?;
-
-    let update_collection_args = serde_json::json!({
-        "uuid": collection_uuid,
-        "preview_photo_uuid": sats_option_string(Some(photo.uuid.clone())),
-        "updated_at": chrono::Utc::now().timestamp(),
-    });
-    client
-        .call_reducer("update_photo_collection", &update_collection_args)
+        .update_photo_collection(update_collection_args)
         .await?;
 
     Ok(())

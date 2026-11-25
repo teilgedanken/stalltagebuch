@@ -1,14 +1,14 @@
 ---
 name: makei18n
-description: Internationalize a Dioxus 0.7 component and update locales via dx-i18n.
+description: Internationalize a Dioxus 0.8.0-alpha.3 component and update locales via dx-i18n.
 argument-hint: Inputs: selected file(s), default locale file path (e.g., locales/de-DE.ftl), optional target locales.
 ---
-Generalize the selected code for internationalization in a Dioxus 0.7 application.
+Generalize the selected code for internationalization in a Dioxus 0.8.0-alpha.3 application.
 
 Goals:
 - Translate visible UI text to the target language and make all strings translatable using dioxus-i18n.
 - Replace hardcoded strings in RSX with translation lookups via the `t!` macro.
-- Keep the implementation idiomatic for Dioxus 0.7 (no `cx`/`Scope`/`use_state`; prefer `use_signal`, `use_memo`, `use_resource`).
+- Keep the implementation idiomatic for Dioxus 0.8.0-alpha.3 (no `cx`/`Scope`/`use_state`; prefer `use_signal`, `use_memo`, `use_resource`).
 - Use `dx-i18n` to extract and maintain keys; do not hand-edit locale files beyond what `dx-i18n` outputs.
 
 Instructions:
@@ -51,7 +51,7 @@ Instructions:
 8) Deliverables
 - Provide the patched code snippets for the selected file(s).
 
-Example patterns (Dioxus 0.7):
+Example patterns (Dioxus 0.8.0-alpha.3):
 - Text node: `h2 { { tid!("page-title") } }`
 - Attribute: `placeholder: tid!("search-placeholder")`
 - Parameterized: `{ tid!("greeting-user", name: user_name.clone()) }`

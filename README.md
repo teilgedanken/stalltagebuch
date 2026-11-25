@@ -1,6 +1,6 @@
 # 🥚 Wachtel-Stallbuch
 
-Native Android-App zur Verwaltung von Wachteln und Eierproduktion, entwickelt mit Dioxus 0.7 und Rust.
+Native Android-App zur Verwaltung von Wachteln und Eierproduktion, entwickelt mit Dioxus 0.8.0-alpha.3 und Rust.
 
 ## ✨ Features
 
@@ -196,7 +196,7 @@ cargo test
 ## 📚 Dokumentation
 
 - **[DEVELOPMENT.md](DEVELOPMENT.md):** Build-Anleitung und Testing
-- **[AGENTS.md](AGENTS.md):** Dioxus 0.7 API-Referenz für AI-Assistenten
+- **[AGENTS.md](AGENTS.md):** Dioxus-API-Referenz für AI-Assistenten (Projektversion 0.8.0-alpha.3)
 - **[PROPOSALS.md](PROPOSALS.md):** Geplante Features
 
 ## 📄 Lizenz

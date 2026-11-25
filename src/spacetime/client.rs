@@ -1,124 +1,238 @@
-//! HTTP client for the SpacetimeDB HTTP API.
+//! Typed, awaitable SpacetimeDB client for non-UI code (e.g. the ZIP importers
+//! and background photo sync metadata service).
 //!
-//! SpacetimeDB exposes a REST-like HTTP interface alongside its WebSocket
-//! subscription API.  This module uses that HTTP interface so that the app
-//! can work without the generated WebSocket bindings (which require
-//! `spacetime generate`).
-//!
-//! Endpoint reference (SpacetimeDB v2):
-//! - `POST /v1/database/{name}/call/{reducer}` – call a reducer
-//! - `POST /v1/database/{name}/sql`             – execute a SQL query
+//! Components use the generated Dioxus hooks.  Plain async services have no
+//! component context, so this wraps a [`DbConnection`] and exposes the
+//! generated reducers and table access as `async` methods that resolve once the
+//! server has executed (or rejected) the reducer or applied subscriptions.
 
+use crate::dioxus_spacetime_module_bindings::{
+    CreateEventArgs, CreatePhotoArgs, CreatePhotoCollectionArgs, CreateQuailArgs, DbConnection,
+    ReducerEventContext, RegisterDeviceArgs, RemoteReducers, RemoteTables, UpdateEventArgs,
+    UpdatePhotoCollectionArgs, UpdatePhotoSyncStatusArgs, UpdateQuailArgs, UpsertEggRecordArgs,
+    create_event_reducer::create_event as _,
+    create_photo_collection_reducer::create_photo_collection as _,
+    create_photo_reducer::create_photo as _, create_quail_reducer::create_quail as _,
+    register_device_reducer::register_device as _, set_quail_photo_reducer::set_quail_photo as _,
+    update_event_reducer::update_event as _,
+    update_photo_collection_reducer::update_photo_collection as _,
+    update_photo_sync_status_reducer::update_photo_sync_status as _,
+    update_quail_reducer::update_quail as _, upsert_egg_record_reducer::upsert_egg_record as _,
+};
 use crate::error::AppError;
-use serde::Serialize;
+use spacetimedb_sdk::DbContext as _;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::oneshot;
+use tokio::time::timeout;
 
-/// Thin async wrapper around the SpacetimeDB HTTP API.
-///
-/// Clone-cheap: the inner `reqwest::Client` is already `Arc`-wrapped.
-#[derive(Clone, Debug)]
+const TIMEOUT: Duration = Duration::from_secs(30);
+
+type ReducerResult = Result<Result<(), String>, spacetimedb_sdk::__codegen::InternalError>;
+type ReducerCallback = Box<dyn FnOnce(&ReducerEventContext, ReducerResult) + Send>;
+
+struct ConnectionDropGuard(DbConnection);
+
+impl Drop for ConnectionDropGuard {
+    fn drop(&mut self) {
+        let _ = self.0.disconnect();
+    }
+}
+
+/// Connection to one SpacetimeDB database. Cheap to clone (`Arc`-backed) and disconnects
+/// automatically when the last handle is dropped.
+#[derive(Clone)]
 pub struct SpacetimeClient {
-    http: reqwest::Client,
-    /// e.g. `https://testnet.spacetimedb.com`
-    pub base_url: String,
-    /// Name or identity of the deployed database, e.g. `stalltagebuch`
-    pub database: String,
-    /// Bearer token obtained from `spacetime login` or the Stalltagebuch
-    /// settings screen.
-    pub token: String,
+    inner: Arc<ConnectionDropGuard>,
 }
 
 impl SpacetimeClient {
-    /// Build a new client.  All fields are required.
-    pub fn new(
-        base_url: impl Into<String>,
-        database: impl Into<String>,
-        token: impl Into<String>,
-    ) -> Self {
-        let http = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
+    /// Connect and wait until the connection is established.
+    pub async fn connect(base_url: &str, database: &str, token: &str) -> Result<Self, AppError> {
+        Self::connect_with_subscriptions(base_url, database, token, &[], |_| {}).await
+    }
+
+    /// Connect, optionally subscribe to `queries` (waiting until applied), and invoke `on_disconnect`
+    /// when the connection closes.
+    pub async fn connect_with_subscriptions(
+        base_url: &str,
+        database: &str,
+        token: &str,
+        queries: &[&str],
+        on_disconnect: impl FnOnce(Option<String>) + Send + 'static,
+    ) -> Result<Self, AppError> {
+        let (tx, rx) = oneshot::channel::<Result<(), String>>();
+        let tx = Arc::new(Mutex::new(Some(tx)));
+        let finish = |tx: &Arc<Mutex<Option<oneshot::Sender<Result<(), String>>>>>,
+                      result: Result<(), String>| {
+            if let Some(tx) = tx.lock().ok().and_then(|mut g| g.take()) {
+                let _ = tx.send(result);
+            }
+        };
+
+        let owned_queries: Vec<String> = queries.iter().map(|q| (*q).to_string()).collect();
+        let (on_ok, on_err, on_disc) = (tx.clone(), tx.clone(), tx);
+        let connection = DbConnection::builder()
+            .with_uri(base_url)
+            .with_database_name(database)
+            .with_token(Some(token.to_string()))
+            .on_connect(move |conn, _identity, _token| {
+                if owned_queries.is_empty() {
+                    finish(&on_ok, Ok(()));
+                } else {
+                    let on_applied = on_ok.clone();
+                    let on_sub_err = on_ok;
+                    conn.subscription_builder()
+                        .on_applied(move |_ctx| finish(&on_applied, Ok(())))
+                        .on_error(move |_ctx, err| finish(&on_sub_err, Err(err.to_string())))
+                        .subscribe(owned_queries);
+                }
+            })
+            .on_connect_error(move |_ctx, err| finish(&on_err, Err(err.to_string())))
+            .on_disconnect(move |_ctx, err| {
+                let err_str = err.map(|e| e.to_string());
+                on_disconnect(err_str.clone());
+                let msg = err_str.unwrap_or_else(|| "disconnected".to_string());
+                finish(&on_disc, Err(msg));
+            })
             .build()
-            .expect(
-                "Failed to build reqwest HTTP client. \
-                 This usually indicates a TLS configuration problem \
-                 (e.g. missing root certificates).",
-            );
-        Self {
-            http,
-            base_url: base_url.into(),
-            database: database.into(),
-            token: token.into(),
+            .map_err(|e| AppError::Other(format!("failed to connect to SpacetimeDB: {e}")))?;
+        let _ = connection.run_threaded();
+
+        match timeout(TIMEOUT, rx).await {
+            Ok(Ok(Ok(()))) => Ok(Self {
+                inner: Arc::new(ConnectionDropGuard(connection)),
+            }),
+            Ok(Ok(Err(e))) => Err(AppError::Other(format!(
+                "SpacetimeDB connection failed: {e}"
+            ))),
+            Ok(Err(_)) => Err(AppError::Other(
+                "SpacetimeDB connection channel closed".into(),
+            )),
+            Err(_) => Err(AppError::Other(
+                "Timed out connecting to SpacetimeDB".into(),
+            )),
         }
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────────
+    /// Whether the underlying WebSocket connection is still active.
+    pub fn is_active(&self) -> bool {
+        self.inner.0.is_active()
+    }
 
-    fn reducer_url(&self, reducer: &str) -> String {
-        format!(
-            "{}/v1/database/{}/call/{}",
-            self.base_url.trim_end_matches('/'),
-            self.database,
-            reducer
+    /// Explicitly disconnect the underlying connection.
+    pub fn disconnect(&self) {
+        let _ = self.inner.0.disconnect();
+    }
+
+    /// Access the local client table cache populated by subscriptions.
+    pub fn db(&self) -> &RemoteTables {
+        &self.inner.0.db
+    }
+
+    /// Invoke a reducer and await its outcome.
+    async fn call(
+        &self,
+        name: &str,
+        invoke: impl FnOnce(&RemoteReducers, ReducerCallback) -> spacetimedb_sdk::Result<()>,
+    ) -> Result<(), AppError> {
+        let (tx, rx) = oneshot::channel::<ReducerResult>();
+        invoke(
+            &self.inner.0.reducers,
+            Box::new(move |_ctx, result| {
+                let _ = tx.send(result);
+            }),
         )
+        .map_err(|e| AppError::Other(format!("failed to dispatch reducer {name}: {e}")))?;
+
+        match timeout(TIMEOUT, rx).await {
+            Ok(Ok(Ok(Ok(())))) => Ok(()),
+            Ok(Ok(Ok(Err(msg)))) => Err(AppError::Other(format!("reducer {name} failed: {msg}"))),
+            Ok(Ok(Err(e))) => Err(AppError::Other(format!(
+                "reducer {name} failed internally: {e}"
+            ))),
+            Ok(Err(_)) => Err(AppError::Other(format!("reducer {name}: callback dropped"))),
+            Err(_) => Err(AppError::Other(format!(
+                "Timed out waiting for reducer {name}"
+            ))),
+        }
     }
 
-    // ── Public API ────────────────────────────────────────────────────────────
-
-    /// Call a reducer with a JSON-serialisable argument.
-    pub async fn call_reducer<A: Serialize>(
-        &self,
-        reducer: &str,
-        args: &A,
-    ) -> Result<(), AppError> {
-        // SpacetimeDB HTTP expects reducer parameters under a top-level `args` key
-        // for reducers declared as `fn reducer(ctx: &ReducerContext, args: SomeArgs)`.
-        let args_json = serde_json::to_value(args)
-            .map_err(|e| AppError::Other(format!("serialise args: {e}")))?;
-        let body = serde_json::json!({ "args": args_json });
-
-        let resp = self
-            .http
-            .post(self.reducer_url(reducer))
-            .bearer_auth(&self.token)
-            .json(&body)
-            .send()
+    pub async fn create_quail(&self, args: CreateQuailArgs) -> Result<(), AppError> {
+        self.call("create_quail", |r, cb| r.create_quail_then(args, cb))
             .await
-            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
-
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::Other(format!(
-                "reducer {reducer} failed ({status}): {text}"
-            )));
-        }
-        Ok(())
     }
 
-    /// Call a reducer with an already-shaped JSON body.
-    ///
-    /// Use this for reducers with non-`args` signatures (e.g. multiple positional
-    /// arguments encoded as top-level keys).
-    pub async fn call_reducer_raw(
-        &self,
-        reducer: &str,
-        body: &serde_json::Value,
-    ) -> Result<(), AppError> {
-        let resp = self
-            .http
-            .post(self.reducer_url(reducer))
-            .bearer_auth(&self.token)
-            .json(body)
-            .send()
+    pub async fn update_quail(&self, args: UpdateQuailArgs) -> Result<(), AppError> {
+        self.call("update_quail", |r, cb| r.update_quail_then(args, cb))
             .await
-            .map_err(|e| AppError::Other(format!("network error: {}", e)))?;
+    }
 
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::Other(format!(
-                "reducer {reducer} failed ({status}): {text}"
-            )));
-        }
-        Ok(())
+    pub async fn create_event(&self, args: CreateEventArgs) -> Result<(), AppError> {
+        self.call("create_event", |r, cb| r.create_event_then(args, cb))
+            .await
+    }
+
+    pub async fn update_event(&self, args: UpdateEventArgs) -> Result<(), AppError> {
+        self.call("update_event", |r, cb| r.update_event_then(args, cb))
+            .await
+    }
+
+    pub async fn upsert_egg_record(&self, args: UpsertEggRecordArgs) -> Result<(), AppError> {
+        self.call("upsert_egg_record", |r, cb| {
+            r.upsert_egg_record_then(args, cb)
+        })
+        .await
+    }
+
+    pub async fn register_device(&self, args: RegisterDeviceArgs) -> Result<(), AppError> {
+        self.call("register_device", |r, cb| r.register_device_then(args, cb))
+            .await
+    }
+
+    pub async fn create_photo_collection(
+        &self,
+        args: CreatePhotoCollectionArgs,
+    ) -> Result<(), AppError> {
+        self.call("create_photo_collection", |r, cb| {
+            r.create_photo_collection_then(args, cb)
+        })
+        .await
+    }
+
+    pub async fn update_photo_collection(
+        &self,
+        args: UpdatePhotoCollectionArgs,
+    ) -> Result<(), AppError> {
+        self.call("update_photo_collection", |r, cb| {
+            r.update_photo_collection_then(args, cb)
+        })
+        .await
+    }
+
+    pub async fn create_photo(&self, args: CreatePhotoArgs) -> Result<(), AppError> {
+        self.call("create_photo", |r, cb| r.create_photo_then(args, cb))
+            .await
+    }
+
+    pub async fn update_photo_sync_status(
+        &self,
+        args: UpdatePhotoSyncStatusArgs,
+    ) -> Result<(), AppError> {
+        self.call("update_photo_sync_status", |r, cb| {
+            r.update_photo_sync_status_then(args, cb)
+        })
+        .await
+    }
+
+    pub async fn set_quail_photo(
+        &self,
+        quail_uuid: String,
+        photo_uuid: Option<String>,
+    ) -> Result<(), AppError> {
+        self.call("set_quail_photo", |r, cb| {
+            r.set_quail_photo_then(quail_uuid, photo_uuid, cb)
+        })
+        .await
     }
 }

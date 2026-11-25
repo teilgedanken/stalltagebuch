@@ -21,6 +21,7 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
     let mut error = use_signal(|| None::<String>);
     let mut success = use_signal(|| false);
     let mut existing_record_uuid = use_signal(|| None::<String>);
+    let mut show_delete_confirm = use_signal(|| false);
 
     // Sync form with record for the selected date
     use_effect(move || {
@@ -105,7 +106,6 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
 
         let current_uuid = existing_record_uuid();
         let upsert_reducer = upsert_egg_record.clone();
-        let delete_reducer = delete_egg_record.clone();
         let on_navigate_submit = on_navigate.clone();
         let device_id = crate::services::device_id_service::get_device_id()
             .unwrap_or_else(|_| "unknown-device".to_string());
@@ -115,29 +115,35 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
         spawn(async move {
-            if eggs_count == 0 {
-                if let Some(uuid) = current_uuid {
-                    if let Err(err) = delete_reducer(uuid) {
-                        error.set(Some(err.to_string()));
-                        return;
-                    }
-                }
-            } else {
-                if let Err(err) = upsert_reducer(spacetime::UpsertEggRecordArgs {
-                    uuid: record_uuid,
-                    record_date: record_timestamp,
-                    total_eggs: eggs_count,
-                    notes: notes_opt,
-                    device_id,
-                }) {
-                    error.set(Some(err.to_string()));
-                    return;
-                }
+            if let Err(err) = upsert_reducer(spacetime::UpsertEggRecordArgs {
+                uuid: record_uuid,
+                record_date: record_timestamp,
+                total_eggs: eggs_count,
+                notes: notes_opt,
+                device_id,
+            }) {
+                error.set(Some(err.to_string()));
+                return;
             }
 
             success.set(true);
             on_navigate_submit.call(Screen::Statistics);
         });
+    };
+
+    let mut handle_delete = move || {
+        error.set(None);
+        if let Some(uuid) = existing_record_uuid() {
+            let delete_reducer = delete_egg_record.clone();
+            let on_navigate_delete = on_navigate.clone();
+            spawn(async move {
+                if let Err(err) = delete_reducer(uuid) {
+                    error.set(Some(err.to_string()));
+                    return;
+                }
+                on_navigate_delete.call(Screen::Statistics);
+            });
+        }
     };
 
     rsx! {
@@ -181,7 +187,10 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                                 r#type: "date",
                                 class: "input",
                                 value: "{date_str}",
-                                oninput: move |e| date_str.set(e.value()),
+                                oninput: move |e| {
+                                    date_str.set(e.value());
+                                    show_delete_confirm.set(false);
+                                },
                                 autofocus: true,
                             }
                         }
@@ -222,6 +231,37 @@ pub fn EggTrackingScreen(date: Option<String>, on_navigate: EventHandler<Screen>
                             {tid!("action-update")}
                         } else {
                             {tid!("action-save")}
+                        }
+                    }
+
+                    if existing_record_uuid().is_some() {
+                        if show_delete_confirm() {
+                            div { class: "mt-4",
+                                div { class: "notification is-warning is-light",
+                                    "⚠️ "
+                                    {tid!("confirm-delete-egg-record")}
+                                }
+                                div { class: "buttons",
+                                    button {
+                                        class: "button is-danger is-fullwidth",
+                                        onclick: move |_| handle_delete(),
+                                        "🗑️ "
+                                        {tid!("action-delete-permanently")}
+                                    }
+                                    button {
+                                        class: "button is-light is-fullwidth",
+                                        onclick: move |_| show_delete_confirm.set(false),
+                                        {tid!("action-cancel")}
+                                    }
+                                }
+                            }
+                        } else {
+                            button {
+                                class: "button is-danger is-light is-fullwidth mt-3",
+                                onclick: move |_| show_delete_confirm.set(true),
+                                "🗑️ "
+                                {tid!("action-delete")}
+                            }
                         }
                     }
                 }

@@ -198,17 +198,19 @@ spacetime publish --project-path stalltagebuch-server stalltagebuch-server
 
 ### Generating typed client bindings
 
-Once the Dioxus binding generator is merged (https://github.com/enaut/SpacetimeDB/pull/4):
+Bindings live in `src/dioxus_spacetime_module_bindings` and are generated with the
+`spacetime` CLI built from the SpacetimeDB fork (`../SpacetimeDB`, branch
+`copilot/create-pr-for-dioxus-changes`; `spacetimedb-standalone` must be built next to it):
 
 ```bash
-spacetime generate \
+../SpacetimeDB/target/x86_64-unknown-linux-gnu/debug/spacetimedb-cli generate \
   --lang dioxus \
-  --out-dir src/spacetime/module_bindings \
-  --project-path stalltagebuch-server
+  --out-dir src/dioxus_spacetime_module_bindings \
+  --module-path stalltagebuch-server --yes
 ```
 
-Until then, the hand-written types in `src/spacetime/types.rs` and the context in
-`src/spacetime/context.rs` serve as the reactive layer.
+Components use the generated hooks (`use_table_*`, `use_reducer_*`); plain async services use
+`spacetime::client::SpacetimeClient`.
 
 ### Connecting the app
 

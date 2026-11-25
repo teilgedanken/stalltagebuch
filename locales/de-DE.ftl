@@ -1,16 +1,16 @@
 # Generated translation template by dx-i18n
-# Contains 303 translation keys
+# Contains 312 translation keys
 
 # Source: ./src/components/profile_detail.rs:415
 action-add-event = Ereignis
 
-# Source: ./src/components/profile_add.rs:194
+# Source: ./src/components/event_edit.rs:299
 action-back = Zurück
 
 # Source: ./src/components/profile_add.rs:389
 action-camera = Kamera
 
-# Source: ./src/components/event_add.rs:161
+# Source: ./src/components/settings/nextcloud_card.rs:532
 action-cancel = Abbrechen
 
 # Source: ./src/components/profile_photo_card.rs:241
@@ -20,41 +20,41 @@ action-crop = Zuschneiden
 # Source: ./src/components/event_edit.rs:627
 action-delete = Löschen
 
-# Source: ./src/components/profile_edit.rs:510
+# Source: ./src/components/settings/nextcloud_card.rs:541
 action-delete-permanently = Endgültig löschen
 
-# Source: ./src/components/profile_edit.rs:527
+# Source: ./src/components/profile_edit.rs:531
 action-delete-quail = Wachtel löschen
 
 # Source: ./src/components/profile_detail.rs:488
 action-edit = Bearbeiten
 
-# Source: ./src/components/profile_add.rs:357
+# Source: ./src/components/event_edit.rs:483
 action-gallery = Galerie
 
-# Source: ./src/components/profile_add.rs:354
+# Source: ./src/components/settings/nextcloud_card.rs:500
 action-loading = Lädt...
 
 # Source: ./src/components/profile_list.rs:120
 # UNUSED: This key is no longer used in the code
 action-new = Neu
 
-# Source: ./src/components/profile_photo_card.rs:336
+# Source: ./src/components/event_edit.rs:586
 action-photo = Foto
 
 # Source: ./src/components/settings/network_check_card.rs:126
 action-retry = Erneut versuchen
 
-# Source: ./src/components/egg_tracking.rs:224
+# Source: ./src/components/event_add.rs:148
 action-save = Speichern
 
 # Source: ./src/components/event_add.rs:146
 action-saving = Speichere...
 
-# Source: ./src/components/egg_tracking.rs:222
+# Source: ./src/components/egg_tracking.rs:228
 action-update = Aktualisieren
 
-# Source: ./src/components/home.rs:25
+# Source: ./src/components/home.rs:28
 app-title = Wachtel-Stallbuch
 
 # Source: ./src/components/settings/backup_card.rs:492
@@ -233,7 +233,10 @@ backup-upload-running = 🔄 Backup wird erstellt und hochgeladen...
 # Parameters: $filename
 backup-upload-success = ✅ Backup erfolgreich hochgeladen: { $filename }
 
-# Source: ./src/components/profile_edit.rs:502
+# Source: ./src/components/egg_tracking.rs:239
+confirm-delete-egg-record = Soll dieser Eier-Eintrag wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.
+
+# Source: ./src/components/profile_edit.rs:506
 confirm-delete-quail = Möchten Sie diese Wachtel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 
 # UNUSED: This key is no longer used in the code
@@ -246,13 +249,13 @@ crop-editor-cancel = Abbrechen
 # UNUSED: This key is no longer used in the code
 crop-editor-title = Foto zuschneiden
 
-# Source: ./src/components/crop_editor.rs:451
+# Source: ./src/components/crop_editor.rs:460
 crop_editor_apply = Anwenden
 
-# Source: ./src/components/crop_editor.rs:448
+# Source: ./src/components/crop_editor.rs:457
 crop_editor_cancel = Abbrechen
 
-# Source: ./src/components/crop_editor.rs:241
+# Source: ./src/components/crop_editor.rs:242
 crop_editor_title = Zuschneiden
 
 # Source: ./src/components/egg_history.rs:109
@@ -269,20 +272,20 @@ egg-history-empty = Keine Einträge vorhanden
 # UNUSED: This key is no longer used in the code
 egg-history-loaded = { $count } Einträge geladen
 
-# Source: ./src/components/statistics.rs:344
+# Source: ./src/components/statistics.rs:352
 egg-history-title = Eier-Historie
 
-# Source: ./src/components/egg_tracking.rs:172
+# Source: ./src/components/egg_tracking.rs:178
 egg-tracking-exists-warning = Eintrag für dieses Datum existiert bereits - Änderungen überschreiben den bestehenden Eintrag
 
 # Source: ./src/components/egg_tracking.rs:250
 # UNUSED: This key is no longer used in the code
 egg-tracking-show-history = Historie anzeigen
 
-# Source: ./src/components/egg_tracking.rs:165
+# Source: ./src/components/egg_tracking.rs:171
 egg-tracking-success = Eintrag erfolgreich gespeichert!
 
-# Source: ./src/components/egg_tracking.rs:150
+# Source: ./src/components/home.rs:48
 egg-tracking-title = Eier eintragen
 
 # Source: ./src/components/profile_add.rs:45
@@ -298,10 +301,10 @@ error-android-only-camera = Kamera nur auf Android verfügbar
 # Source: ./src/components/event_edit.rs:473
 error-android-only-gallery = Galerie nur auf Android verfügbar
 
-# Source: ./src/components/profile_photo_card.rs:326
+# Source: ./src/components/profile_photo_card.rs:332
 error-camera-android-only = Kamera nur auf Android verfügbar
 
-# Source: ./src/components/profile_photo_card.rs:275
+# Source: ./src/components/profile_photo_card.rs:281
 error-capture-failed = Fehler bei Aufnahme
 
 # Source: ./src/components/event_edit.rs:529
@@ -311,16 +314,16 @@ error-capture-photo = Aufnahmefehler: { $error }
 # Source: ./src/components/settings/network_check_card.rs:15
 error-client = Client-Fehler
 
-# Source: ./src/components/egg_tracking.rs:82
+# Source: ./src/components/egg_tracking.rs:83
 error-date-format = Ungültiges Datum (Format: YYYY-MM-DD)
 
-# Source: ./src/components/egg_tracking.rs:60
+# Source: ./src/components/egg_tracking.rs:61
 error-eggs-count-empty = Eierzahl darf nicht leer sein
 
-# Source: ./src/components/egg_tracking.rs:71
+# Source: ./src/components/egg_tracking.rs:72
 error-eggs-count-invalid = Ungültige Eierzahl
 
-# Source: ./src/components/egg_tracking.rs:67
+# Source: ./src/components/egg_tracking.rs:68
 error-eggs-count-negative = Eierzahl darf nicht negativ sein
 
 # Source: ./src/components/event_edit.rs:217
@@ -332,7 +335,7 @@ error-invalid-date = Ungültiges Datumsformat
 # Source: ./src/components/event_edit.rs:463
 error-invalid-event-id = Ungueltige Ereignis-ID
 
-# Source: ./src/components/profile_photo_card.rs:206
+# Source: ./src/components/profile_photo_card.rs:212
 error-multiselect-android-only = Mehrfach-Auswahl nur auf Android verfügbar
 
 # Name cannot be empty
@@ -342,7 +345,7 @@ error-name-required = Name darf nicht leer sein
 # Source: ./src/components/settings/network_check_card.rs:14
 error-network = Fehler
 
-# Source: ./src/components/egg_tracking.rs:52
+# Source: ./src/components/event_add.rs:30
 error-not-connected = Nicht mit SpacetimeDB verbunden
 
 # Source: ./src/components/event_edit.rs:424
@@ -352,7 +355,7 @@ error-pick-images = Auswahlfehler: { $error }
 # Source: ./src/components/profile_add.rs:60
 error-ring-color-combination-not-unique = Diese Ringfarbkombination ist bereits einer anderen Wachtel zugeordnet
 
-# Source: ./src/components/profile_photo_card.rs:143
+# Source: ./src/components/profile_photo_card.rs:149
 error-selection-failed = Fehler bei Auswahl
 
 # Source: ./src/components/event_add.rs:85
@@ -411,40 +414,40 @@ field-date = Geburtstag
 # UNUSED: This key is no longer used in the code
 field-date-format-hint = Format: YYYY-MM-DD
 
-# Source: ./src/components/egg_tracking.rs:178
+# Source: ./src/components/egg_tracking.rs:184
 field-date-required = Datum *
 
-# Source: ./src/components/egg_tracking.rs:196
+# Source: ./src/components/egg_tracking.rs:202
 field-eggs-count-placeholder = z.B. 12
 
-# Source: ./src/components/egg_tracking.rs:191
+# Source: ./src/components/egg_tracking.rs:197
 field-eggs-count-required = Anzahl Eier *
 
 # Source: ./src/components/event_add.rs:92
 field-event-type = Ereignistyp
 
-# Source: ./src/components/profile_edit.rs:305
+# Source: ./src/components/profile_edit.rs:308
 field-gender = Geschlecht
 
-# Source: ./src/components/profile_edit.rs:296
+# Source: ./src/components/profile_edit.rs:299
 field-name-placeholder = z.B. Flecki
 
-# Source: ./src/components/profile_edit.rs:291
+# Source: ./src/components/profile_edit.rs:294
 field-name-required = Name *
 
-# Source: ./src/components/egg_tracking.rs:205
+# Source: ./src/components/event_edit.rs:359
 field-notes = Notizen
 
 # Source: ./src/components/event_add.rs:127
 field-notes-optional = Notizen (optional)
 
-# Source: ./src/components/egg_tracking.rs:210
+# Source: ./src/components/egg_tracking.rs:216
 field-notes-placeholder = Besonderheiten, Auffälligkeiten, etc.
 
-# Source: ./src/components/profile_edit.rs:378
+# Source: ./src/components/profile_edit.rs:381
 field-photos = Fotos
 
-# Source: ./src/components/profile_edit.rs:332
+# Source: ./src/components/profile_edit.rs:335
 field-ring-color = Ringfarbe
 
 # Source: ./src/components/event_edit.rs:325
@@ -468,22 +471,22 @@ import-failed = Fehler beim Importieren
 # Source: ./src/components/settings/backup_card.rs:302
 import-in-progress = Import läuft...
 
-# Source: ./src/components/profile_edit.rs:372
+# Source: ./src/components/profile_edit.rs:375
 info-photos-detail-view = Fotos werden in der Detailansicht hinzugefügt. Hier können Sie nur das Profilbild auswählen oder Fotos löschen.
 
-# Source: ./src/components/home.rs:87
+# Source: ./src/components/home.rs:100
 info-spacetimedb-connected = SpacetimeDB: verbunden
 
-# Source: ./src/components/home.rs:81
+# Source: ./src/components/home.rs:94
 info-spacetimedb-connecting = SpacetimeDB: verbinde...
 
-# Source: ./src/components/home.rs:78
+# Source: ./src/components/home.rs:91
 info-spacetimedb-disconnected = SpacetimeDB: nicht verbunden
 
-# Source: ./src/components/home.rs:89
+# Source: ./src/components/home.rs:102
 info-spacetimedb-error = SpacetimeDB: Verbindungsfehler
 
-# Source: ./src/components/profile_edit.rs:465
+# Source: ./src/components/profile_edit.rs:469
 info-tap-photo-to-mark = Tippen Sie auf ein Foto, um es als Profilbild zu markieren.
 
 # Source: ./src/components/event_edit.rs:633
@@ -495,35 +498,14 @@ loading-profile = Lade Profil...
 # Source: ./src/components/navigation.rs:33
 nav-eggs = Eier
 
-# Source: ./src/components/navigation.rs
-nav-quest = Quest
-
-# Source: ./src/components/quest_mode.rs
-quest-last-photo-days = vor { $days } Tagen
-
-# Source: ./src/components/quest_mode.rs
-quest-no-candidates = Alle Wachteln haben aktuelle Fotos! 🎉
-
-# Source: ./src/components/quest_mode.rs
-quest-no-photo = Noch kein Foto
-
-# Source: ./src/components/quest_mode.rs
-quest-or = oder
-
-# Source: ./src/components/quest_mode.rs
-quest-recent-photos = Letzte Fotos
-
-# Source: ./src/components/quest_mode.rs
-quest-skip = Nächste Wachtel
-
-# Source: ./src/components/quest_mode.rs
-quest-title = Foto-Quest
-
 # Source: ./src/components/navigation.rs:15
 nav-home = Startseite
 
 # Source: ./src/components/navigation.rs:24
 nav-profiles = Profile
+
+# Source: ./src/components/navigation.rs:42
+nav-quest = Quest
 
 # Statistik
 # Source: ./src/components/navigation.rs:50
@@ -536,19 +518,19 @@ network-checking = Netzwerkverbindung prüfen...
 # Source: ./src/components/settings/network_check_card.rs:120
 network-offline = Keine Internet-Verbindung
 
-# Source: ./src/components/statistics.rs:244
+# Source: ./src/components/profile_list.rs:619
 period-all = Alle
 
-# Source: ./src/components/statistics.rs:242
+# Source: ./src/components/profile_i18n.rs:41
 period-month = Monat
 
 # Source: ./src/components/profile_i18n.rs:15
 period-months = Monate
 
-# Source: ./src/components/statistics.rs:241
+# Source: ./src/components/statistics.rs:243
 period-week = Woche
 
-# Source: ./src/components/statistics.rs:243
+# Source: ./src/components/profile_i18n.rs:34
 period-year = Jahr
 
 # Source: ./src/components/profile_i18n.rs:36
@@ -582,7 +564,7 @@ profile-created-success = Profil erstellt!
 # Source: ./src/components/profile_detail.rs:187
 profile-detail-title = Profil
 
-# Source: ./src/components/profile_edit.rs:269
+# Source: ./src/components/profile_edit.rs:272
 profile-edit-title = Profil bearbeiten
 
 # Source: ./src/components/profile_add.rs:230
@@ -591,7 +573,7 @@ profile-gender-label = Geschlecht
 # Source: ./src/components/profile_list.rs:327
 profile-list-empty = Keine Profile vorhanden
 
-# Source: ./src/components/home.rs:40
+# Source: ./src/components/home.rs:43
 profile-list-title = Wachtel-Profile
 
 # Source: ./src/components/profile_add.rs:216
@@ -606,7 +588,30 @@ profile-photo-label = Foto
 # Source: ./src/components/profile_add.rs:257
 profile-ring-color-label = Ringfarbe
 
-# Source: ./src/components/home.rs:35
+# Source: ./src/components/quest_mode.rs:452
+# Parameters: $days
+quest-last-photo-days = vor { $days } Tagen
+
+# Source: ./src/components/quest_mode.rs:578
+quest-no-candidates = Alle Wachteln haben aktuelle Fotos! 🎉
+
+# Source: ./src/components/quest_mode.rs:440
+quest-no-photo = Noch kein Foto
+
+# Source: ./src/components/quest_mode.rs
+# UNUSED: This key is no longer used in the code
+quest-or = oder
+
+# Source: ./src/components/quest_mode.rs:513
+quest-recent-photos = Letzte Fotos
+
+# Source: ./src/components/quest_mode.rs:571
+quest-skip = Nächste Wachtel
+
+# Source: ./src/components/quest_mode.rs:392
+quest-title = Foto-Quest
+
+# Source: ./src/components/home.rs:38
 quick-access = Schnellzugriff
 
 # Source: ./src/components/ring_color_picker.rs:148
@@ -651,7 +656,7 @@ ring-color-yellow = Gelb
 # Source: ./src/components/profile_list.rs:241
 search-placeholder-name = Suche...
 
-# Source: ./src/components/home.rs:59
+# Source: ./src/components/home.rs:62
 settings-title = Einstellungen
 
 # Source: ./src/components/settings/spacetime_db_card.rs:64
@@ -745,20 +750,20 @@ spacetime-card-token-hint = Nur lokal gespeichert und fuer Reconnect wiederverwe
 # Source: ./src/components/settings/spacetime_db_card.rs:234
 spacetime-card-token-label = Auth-Token
 
-# Source: ./src/components/statistics.rs:229
+# Source: ./src/components/statistics.rs:231
 stats-add-entry = Eier eintragen
 
-# Source: ./src/components/statistics.rs:305
+# Source: ./src/components/statistics.rs:307
 stats-averages = Durchschnitte
 
-# Source: ./src/components/statistics.rs:526
+# Source: ./src/components/statistics.rs:576
 stats-chart-ma = 3-Tage-Mittel
 
 # let raw_label = tid!("stats-chart-raw").to_string();
-# Source: ./src/components/statistics.rs:525
+# Source: ./src/components/statistics.rs:575
 stats-chart-raw = Tageswert
 
-# Source: ./src/components/statistics.rs:309
+# Source: ./src/components/statistics.rs:311
 stats-daily-avg = Täglich
 
 # Source: ./src/components/statistics.rs:64
@@ -768,59 +773,59 @@ stats-date-format-extra-short = %d.%m
 # UNUSED: This key is no longer used in the code
 stats-date-format-short = %d.%m.%y
 
-# Source: ./src/components/statistics.rs:330
+# Source: ./src/components/statistics.rs:338
 stats-egg-chart-title = Eier-Verlauf
 
 # Source: ./src/components/statistics.rs:247
 # UNUSED: This key is no longer used in the code
 stats-last-10-days = Letzte 10 Tage
 
-# Source: ./src/components/statistics.rs:295
+# Source: ./src/components/statistics.rs:297
 stats-max = Maximum
 
-# Source: ./src/components/statistics.rs:290
+# Source: ./src/components/statistics.rs:292
 stats-min = Minimum
 
-# Source: ./src/components/statistics.rs:319
+# Source: ./src/components/statistics.rs:324
 stats-monthly-avg = Monatlich
 
-# Source: ./src/components/statistics.rs:415
+# Source: ./src/components/statistics.rs:423
 stats-no-data = Keine Daten vorhanden
 
-# Source: ./src/components/statistics.rs:266
+# Source: ./src/components/statistics.rs:268
 stats-overview = Übersicht
 
-# Source: ./src/components/statistics.rs:350
+# Source: ./src/components/statistics.rs:358
 stats-period = Zeitraum
 
-# Source: ./src/components/statistics.rs:387
+# Source: ./src/components/statistics.rs:395
 stats-population-hens = Hühnchen
 
-# Source: ./src/components/statistics.rs:407
+# Source: ./src/components/statistics.rs:415
 stats-population-ratio = Verhältnis
 
-# Source: ./src/components/statistics.rs:392
+# Source: ./src/components/statistics.rs:400
 stats-population-roosters = Hähnchen
 
-# Source: ./src/components/statistics.rs:379
+# Source: ./src/components/statistics.rs:387
 stats-population-title = Stallpopulation
 
-# Source: ./src/components/statistics.rs:382
+# Source: ./src/components/statistics.rs:390
 stats-population-total-quails = Wachteln
 
-# Source: ./src/components/home.rs:50
+# Source: ./src/components/home.rs:53
 stats-title = Statistik
 
-# Source: ./src/components/statistics.rs:285
+# Source: ./src/components/statistics.rs:287
 stats-total-eggs = Gesamt Eier
 
-# Source: ./src/components/statistics.rs:279
+# Source: ./src/components/statistics.rs:281
 stats-total-records = Gesamt Einträge
 
-# Source: ./src/components/statistics.rs:272
+# Source: ./src/components/statistics.rs:274
 stats-until = bis
 
-# Source: ./src/components/statistics.rs:314
+# Source: ./src/components/statistics.rs:316
 stats-weekly-avg = Wöchentlich
 
 # Source: ./src/components/profile_detail.rs:272
@@ -829,7 +834,7 @@ status-alive = Am Leben
 # Source: ./src/components/profile_detail.rs:266
 status-born = Geboren
 
-# Source: ./src/components/home.rs:19
+# Source: ./src/components/home.rs:22
 # Parameters: $count
 status-db-ready = Datenbank bereit ({ $count } Profile)
 
@@ -851,7 +856,7 @@ status-sick = Krank
 # Source: ./src/components/profile_detail.rs:296
 status-slaughtered = Geschlachtet
 
-# Source: ./src/components/profile_edit.rs:278
+# Source: ./src/components/profile_edit.rs:281
 success-profile-updated = Profil erfolgreich aktualisiert!
 
 # Source: ./src/components/settings/nextcloud_card.rs:595
@@ -965,7 +970,7 @@ sync-username = Benutzer
 # Source: ./src/components/settings/nextcloud_card.rs:596
 sync-waiting = Warte auf Anmeldung...
 
-# Source: ./src/components/home.rs:64
+# Source: ./src/components/home.rs:67
 system-info = System Informationen
 
 # Source: ./src/components/event_edit.rs:318
