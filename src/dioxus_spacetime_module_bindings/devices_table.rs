@@ -18,6 +18,18 @@ pub struct DevicesTableHandle<'ctx> {
     ctx: std::marker::PhantomData<&'ctx super::RemoteTables>,
 }
 
+/// Lifetime-aware accessor marker for the table `devices`.
+pub struct DevicesTableAccessor;
+
+impl __sdk::TableAccessor<super::RemoteTables> for DevicesTableAccessor {
+    type Row = Device;
+    type Handle<'db> = DevicesTableHandle<'db>;
+
+    fn get<'db>(db: &'db super::RemoteTables) -> Self::Handle<'db> {
+        db.devices()
+    }
+}
+
 #[allow(non_camel_case_types)]
 /// Extension trait for access to the table `devices`.
 ///
@@ -39,6 +51,18 @@ impl DevicesTableAccess for super::RemoteTables {
 
 pub struct DevicesInsertCallbackId(__sdk::CallbackId);
 pub struct DevicesDeleteCallbackId(__sdk::CallbackId);
+
+impl<'ctx> __sdk::TableLike for DevicesTableHandle<'ctx> {
+    type Row = Device;
+    type EventContext = super::EventContext;
+
+    fn count(&self) -> u64 {
+        self.imp.count()
+    }
+    fn iter(&self) -> impl Iterator<Item = Device> + '_ {
+        self.imp.iter()
+    }
+}
 
 impl<'ctx> __sdk::Table for DevicesTableHandle<'ctx> {
     type Row = Device;
@@ -78,9 +102,54 @@ impl<'ctx> __sdk::Table for DevicesTableHandle<'ctx> {
     }
 }
 
+impl<'ctx> __sdk::WithInsert for DevicesTableHandle<'ctx> {
+    type InsertCallbackId = DevicesInsertCallbackId;
+
+    fn on_insert(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> DevicesInsertCallbackId {
+        DevicesInsertCallbackId(self.imp.on_insert(Box::new(callback)))
+    }
+
+    fn remove_on_insert(&self, callback: DevicesInsertCallbackId) {
+        self.imp.remove_on_insert(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithDelete for DevicesTableHandle<'ctx> {
+    type DeleteCallbackId = DevicesDeleteCallbackId;
+
+    fn on_delete(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> DevicesDeleteCallbackId {
+        DevicesDeleteCallbackId(self.imp.on_delete(Box::new(callback)))
+    }
+
+    fn remove_on_delete(&self, callback: DevicesDeleteCallbackId) {
+        self.imp.remove_on_delete(callback.0)
+    }
+}
+
 pub struct DevicesUpdateCallbackId(__sdk::CallbackId);
 
 impl<'ctx> __sdk::TableWithPrimaryKey for DevicesTableHandle<'ctx> {
+    type UpdateCallbackId = DevicesUpdateCallbackId;
+
+    fn on_update(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row, &Self::Row) + Send + 'static,
+    ) -> DevicesUpdateCallbackId {
+        DevicesUpdateCallbackId(self.imp.on_update(Box::new(callback)))
+    }
+
+    fn remove_on_update(&self, callback: DevicesUpdateCallbackId) {
+        self.imp.remove_on_update(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithUpdate for DevicesTableHandle<'ctx> {
     type UpdateCallbackId = DevicesUpdateCallbackId;
 
     fn on_update(

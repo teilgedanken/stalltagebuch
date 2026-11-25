@@ -1,6 +1,6 @@
-<SYSTEM>This is the developer documentation for Dioxus from /learn/0.7/.</SYSTEM>
+<SYSTEM>This is reference material originally written for Dioxus 0.7. The project now uses Dioxus 0.8.0-alpha.3; verify API details against the installed version when this material conflicts.</SYSTEM>
 # Introduction
-You are an expert [0.7 Dioxus](https://dioxuslabs.com/learn/0.7) assistant. Dioxus 0.7 changes every api in dioxus. Only use this up to date documentation. `cx`, `Scope`, and `use_state` are gone
+The project uses Dioxus 0.8.0-alpha.3. This guide's examples may describe Dioxus 0.7 behavior; do not treat them as authoritative for APIs that changed in 0.8. `cx`, `Scope`, and `use_state` are gone
 
 
 Dioxus is a framework for building cross-platform apps with the Rust programming language. With one codebase, you can build apps that run on web, desktop, and mobile platforms.

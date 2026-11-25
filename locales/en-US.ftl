@@ -233,6 +233,9 @@ backup-upload-running = 🔄 Creating and uploading backup...
 # Parameters: $filename
 backup-upload-success = ✅ Backup uploaded successfully: { $filename }
 
+# Source: ./src/components/egg_tracking.rs:239
+confirm-delete-egg-record = Are you sure you want to delete this egg record? This action cannot be undone.
+
 # Source: ./src/components/profile_edit.rs:502
 confirm-delete-quail = Are you sure you want to delete this quail? This action cannot be undone.
 

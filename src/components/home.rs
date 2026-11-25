@@ -13,7 +13,7 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
     let connection_state = spacetimedb_ctx.state;
 
     let app_version = env!("CARGO_PKG_VERSION");
-    let git_commit = option_env!("GIT_COMMIT_HASH").unwrap_or("dev");
+    let git_commit = option_env!("GIT_COMMIT_HASH").unwrap_or("unknown");
 
     // Initialize database on mount
     use_effect(move || {
@@ -78,9 +78,11 @@ pub fn HomeScreen(on_navigate: EventHandler<Screen>) -> Element {
                             strong { "Version: " }
                             "{app_version}"
                         }
-                        p {
-                            strong { "Commit: " }
-                            "{git_commit}"
+                        if git_commit != "unknown" {
+                            p {
+                                strong { "Commit: " }
+                                "{git_commit}"
+                            }
                         }
                         p {
                             {

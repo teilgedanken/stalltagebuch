@@ -1,6 +1,6 @@
 # dioxus-gallery
 
-A reusable photo gallery component library for Dioxus 0.7 applications.
+A reusable photo gallery component library for Dioxus 0.8.0-alpha.3 applications.
 
 ## Features
 
@@ -124,7 +124,7 @@ pub struct GalleryConfig {
 1. **Separation of Concerns**: UI rendering is separate from data management
 2. **Parent Control**: All data operations are handled by the parent via callbacks
 3. **Zero Dependencies**: Only depends on Dioxus core
-4. **Reusability**: Can be used in any Dioxus 0.7 application
+4. **Reusability**: Can be used in any Dioxus 0.8.0-alpha.3 application
 
 ## License
 

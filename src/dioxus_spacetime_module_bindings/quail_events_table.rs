@@ -18,6 +18,18 @@ pub struct QuailEventsTableHandle<'ctx> {
     ctx: std::marker::PhantomData<&'ctx super::RemoteTables>,
 }
 
+/// Lifetime-aware accessor marker for the table `quail_events`.
+pub struct QuailEventsTableAccessor;
+
+impl __sdk::TableAccessor<super::RemoteTables> for QuailEventsTableAccessor {
+    type Row = QuailEvent;
+    type Handle<'db> = QuailEventsTableHandle<'db>;
+
+    fn get<'db>(db: &'db super::RemoteTables) -> Self::Handle<'db> {
+        db.quail_events()
+    }
+}
+
 #[allow(non_camel_case_types)]
 /// Extension trait for access to the table `quail_events`.
 ///
@@ -39,6 +51,18 @@ impl QuailEventsTableAccess for super::RemoteTables {
 
 pub struct QuailEventsInsertCallbackId(__sdk::CallbackId);
 pub struct QuailEventsDeleteCallbackId(__sdk::CallbackId);
+
+impl<'ctx> __sdk::TableLike for QuailEventsTableHandle<'ctx> {
+    type Row = QuailEvent;
+    type EventContext = super::EventContext;
+
+    fn count(&self) -> u64 {
+        self.imp.count()
+    }
+    fn iter(&self) -> impl Iterator<Item = QuailEvent> + '_ {
+        self.imp.iter()
+    }
+}
 
 impl<'ctx> __sdk::Table for QuailEventsTableHandle<'ctx> {
     type Row = QuailEvent;
@@ -78,9 +102,54 @@ impl<'ctx> __sdk::Table for QuailEventsTableHandle<'ctx> {
     }
 }
 
+impl<'ctx> __sdk::WithInsert for QuailEventsTableHandle<'ctx> {
+    type InsertCallbackId = QuailEventsInsertCallbackId;
+
+    fn on_insert(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> QuailEventsInsertCallbackId {
+        QuailEventsInsertCallbackId(self.imp.on_insert(Box::new(callback)))
+    }
+
+    fn remove_on_insert(&self, callback: QuailEventsInsertCallbackId) {
+        self.imp.remove_on_insert(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithDelete for QuailEventsTableHandle<'ctx> {
+    type DeleteCallbackId = QuailEventsDeleteCallbackId;
+
+    fn on_delete(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row) + Send + 'static,
+    ) -> QuailEventsDeleteCallbackId {
+        QuailEventsDeleteCallbackId(self.imp.on_delete(Box::new(callback)))
+    }
+
+    fn remove_on_delete(&self, callback: QuailEventsDeleteCallbackId) {
+        self.imp.remove_on_delete(callback.0)
+    }
+}
+
 pub struct QuailEventsUpdateCallbackId(__sdk::CallbackId);
 
 impl<'ctx> __sdk::TableWithPrimaryKey for QuailEventsTableHandle<'ctx> {
+    type UpdateCallbackId = QuailEventsUpdateCallbackId;
+
+    fn on_update(
+        &self,
+        callback: impl FnMut(&Self::EventContext, &Self::Row, &Self::Row) + Send + 'static,
+    ) -> QuailEventsUpdateCallbackId {
+        QuailEventsUpdateCallbackId(self.imp.on_update(Box::new(callback)))
+    }
+
+    fn remove_on_update(&self, callback: QuailEventsUpdateCallbackId) {
+        self.imp.remove_on_update(callback.0)
+    }
+}
+
+impl<'ctx> __sdk::WithUpdate for QuailEventsTableHandle<'ctx> {
     type UpdateCallbackId = QuailEventsUpdateCallbackId;
 
     fn on_update(

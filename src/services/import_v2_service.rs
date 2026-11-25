@@ -1,3 +1,8 @@
+use crate::dioxus_spacetime_module_bindings::{
+    CreateEventArgs, CreatePhotoArgs, CreatePhotoCollectionArgs, CreateQuailArgs,
+    RegisterDeviceArgs, UpdateEventArgs, UpdatePhotoCollectionArgs, UpdatePhotoSyncStatusArgs,
+    UpdateQuailArgs, UpsertEggRecordArgs,
+};
 use crate::error::AppError;
 use crate::models::export::{
     DeviceExport, EggRecordExport, ExportData, ExportMetadata, PhotoCollectionExport, PhotoExport,
@@ -6,17 +11,9 @@ use crate::models::export::{
 use crate::services::spacetime_settings_service;
 use crate::spacetime::client::SpacetimeClient;
 use serde::Deserialize;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::io::Read;
 use zip::ZipArchive;
-
-fn sats_option<T: Serialize>(value: Option<T>) -> serde_json::Value {
-    match value {
-        Some(value) => serde_json::json!({ "some": value }),
-        None => serde_json::Value::Null,
-    }
-}
 
 #[derive(Debug, Deserialize)]
 struct ZipDataSection {
@@ -40,7 +37,12 @@ pub async fn import_v2_from_zip(
             "Spacetime settings are missing; cannot import data".to_string(),
         ));
     }
-    let client = SpacetimeClient::new(settings.server_url, settings.database_name, settings.token);
+    let client = SpacetimeClient::connect(
+        &settings.server_url,
+        &settings.database_name,
+        &settings.token,
+    )
+    .await?;
 
     progress_callback("Loading v2 data...".to_string());
     let export = read_v2_export_data(archive)?;
@@ -107,12 +109,10 @@ pub async fn import_v2_from_zip(
     progress_callback("Restoring profile photos...".to_string());
     for quail in &export.quails {
         if let Some(profile_photo_uuid) = &quail.profile_photo {
-            let payload = serde_json::json!({
-                "quail_uuid": quail.uuid.clone(),
-                "photo_uuid": sats_option(Some(profile_photo_uuid.clone())),
-            });
-
-            if let Err(err) = client.call_reducer_raw("set_quail_photo", &payload).await {
+            if let Err(err) = client
+                .set_quail_photo(quail.uuid.clone(), Some(profile_photo_uuid.clone()))
+                .await
+            {
                 log::warn!(
                     "Failed to set profile photo for quail {}: {}",
                     quail.uuid,
@@ -125,16 +125,13 @@ pub async fn import_v2_from_zip(
     progress_callback("Restoring collection previews...".to_string());
     for collection in &export.photo_collections {
         if let Some(preview_photo_uuid) = &collection.preview_photo_uuid {
-            let update_args = serde_json::json!({
-                "uuid": collection.uuid.clone(),
-                "preview_photo_uuid": sats_option(Some(preview_photo_uuid.clone())),
-                "updated_at": collection.updated_at,
-            });
+            let update_args = UpdatePhotoCollectionArgs {
+                uuid: collection.uuid.clone(),
+                preview_photo_uuid: Some(preview_photo_uuid.clone()),
+                updated_at: collection.updated_at,
+            };
 
-            if let Err(err) = client
-                .call_reducer("update_photo_collection", &update_args)
-                .await
-            {
+            if let Err(err) = client.update_photo_collection(update_args).await {
                 log::warn!(
                     "Failed to restore preview photo for collection {}: {}",
                     collection.uuid,
@@ -191,37 +188,37 @@ fn read_json_from_zip<T: DeserializeOwned>(
 }
 
 async fn import_device_v2(client: &SpacetimeClient, device: &DeviceExport) -> Result<(), AppError> {
-    let args = serde_json::json!({
-        "device_id": device.device_id.clone(),
-        "name": sats_option(device.name.clone()),
-        "comment": sats_option(device.comment.clone()),
-    });
+    let args = RegisterDeviceArgs {
+        device_id: device.device_id.clone(),
+        name: device.name.clone(),
+        comment: device.comment.clone(),
+    };
 
-    client.call_reducer("register_device", &args).await
+    client.register_device(args).await
 }
 
 async fn import_quail_v2(client: &SpacetimeClient, quail: &QuailExport) -> Result<(), AppError> {
-    let create_args = serde_json::json!({
-        "uuid": quail.uuid.clone(),
-        "name": quail.name.clone(),
-        "gender": quail.gender.clone(),
-        "ring_color_left": sats_option(quail.ring_color_left.clone()),
-        "ring_color_right": sats_option(quail.ring_color_right.clone()),
-        "profile_photo": serde_json::Value::Null,
-        "device_id": quail.device_id.clone(),
-    });
+    let create_args = CreateQuailArgs {
+        uuid: quail.uuid.clone(),
+        name: quail.name.clone(),
+        gender: quail.gender.clone(),
+        ring_color_left: quail.ring_color_left.clone(),
+        ring_color_right: quail.ring_color_right.clone(),
+        profile_photo: None,
+        device_id: quail.device_id.clone(),
+    };
 
-    if let Err(create_err) = client.call_reducer("create_quail", &create_args).await {
-        let update_args = serde_json::json!({
-            "uuid": quail.uuid.clone(),
-            "name": quail.name.clone(),
-            "gender": quail.gender.clone(),
-            "ring_color_left": sats_option(quail.ring_color_left.clone()),
-            "ring_color_right": sats_option(quail.ring_color_right.clone()),
-            "profile_photo": serde_json::Value::Null,
-        });
+    if let Err(create_err) = client.create_quail(create_args).await {
+        let update_args = UpdateQuailArgs {
+            uuid: quail.uuid.clone(),
+            name: quail.name.clone(),
+            gender: quail.gender.clone(),
+            ring_color_left: quail.ring_color_left.clone(),
+            ring_color_right: quail.ring_color_right.clone(),
+            profile_photo: None,
+        };
         client
-            .call_reducer("update_quail", &update_args)
+            .update_quail(update_args)
             .await
             .map_err(|update_err| {
                 AppError::Other(format!(
@@ -238,26 +235,26 @@ async fn import_event_v2(
     client: &SpacetimeClient,
     event: &QuailEventExport,
 ) -> Result<(), AppError> {
-    let create_args = serde_json::json!({
-        "uuid": event.uuid.clone(),
-        "quail_uuid": event.quail_uuid.clone(),
-        "event_type": event.event_type.clone(),
-        "event_date": event.event_date.clone(),
-        "notes": sats_option(event.notes.clone()),
-        "photos": sats_option(event.photos.clone()),
-        "device_id": event.device_id.clone(),
-    });
+    let create_args = CreateEventArgs {
+        uuid: event.uuid.clone(),
+        quail_uuid: event.quail_uuid.clone(),
+        event_type: event.event_type.clone(),
+        event_date: event.event_date.clone(),
+        notes: event.notes.clone(),
+        photos: event.photos.clone(),
+        device_id: event.device_id.clone(),
+    };
 
-    if let Err(create_err) = client.call_reducer("create_event", &create_args).await {
-        let update_args = serde_json::json!({
-            "uuid": event.uuid.clone(),
-            "event_type": event.event_type.clone(),
-            "event_date": event.event_date.clone(),
-            "notes": sats_option(event.notes.clone()),
-            "photos": sats_option(event.photos.clone()),
-        });
+    if let Err(create_err) = client.create_event(create_args).await {
+        let update_args = UpdateEventArgs {
+            uuid: event.uuid.clone(),
+            event_type: event.event_type.clone(),
+            event_date: event.event_date.clone(),
+            notes: event.notes.clone(),
+            photos: event.photos.clone(),
+        };
         client
-            .call_reducer("update_event", &update_args)
+            .update_event(update_args)
             .await
             .map_err(|update_err| {
                 AppError::Other(format!(
@@ -274,27 +271,27 @@ async fn import_egg_record_v2(
     client: &SpacetimeClient,
     egg_record: &EggRecordExport,
 ) -> Result<(), AppError> {
-    let args = serde_json::json!({
-        "uuid": egg_record.uuid.clone(),
-        "record_date": egg_record.record_date,
-        "total_eggs": egg_record.total_eggs,
-        "notes": sats_option(egg_record.notes.clone()),
-        "device_id": egg_record.device_id.clone(),
-    });
+    let args = UpsertEggRecordArgs {
+        uuid: egg_record.uuid.clone(),
+        record_date: egg_record.record_date,
+        total_eggs: egg_record.total_eggs,
+        notes: egg_record.notes.clone(),
+        device_id: egg_record.device_id.clone(),
+    };
 
-    client.call_reducer("upsert_egg_record", &args).await
+    client.upsert_egg_record(args).await
 }
 
 async fn import_photo_collection_v2(client: &SpacetimeClient, collection: &PhotoCollectionExport) {
-    let args = serde_json::json!({
-        "uuid": collection.uuid.clone(),
-        "quail_uuid": sats_option(collection.quail_uuid.clone()),
-        "event_uuid": sats_option(collection.event_uuid.clone()),
-        "name": collection.name.clone(),
-        "device_id": collection.device_id.clone(),
-    });
+    let args = CreatePhotoCollectionArgs {
+        uuid: collection.uuid.clone(),
+        quail_uuid: collection.quail_uuid.clone(),
+        event_uuid: collection.event_uuid.clone(),
+        name: collection.name.clone(),
+        device_id: collection.device_id.clone(),
+    };
 
-    if let Err(err) = client.call_reducer("create_photo_collection", &args).await {
+    if let Err(err) = client.create_photo_collection(args).await {
         log::warn!(
             "Failed to create photo collection {}: {}",
             collection.uuid,
@@ -351,27 +348,22 @@ async fn import_photo_v2(
         512,
     );
 
-    let create_photo_args = serde_json::json!({
-        "uuid": photo.uuid.clone(),
-        "collection_uuid": photo.collection_uuid.clone(),
-        "relative_path": target_relative_path,
-        "device_id": photo.device_id.clone(),
-    });
-    client
-        .call_reducer("create_photo", &create_photo_args)
-        .await?;
+    let create_photo_args = CreatePhotoArgs {
+        uuid: photo.uuid.clone(),
+        collection_uuid: photo.collection_uuid.clone(),
+        relative_path: target_relative_path,
+        device_id: photo.device_id.clone(),
+    };
+    client.create_photo(create_photo_args).await?;
 
-    let sync_args = serde_json::json!({
-        "uuid": photo.uuid.clone(),
-        "sync_status": photo.sync_status.clone(),
-        "sync_error": sats_option(photo.sync_error.clone()),
-        "last_sync_attempt": sats_option(photo.last_sync_attempt),
-        "retry_count": photo.retry_count,
-    });
-    if let Err(err) = client
-        .call_reducer("update_photo_sync_status", &sync_args)
-        .await
-    {
+    let sync_args = UpdatePhotoSyncStatusArgs {
+        uuid: photo.uuid.clone(),
+        sync_status: photo.sync_status.clone(),
+        sync_error: photo.sync_error.clone(),
+        last_sync_attempt: photo.last_sync_attempt,
+        retry_count: photo.retry_count,
+    };
+    if let Err(err) = client.update_photo_sync_status(sync_args).await {
         log::warn!(
             "Failed to restore sync metadata for photo {}: {}",
             photo.uuid,

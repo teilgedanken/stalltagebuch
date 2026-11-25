@@ -1,18 +1,17 @@
 use crate::{Screen, spacetime};
 use dioxus::prelude::*;
-use dioxus_charts::LineChart;
 use dioxus_i18n::tid;
 use spacetimedb_sdk::DbContext;
 
 #[derive(Clone, Debug)]
 struct EggStatistics {
     total_records: i32,
-    total_eggs: i32,
+    total_eggs: f64,
     daily_average: f64,
-    weekly_average: f64,
-    monthly_average: f64,
-    min_eggs: i32,
-    max_eggs: i32,
+    weekly_average: Option<f64>,
+    monthly_average: Option<f64>,
+    min_eggs: f64,
+    max_eggs: f64,
     first_date: Option<String>,
     last_date: Option<String>,
 }
@@ -63,28 +62,23 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         let today = chrono::Local::now().date_naive();
         let date_format = tid!("stats-date-format-extra-short");
         let period_start = match selected_period().as_str() {
-            "week" => Some(today - chrono::Duration::days(7)),
-            "month" => Some(today - chrono::Duration::days(30)),
-            "year" => Some(today - chrono::Duration::days(365)),
+            "week" => Some(today - chrono::Duration::days(6)),
+            "month" => Some(today - chrono::Duration::days(29)),
+            "year" => Some(today - chrono::Duration::days(364)),
             _ => None,
         };
 
-        let mut valid_records: Vec<(chrono::NaiveDate, i32)> = egg_records()
+        let mut all_records: Vec<(chrono::NaiveDate, i32)> = egg_records()
             .into_iter()
             .filter_map(|record| {
                 let date = chrono::DateTime::from_timestamp(record.record_date, 0)
                     .map(|dt| dt.date_naive())?;
-                Some((date, record.total_eggs))
+                (date <= today).then_some((date, record.total_eggs))
             })
             .collect();
+        all_records.sort_by_key(|(date, _)| *date);
 
-        if let Some(start) = period_start {
-            valid_records.retain(|(date, _)| *date >= start && *date <= today);
-        }
-
-        valid_records.sort_by(|a, b| b.0.cmp(&a.0));
-
-        if valid_records.is_empty() {
+        if all_records.is_empty() {
             stats.set(None);
             period_records.set(Vec::new());
             chart_data.set((Vec::new(), Vec::new(), Vec::new()));
@@ -92,52 +86,62 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
             return;
         }
 
-        let total_records = valid_records.len() as i32;
-        let total_eggs: i32 = valid_records.iter().map(|(_, eggs)| *eggs).sum();
-        let min_eggs = valid_records
+        let distributed_daily = distribute_egg_records(&all_records);
+        let selected_daily: Vec<(chrono::NaiveDate, f64)> = distributed_daily
+            .iter()
+            .filter(|(date, _)| period_start.map_or(true, |start| **date >= start))
+            .map(|(date, eggs)| (*date, *eggs))
+            .collect();
+
+        let selected_records: Vec<(chrono::NaiveDate, i32)> = all_records
+            .iter()
+            .copied()
+            .filter(|(date, _)| period_start.map_or(true, |start| *date >= start))
+            .collect();
+
+        if selected_daily.is_empty() {
+            stats.set(None);
+            period_records.set(
+                selected_records
+                    .iter()
+                    .rev()
+                    .map(|(date, eggs)| {
+                        (
+                            format_display_date(*date, &date_format),
+                            date.format("%Y-%m-%d").to_string(),
+                            *eggs,
+                        )
+                    })
+                    .collect(),
+            );
+            chart_data.set((Vec::new(), Vec::new(), Vec::new()));
+            error.set(String::new());
+            return;
+        }
+
+        let total_records = selected_records.len() as i32;
+        let total_eggs: f64 = selected_daily.iter().map(|(_, eggs)| *eggs).sum();
+        let min_eggs = selected_daily
             .iter()
             .map(|(_, eggs)| *eggs)
-            .min()
-            .unwrap_or(0);
-        let max_eggs = valid_records
+            .fold(f64::INFINITY, f64::min);
+        let max_eggs = selected_daily
             .iter()
             .map(|(_, eggs)| *eggs)
-            .max()
-            .unwrap_or(0);
-        let daily_average = total_eggs as f64 / total_records as f64;
+            .fold(f64::NEG_INFINITY, f64::max);
+        let daily_average = total_eggs / selected_daily.len() as f64;
 
-        let weekly_window = valid_records.iter().take(7).collect::<Vec<_>>();
-        let weekly_average = if weekly_window.is_empty() {
-            0.0
-        } else {
-            weekly_window
-                .iter()
-                .map(|(_, eggs)| *eggs as f64)
-                .sum::<f64>()
-                / weekly_window.len() as f64
-        };
+        let weekly_average =
+            average_in_recent_days(&selected_daily, today - chrono::Duration::days(6));
+        let monthly_average =
+            average_in_recent_days(&selected_daily, today - chrono::Duration::days(29));
 
-        let monthly_window = valid_records.iter().take(30).collect::<Vec<_>>();
-        let monthly_average = if monthly_window.is_empty() {
-            0.0
-        } else {
-            monthly_window
-                .iter()
-                .map(|(_, eggs)| *eggs as f64)
-                .sum::<f64>()
-                / monthly_window.len() as f64
-        };
-
-        let first_date = valid_records
-            .iter()
-            .map(|(date, _)| *date)
-            .min()
-            .map(|date| format_display_date(date, &date_format));
-        let last_date = valid_records
-            .iter()
-            .map(|(date, _)| *date)
-            .max()
-            .map(|date| format_display_date(date, &date_format));
+        let first_date = selected_daily
+            .first()
+            .map(|(date, _)| format_display_date(*date, &date_format));
+        let last_date = selected_daily
+            .last()
+            .map(|(date, _)| format_display_date(*date, &date_format));
 
         stats.set(Some(EggStatistics {
             total_records,
@@ -152,8 +156,9 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
         }));
 
         period_records.set(
-            valid_records
+            selected_records
                 .iter()
+                .rev()
                 .map(|(date, eggs)| {
                     (
                         format_display_date(*date, &date_format),
@@ -164,22 +169,14 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                 .collect(),
         );
 
-        // Chart: expand to a continuous daily series, missing calendar days → 0
-        let chart_start = period_start
-            .unwrap_or_else(|| valid_records.iter().map(|(d, _)| *d).min().unwrap_or(today));
-        let record_map: std::collections::HashMap<chrono::NaiveDate, i32> =
-            valid_records.iter().cloned().collect();
+        let daily_dates: Vec<chrono::NaiveDate> =
+            selected_daily.iter().map(|(date, _)| *date).collect();
+        let raw_series: Vec<f32> = selected_daily
+            .iter()
+            .map(|(_, eggs)| *eggs as f32)
+            .collect();
 
-        let mut daily_dates: Vec<chrono::NaiveDate> = Vec::new();
-        let mut raw_series: Vec<f32> = Vec::new();
-        let mut current = chart_start;
-        while current <= today {
-            daily_dates.push(current);
-            raw_series.push(*record_map.get(&current).unwrap_or(&0) as f32);
-            current = current + chrono::Duration::days(1);
-        }
-
-        // Centered 3-day moving average over calendar days (gaps count as 0)
+        // Centered 3-day moving average over estimated calendar-day values.
         let n = raw_series.len();
         let ma_series: Vec<f32> = (0..n)
             .map(|i| {
@@ -283,17 +280,17 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
                                 StatCard {
                                     label: tid!("stats-total-eggs"),
-                                    value: format!("{}", s.total_eggs),
+                                    value: format!("{:.1}", s.total_eggs),
                                     icon: "🥚",
                                 }
                                 StatCard {
                                     label: tid!("stats-min"),
-                                    value: format!("{}", s.min_eggs),
+                                    value: format!("{:.1}", s.min_eggs),
                                     icon: "⬇️",
                                 }
                                 StatCard {
                                     label: tid!("stats-max"),
-                                    value: format!("{}", s.max_eggs),
+                                    value: format!("{:.1}", s.max_eggs),
                                     icon: "⬆️",
                                 }
                             }
@@ -312,12 +309,18 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                 }
                                 StatCard {
                                     label: tid!("stats-weekly-avg"),
-                                    value: format!("{:.1}", s.weekly_average),
+                                    value: s
+                                        .weekly_average
+                                        .map(|average| format!("{average:.1}"))
+                                        .unwrap_or_else(|| "—".to_string()),
                                     icon: "📆",
                                 }
                                 StatCard {
                                     label: tid!("stats-monthly-avg"),
-                                    value: format!("{:.1}", s.monthly_average),
+                                    value: s
+                                        .monthly_average
+                                        .map(|average| format!("{average:.1}"))
+                                        .unwrap_or_else(|| "—".to_string()),
                                     icon: "🗓️",
                                 }
                             }
@@ -330,7 +333,6 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
                                     {tid!("stats-egg-chart-title")}
                                 }
                                 EggHistoryChart {
-                                    raw: chart_data().0,
                                     moving_avg: chart_data().1,
                                     labels: chart_data().2,
                                 }
@@ -421,6 +423,48 @@ pub fn StatisticsScreen(on_navigate: EventHandler<Screen>) -> Element {
 
 fn format_display_date(date: chrono::NaiveDate, date_format: &str) -> String {
     date.format(date_format).to_string()
+}
+
+fn distribute_egg_records(
+    records: &[(chrono::NaiveDate, i32)],
+) -> std::collections::BTreeMap<chrono::NaiveDate, f64> {
+    let mut daily_values = std::collections::BTreeMap::new();
+    let Some((first_date, first_eggs)) = records.first() else {
+        return daily_values;
+    };
+
+    daily_values.insert(*first_date, *first_eggs as f64);
+    let mut previous_date = *first_date;
+
+    for (date, eggs) in records.iter().skip(1) {
+        let elapsed_days = (*date - previous_date).num_days();
+        if elapsed_days <= 0 {
+            *daily_values.entry(*date).or_insert(0.0) += *eggs as f64;
+        } else {
+            let eggs_per_day = *eggs as f64 / elapsed_days as f64;
+            for day_offset in 1..=elapsed_days {
+                let day = previous_date + chrono::Duration::days(day_offset);
+                *daily_values.entry(day).or_insert(0.0) += eggs_per_day;
+            }
+        }
+        previous_date = *date;
+    }
+
+    daily_values
+}
+
+fn average_in_recent_days(
+    daily_values: &[(chrono::NaiveDate, f64)],
+    start_date: chrono::NaiveDate,
+) -> Option<f64> {
+    let recent_values: Vec<f64> = daily_values
+        .iter()
+        .filter(|(date, _)| *date >= start_date)
+        .map(|(_, eggs)| *eggs)
+        .collect();
+
+    (!recent_values.is_empty())
+        .then(|| recent_values.iter().sum::<f64>() / recent_values.len() as f64)
 }
 
 fn calculate_population_stats(
@@ -521,25 +565,118 @@ fn StatCard(label: String, value: String, icon: String) -> Element {
 }
 
 #[component]
-fn EggHistoryChart(raw: Vec<f32>, moving_avg: Vec<f32>, labels: Vec<String>) -> Element {
-    //let raw_label = tid!("stats-chart-raw").to_string();
+fn EggHistoryChart(moving_avg: Vec<f32>, labels: Vec<String>) -> Element {
+    const WIDTH: f32 = 600.0;
+    const HEIGHT: f32 = 320.0;
+    const LEFT: f32 = 48.0;
+    const RIGHT: f32 = 590.0;
+    const TOP: f32 = 16.0;
+    const BOTTOM: f32 = 276.0;
+
     let ma_label = tid!("stats-chart-ma").to_string();
+    let max_value = moving_avg.iter().copied().fold(0.0_f32, f32::max).max(1.0);
+    let plot_height = BOTTOM - TOP;
+    let plot_width = RIGHT - LEFT;
+    let points: Vec<(f32, f32)> = moving_avg
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            let x = if moving_avg.len() == 1 {
+                LEFT + plot_width / 2.0
+            } else {
+                LEFT + index as f32 / (moving_avg.len() - 1) as f32 * plot_width
+            };
+            let y = BOTTOM - value / max_value * plot_height;
+            (x, y)
+        })
+        .collect();
+    let line_points = points
+        .iter()
+        .map(|(x, y)| format!("{x:.1},{y:.1}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let y_ticks: Vec<(f32, String)> = (0..=4)
+        .map(|tick| {
+            let fraction = tick as f32 / 4.0;
+            (
+                BOTTOM - fraction * plot_height,
+                format!("{:.1}", fraction * max_value),
+            )
+        })
+        .collect();
+    let x_labels: Vec<(f32, String)> = labels
+        .iter()
+        .enumerate()
+        .filter(|(_, label)| !label.is_empty())
+        .map(|(index, label)| {
+            let x = if labels.len() == 1 {
+                LEFT + plot_width / 2.0
+            } else {
+                LEFT + index as f32 / (labels.len() - 1) as f32 * plot_width
+            };
+            (x, label.clone())
+        })
+        .collect();
+
     rsx! {
-        LineChart {
-            series: vec![moving_avg],
-            labels,
-            series_labels: vec![ma_label],
-            viewbox_width: 600,
-            viewbox_height: 450,
-            padding_top: 10,
-            padding_bottom: 30,
-            padding_left: 20,
-            padding_right: 10,
-            line_width: "1.5%",
-            show_grid_ticks: true,
-            show_dotted_grid: false,
-            lowest: 0.0,
-            max_ticks: 5,
+        div {
+            div { class: "is-flex is-align-items-center mb-2",
+                span {
+                    style: "display:inline-block;width:1.5rem;border-top:2px solid var(--bulma-link);margin-right:0.5rem;",
+                }
+                span { class: "is-size-7 has-text-grey", "{ma_label}" }
+            }
+            svg {
+                view_box: "0 0 {WIDTH} {HEIGHT}",
+                width: "100%",
+                height: "auto",
+                role: "img",
+                style: "display:block;width:100%;height:auto;",
+                for (y, value) in y_ticks {
+                    line {
+                        x1: "{LEFT}",
+                        y1: "{y:.1}",
+                        x2: "{RIGHT}",
+                        y2: "{y:.1}",
+                        stroke: "var(--bulma-border)",
+                        stroke_width: "1",
+                    }
+                    text {
+                        x: "{LEFT - 8.0}",
+                        y: "{y + 4.0:.1}",
+                        text_anchor: "end",
+                        fill: "var(--bulma-text-weak)",
+                        font_size: "12",
+                        "{value}"
+                    }
+                }
+                polyline {
+                    points: "{line_points}",
+                    fill: "none",
+                    stroke: "var(--bulma-link)",
+                    stroke_width: "3",
+                    stroke_linecap: "round",
+                    stroke_linejoin: "round",
+                }
+                for (x, y) in points {
+                    circle {
+                        cx: "{x:.1}",
+                        cy: "{y:.1}",
+                        r: "2.5",
+                        fill: "var(--bulma-link)",
+                    }
+                }
+                for (x, label) in x_labels {
+                    text {
+                        x: "{x:.1}",
+                        y: "{HEIGHT - 6.0}",
+                        text_anchor: "middle",
+                        fill: "var(--bulma-text-weak)",
+                        font_size: "12",
+                        "{label}"
+                    }
+                }
+            }
         }
     }
 }

@@ -54,60 +54,29 @@ fn main() {
 
 #[cfg(target_os = "android")]
 fn init_android_tls_verifier() {
-    use dioxus::prelude::jni::JavaVM;
-    use dioxus::prelude::jni::objects::JObject;
+    use ::jni::{JavaVM, objects::JObject};
     use ndk_context::android_context;
 
-    let vm_ptr = android_context().vm() as *mut jni::sys::JavaVM;
-    let context_ptr = android_context().context() as jni::sys::jobject;
+    let context = android_context();
+    let vm_ptr = context.vm() as *mut ::jni::sys::JavaVM;
+    let context_ptr = context.context() as ::jni::sys::jobject;
 
     if vm_ptr.is_null() || context_ptr.is_null() {
         log::error!("Android TLS verifier init failed: missing VM or context pointer");
         return;
     }
 
-    let vm = match unsafe { JavaVM::from_raw(vm_ptr) } {
-        Ok(vm) => vm,
-        Err(error) => {
-            log::error!(
-                "Android TLS verifier init failed: JavaVM from_raw error: {}",
-                error
-            );
-            return;
-        }
-    };
+    // rustls-platform-verifier 0.7 uses jni 0.22, while Dioxus re-exports jni 0.21.
+    let vm = unsafe { JavaVM::from_raw(vm_ptr) };
+    let result = vm.attach_current_thread(|env| {
+        let context_global = unsafe { JObject::from_raw(env, context_ptr) };
+        let context_local = env.new_local_ref(&context_global)?;
+        rustls_platform_verifier::android::init_with_env(env, context_local)
+    });
 
-    let mut env = match vm.attach_current_thread() {
-        Ok(guard) => guard,
-        Err(error) => {
-            log::error!(
-                "Android TLS verifier init failed: attach thread error: {}",
-                error
-            );
-            return;
-        }
-    };
-
-    let context_global = unsafe { JObject::from_raw(context_ptr) };
-    let context_local = match env.new_local_ref(&context_global) {
-        Ok(local) => local,
-        Err(error) => {
-            log::error!(
-                "Android TLS verifier init failed: new_local_ref error: {}",
-                error
-            );
-            return;
-        }
-    };
-    std::mem::forget(context_global);
-
-    match rustls_platform_verifier::android::init_with_env(&mut env, context_local) {
-        Ok(()) => {
-            log::info!("Android TLS verifier initialized");
-        }
-        Err(error) => {
-            log::error!("Android TLS verifier init failed: {}", error);
-        }
+    match result {
+        Ok(()) => log::info!("Android TLS verifier initialized"),
+        Err(error) => log::error!("Android TLS verifier init failed: {}", error),
     }
 }
 

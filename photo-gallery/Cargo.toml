@@ -7,16 +7,16 @@ description = "A reusable photo gallery management library with thumbnail genera
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 image = { version = "0.25", default-features = false, features = [
     "jpeg",
     "png",
     "webp",
 ] }
-tokio = { version = "1.0", features = ["rt", "time", "sync"] }
-log = "0.4.28"
-dioxus = { version = "0.7.4", optional = true }
-base64 = { version = "0.22", optional = true }
+tokio = { version = "1", features = ["rt", "time", "sync"] }
+log = "0.4"
+dioxus = { workspace = true, optional = true }
+base64 = { version = "0.23", optional = true }
 reqwest_dav = { workspace = true }
 rand = { version = "0.9", optional = true }
 

@@ -11,7 +11,7 @@ fn main() {
         .ok()
         .filter(|o| o.status.success())
         .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().chars().take(10).collect::<String>())
+        .map(|s| s.trim().chars().take(16).collect::<String>())
         .unwrap_or_else(|| "unknown".to_string());
 
     println!("cargo:rustc-env=GIT_COMMIT_HASH={}", hash);
